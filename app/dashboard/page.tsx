@@ -47,7 +47,7 @@ export default function DisruptiveLandingPage() {
 
   const navLinks = [
     { name: "Home", href: "/dashboard" },
-    { name: "Product & Solutions", href: "" },
+    { name: "Product & Solutions", href: "/lighting-products-smart-solutions" },
     { name: "Brands", href: "" },
     { name: "Contact Us", href: "/contact-us" },
   ];
