@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, where } from "firebase/firestore";
+import SignUpNewsletter from "../components/SignUpNewsletter"    
 import {
   Menu,
   Search,
@@ -428,50 +429,8 @@ useEffect(() => {
               </ul>
             </div>
 
-            {/* NEWSLETTER / INSIGHTS */}
             <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl flex flex-col justify-between">
-              <div>
-                <h4 className="text-xl font-black uppercase tracking-tight mb-3">
-                  Industry Insights
-                </h4>
-
-                <p className="text-gray-400 text-sm leading-relaxed mb-6 max-w-md">
-                  Receive curated updates on smart lighting innovations,
-                  engineering breakthroughs, and industry best practices —
-                  delivered straight to your inbox.
-                </p>
-
-                <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10">
-                  <input
-                    type="email"
-                    placeholder="Enter your business email"
-                    className="
-                bg-transparent flex-1 px-4 py-2
-                text-sm text-white
-                placeholder:text-gray-500
-                outline-none
-              "
-                  />
-
-                  <button
-                    className="
-                group flex items-center gap-2
-                bg-[#d11a2a] px-4 py-3 rounded-xl
-                hover:bg-[#b11422]
-                transition-all duration-300
-                shadow-lg
-              "
-                  >
-                    <span className="hidden md:block text-[10px] font-black uppercase tracking-widest">
-                      Subscribe
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <p className="text-[10px] text-gray-500 mt-4">
-                We respect your privacy. No spam, unsubscribe anytime.
-              </p>
+                <SignUpNewsletter></SignUpNewsletter>
             </div>
           </div>
 

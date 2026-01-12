@@ -7,7 +7,7 @@ import { ArrowRight, Loader2, ChevronUp, Facebook, Instagram, Linkedin } from "l
 import { db } from "@/lib/firebase"; 
 // Idinagdag ang 'limit' sa import
 import { collection, query, orderBy, onSnapshot, limit, } from "firebase/firestore";
-
+import SignUpNewsletter from "../components/SignUpNewsletter"    
 // Inayos ang parenthesis dito
 export default function BlogPage() {
     const [blogs, setBlogs] = useState<any[]>([]);
@@ -189,19 +189,8 @@ export default function BlogPage() {
               </ul>
             </div>
 
-            <div className="md:col-span-2 bg-white/5 backdrop-blur-2xl rounded-[40px] p-12 border border-white/10 shadow-2xl relative overflow-hidden group">
-              <div className="relative z-10">
-                <h4 className="text-2xl font-black uppercase tracking-tighter mb-4">Newsletter</h4>
-                <p className="text-gray-400 text-sm mb-8 max-w-sm">Get exclusive engineering insights and smart solution updates.</p>
-                <div className="flex bg-black/40 p-2 rounded-2xl border border-white/10 focus-within:border-[#d11a2a]/50 transition-all">
-                  <input type="email" placeholder="Business Email" className="bg-transparent flex-1 px-4 py-2 text-sm outline-none text-white" />
-                  <button className="bg-[#d11a2a] px-6 py-3 rounded-xl hover:bg-white hover:text-black transition-all group/btn flex items-center gap-2 text-white">
-                    <span className="text-[10px] font-black uppercase tracking-widest">Join</span>
-                    <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-              </div>
-              <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-[#d11a2a]/10 rounded-full blur-[100px] group-hover:bg-[#d11a2a]/20 transition-all duration-1000" />
+            <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl flex flex-col justify-between">
+                <SignUpNewsletter></SignUpNewsletter>
             </div>
           </div>
 

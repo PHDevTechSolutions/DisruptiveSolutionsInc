@@ -53,7 +53,7 @@ export default function CheckoutPage() {
         createdAt: serverTimestamp(),
       });
 
-      // 2. SEND EMAIL VIA API ROUTE
+      // 2. SEND EMAIL
       await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,7 +69,7 @@ export default function CheckoutPage() {
         }),
       });
 
-      // 3. SUCCESS UI & CLEANUP
+      // 3. CLEANUP
       localStorage.removeItem("disruptive_quote_cart");
       window.dispatchEvent(new Event("cartUpdated"));
       setIsSuccess(true);
@@ -125,8 +125,8 @@ export default function CheckoutPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Street address *</label>
-                  <input required name="streetAddress" placeholder="House number and street name" value={formData.streetAddress} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold placeholder:text-gray-300" />
-                  <input name="apartment" placeholder="Apartment, suite, unit, etc. (optional)" value={formData.apartment} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold mt-2 placeholder:text-gray-300" />
+                  <input required name="streetAddress" placeholder="House number and street name" value={formData.streetAddress} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold" />
+                  <input name="apartment" placeholder="Apartment, suite, unit, etc. (optional)" value={formData.apartment} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold mt-2" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Email address *</label>

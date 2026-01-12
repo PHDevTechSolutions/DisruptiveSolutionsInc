@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Menu, Zap, Lightbulb, Target, ArrowRight, ChevronUp, Check, Facebook, Linkedin, Twitter, X } from "lucide-react"
-
+import SignUpNewsletter from "../components/SignUpNewsletter" 
 export default function DisruptiveLandingPage() {
     const [isScrolled, setIsScrolled] = useState(false)
     const [isNavOpen, setIsNavOpen] = useState(false)
@@ -27,20 +27,20 @@ export default function DisruptiveLandingPage() {
     ];
 
 
-    const brandData = [
-        {
-            title: "Premium Tech",
-            category: "Industrial",
-            description: "Next-gen lighting systems for heavy-duty industrial warehouses and manufacturing plants.",
-            image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070"
-        },
-        {
-            title: "Smart Eco",
-            category: "Sustainability",
-            description: "Eco-friendly automation that reduces power consumption by up to 60% using AI controls.",
-            image: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069"
-        }
-    ]
+  const brandData = [
+    {
+      category: "Smart Lighting",
+      title: "Zumtobel's Lighting Solutions",
+      description: "Global leader in premium lighting solutions, combines design, innovation and sustainability.",
+      image: "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png"
+    },
+    {
+      category: "Power Solutions",
+      title: "Affordable Lighting That Works as Hard as You Do",
+      description: "Smart lighting at smarter prices - reliable quality without compromise",
+      image: "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png"
+    }
+  ];
 
     const socials = [
         { icon: Facebook, color: "hover:bg-blue-600" },
@@ -141,8 +141,7 @@ export default function DisruptiveLandingPage() {
                         transition={{ delay: 0.6 }}
                         className="flex flex-col sm:flex-row gap-4 justify-center"
                     >
-                        <button className="bg-[#d11a2a] text-white px-10 py-4 rounded-full font-black uppercase tracking-widest hover:bg-[#b11422] transition-all shadow-2xl shadow-red-500/20 active:scale-95">Explore Solutions</button>
-                        <button className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-10 py-4 rounded-full font-black uppercase tracking-widest hover:bg-white/20 transition-all active:scale-95">Our Projects</button>
+                    
                     </motion.div>
                 </div>
             </section>
@@ -205,41 +204,122 @@ export default function DisruptiveLandingPage() {
                 </div>
             </section>
 
-            {/* --- 4. CENTERED BRANDS HERO (AS REQUESTED) --- */}
-            <section className="relative w-full bg-[#fcfcfc] overflow-hidden py-32 border-y border-gray-100">
-                <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col items-center">
-                    <div className="text-center mb-20 max-w-2xl">
-                        <span className="text-[#d11a2a] text-[10px] font-black uppercase tracking-[0.4em] mb-4 block">Our Partners</span>
-                        <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter uppercase mb-6">Trusted <span className="text-[#d11a2a]">Brands</span></h2>
-                        <div className="h-1 w-12 bg-[#d11a2a] mx-auto" />
-                    </div>
-
-                    <motion.div
-                        className="flex flex-wrap justify-center gap-10 w-full"
-                        initial="hidden" whileInView="show" viewport={{ once: true }}
-                        variants={{ show: { transition: { staggerChildren: 0.2 } } }}
-                    >
+                  {/* --- 3. BRANDS SECTION --- */}
+                  <section className="relative w-full bg-white overflow-hidden py-24">
+                    {/* Subtle Engineering Grid Background */}
+                    <div
+                      className="absolute inset-0 pointer-events-none opacity-[0.3]"
+                      style={{
+                        backgroundImage: `
+                    linear-gradient(to right, #e5e7eb 1px, transparent 4px),
+                    linear-gradient(to bottom, #e5e7eb 1px, transparent 4px)
+                  `,
+                        backgroundSize: '40px 40px',
+                      }}
+                    />
+            
+                    <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col items-center">
+            
+                      {/* --- BRAND SECTION HEADER (CENTERED & OPTIMIZED) --- */}
+                      <div className="flex flex-col items-center justify-center text-center mb-20 max-w-3xl mx-auto px-4">
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} // Mas smooth na "Out-Expo" ease
+                          className="flex flex-col items-center"
+                        >
+                          {/* BADGE */}
+                          <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] mb-6 bg-red-50 px-5 py-2 rounded-full border border-red-100/50">
+                            <Zap size={12} className="fill-[#d11a2a]" /> Premium Products
+                          </span>
+            
+                          {/* TITLE */}
+                          <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-[-0.04em] uppercase leading-[0.9] mb-8">
+                            Our <br className="md:hidden" />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">
+                              Brands
+                            </span>
+                          </h2>
+            
+                          {/* ACCENT LINE */}
+                          <div className="h-1.5 w-16 bg-[#d11a2a] mb-8 rounded-full shadow-[0_2px_10px_rgba(209,26,42,0.3)]" />
+            
+                          {/* DESCRIPTION */}
+                          <p className="text-gray-500 font-medium text-xs md:text-sm leading-relaxed italic max-w-2xl">
+                            Empowering your space with world-class engineering and sustainable lighting solutions
+                            from our <span className="text-gray-900 font-bold">trusted global technology partners</span>.
+                          </p>
+                        </motion.div>
+                      </div>
+            
+                      {/* CENTERED GRID */}
+                      <motion.div
+                        className="flex flex-wrap justify-center gap-8 w-full"
+                        initial="hidden"
+                        whileInView="show"
+                        viewport={{ once: true }}
+                        variants={{
+                          hidden: { opacity: 0 },
+                          show: {
+                            opacity: 1,
+                            transition: { staggerChildren: 0.2 },
+                          },
+                        }}
+                      >
                         {brandData.map((brand, idx) => (
-                            <motion.div
-                                key={idx}
-                                variants={{ hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0 } }}
-                                className="group relative h-[500px] w-full lg:w-[480px] rounded-[40px] overflow-hidden shadow-2xl"
-                            >
-                                <img src={brand.image} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110" alt={brand.title} />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                                <div className="absolute inset-0 p-10 flex flex-col justify-end">
-                                    <span className="bg-[#d11a2a] text-white text-[9px] font-black uppercase px-3 py-1 rounded-md w-fit mb-4">{brand.category}</span>
-                                    <h3 className="text-3xl font-black text-white mb-2 uppercase">{brand.title}</h3>
-                                    <p className="text-white/60 text-sm mb-6 line-clamp-2">{brand.description}</p>
-                                    <div className="flex items-center gap-3 text-white text-[10px] font-bold uppercase tracking-widest">
-                                        <div className="h-[1px] w-8 bg-[#d11a2a]" /> View Brand
-                                    </div>
+                          <motion.div
+                            key={idx}
+                            variants={{
+                              hidden: { opacity: 0, y: 40 },
+                              show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } }
+                            }}
+                            whileHover={{ y: -10 }}
+                            className="group relative h-[500px] w-full md:w-[calc(50%-1rem)] lg:w-[480px] rounded-[32px] overflow-hidden bg-gray-900 shadow-2xl border border-gray-100 transition-all duration-500"
+                          >
+                            {/* Image Layer - FIXED BLUR (HINDI NAWAWALA) */}
+                            <div className="absolute inset-0 overflow-hidden">
+                              <motion.img
+                                src={brand.image}
+                                alt={brand.title}
+                                // Ginamit ang blur-[4px] para sakto lang ang labo. 
+                                // Tinanggal ang group-hover:blur-none para manatiling blurred.
+                                className="w-full h-full object-cover blur-[4px] brightness-[0.8] transition-transform duration-1000 group-hover:scale-110"
+                              />
+                              {/* Dark Gradient Overlay - Permanent readability */}
+                              <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/80" />
+                            </div>
+            
+                            {/* Content Overlay */}
+                            <div className="absolute inset-0 p-8 flex flex-col justify-end z-10">
+                              <div className="mb-4">
+                                <span className="bg-[#d11a2a] text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg">
+                                  {brand.category}
+                                </span>
+                              </div>
+            
+                              <div className="transform transition-transform duration-500 group-hover:translate-y-[-5px]">
+                                <h3 className="text-2xl md:text-3xl font-black text-white mb-3 uppercase tracking-tighter">
+                                  {brand.title}
+                                </h3>
+                                <p className="text-white/90 text-xs md:text-sm leading-relaxed mb-6 line-clamp-2 group-hover:text-white transition-colors">
+                                  {brand.description}
+                                </p>
+            
+                                <div className="flex items-center gap-3 text-white">
+                                  <div className="h-[2px] w-8 bg-[#d11a2a] group-hover:w-16 transition-all duration-500" />
+                                  <span className="text-[10px] font-black uppercase tracking-widest opacity-80">
+                                    View Details
+                                  </span>
+                                  <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
                                 </div>
-                            </motion.div>
+                              </div>
+                            </div>
+                          </motion.div>
                         ))}
-                    </motion.div>
-                </div>
-            </section>
+                      </motion.div>
+                    </div>
+                  </section>
 
             {/* --- 5. MODERN FOOTER (ENHANCED & ALIGNED) --- */}
             <footer className="bg-[#0a0a0a] text-white pt-24 pb-12">
@@ -304,55 +384,9 @@ export default function DisruptiveLandingPage() {
                             </ul>
                         </div>
 
-                        {/* NEWSLETTER / INSIGHTS */}
-                        <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl flex flex-col justify-between">
-                            <div>
-                                <h4 className="text-xl font-black uppercase tracking-tight mb-3">
-                                    Industry Insights
-                                </h4>
-
-                                <p className="text-gray-400 text-sm leading-relaxed mb-6 max-w-md">
-                                    Receive curated updates on smart lighting innovations, engineering
-                                    breakthroughs, and industry best practices — delivered straight to
-                                    your inbox.
-                                </p>
-
-                                <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10">
-                                    <input
-                                        type="email"
-                                        placeholder="Enter your business email"
-                                        className="
-                bg-transparent flex-1 px-4 py-2
-                text-sm text-white
-                placeholder:text-gray-500
-                outline-none
-              "
-                                    />
-
-                                    <button
-                                        className="
-                group flex items-center gap-2
-                bg-[#d11a2a] px-4 py-3 rounded-xl
-                hover:bg-[#b11422]
-                transition-all duration-300
-                shadow-lg
-              "
-                                    >
-                                        <span className="hidden md:block text-[10px] font-black uppercase tracking-widest">
-                                            Subscribe
-                                        </span>
-                                        <ArrowRight
-                                            size={18}
-                                            className="group-hover:translate-x-1 transition-transform"
-                                        />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <p className="text-[10px] text-gray-500 mt-4">
-                                We respect your privacy. No spam, unsubscribe anytime.
-                            </p>
-                        </div>
+            <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl flex flex-col justify-between">
+                <SignUpNewsletter></SignUpNewsletter>
+            </div>
                     </div>
 
                     {/* BOTTOM BAR */}

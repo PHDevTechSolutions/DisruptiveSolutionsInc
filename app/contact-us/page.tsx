@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
+import SignUpNewsletter from "../components/SignUpNewsletter" 
 import {
     Menu, Mail, Phone, MapPin, Send, ChevronUp, Sparkles, ArrowRight,
     Facebook, Instagram, Linkedin, X
@@ -290,14 +291,9 @@ export default function ContactUsPage() {
                                 ))}
                             </ul>
                         </div>
-                        <div className="md:col-span-2 bg-white/5 p-10 rounded-[40px] border border-white/10">
-                            <h4 className="text-xl font-black uppercase mb-4 italic">Join the Disruption</h4>
-                            <p className="text-gray-400 text-sm mb-8">Get the latest on smart lighting tech and engineering breakthroughs.</p>
-                            <div className="flex bg-black/50 p-2 rounded-2xl border border-white/10">
-                                <input type="email" placeholder="Email Address" className="bg-transparent flex-1 px-4 outline-none text-sm" />
-                                <button className="bg-[#d11a2a] p-3 rounded-xl hover:bg-white hover:text-black transition-all"><ArrowRight size={20} /></button>
-                            </div>
-                        </div>
+            <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl flex flex-col justify-between">
+                <SignUpNewsletter></SignUpNewsletter>
+            </div>
                     </div>
                     <div className="pt-12 border-t border-white/5 flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
                         <p>© 2026 Disruptive Solutions Inc.</p>

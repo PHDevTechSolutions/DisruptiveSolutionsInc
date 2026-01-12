@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useId } from "react";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestore";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
+import SignUpNewsletter from "../components/SignUpNewsletter"
 import {
   Menu,
   X,
@@ -34,6 +37,8 @@ const AI_AGENTS = [
   { id: "gpt4", name: "Disruptive AI", role: "Smart Lighting Expert", avatar: "https://github.com/shadcn.png", status: "online", icon: Sparkles, gradient: "from-red-500/20 to-rose-500/20" },
   { id: "gemini", name: "Sales Pro", role: "Quotation Assistant", avatar: "https://github.com/shadcn.png", status: "online", icon: Zap, gradient: "from-blue-500/20 to-cyan-500/20" },
 ];
+
+
 
 export default function DisruptiveLandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -77,6 +82,27 @@ export default function DisruptiveLandingPage() {
       image: "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png"
     }
   ];
+
+  const [blogs, setBlogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Kinukuha lang ang TOP 3 pinakabagong blogs
+    const q = query(
+      collection(db, "blogs"),
+      orderBy("createdAt", "desc"),
+      limit(3) // LIMIT TO 3 ONLY
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedBlogs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setBlogs(fetchedBlogs);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -211,24 +237,35 @@ export default function DisruptiveLandingPage() {
 
         <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col items-center">
 
-          {/* Section Header */}
-          <div className="text-center mb-16 max-w-3xl">
+          {/* --- BRAND SECTION HEADER (CENTERED & OPTIMIZED) --- */}
+          <div className="flex flex-col items-center justify-center text-center mb-20 max-w-3xl mx-auto px-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} // Mas smooth na "Out-Expo" ease
+              className="flex flex-col items-center"
             >
-              <span className="text-[#d11a2a] text-[10px] font-black uppercase tracking-[0.4em] mb-3 block">
-                Premium Products
+              {/* BADGE */}
+              <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] mb-6 bg-red-50 px-5 py-2 rounded-full border border-red-100/50">
+                <Zap size={12} className="fill-[#d11a2a]" /> Premium Products
               </span>
-              <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter uppercase leading-tight mb-6">
-                Our <span className="text-[#d11a2a]">Brands</span>
+
+              {/* TITLE */}
+              <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-[-0.04em] uppercase leading-[0.9] mb-8">
+                Our <br className="md:hidden" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">
+                  Brands
+                </span>
               </h2>
-              <div className="h-1 w-12 bg-[#d11a2a] mx-auto mb-6 rounded-full" />
-              <p className="text-gray-500 font-medium text-sm md:text-base leading-relaxed">
+
+              {/* ACCENT LINE */}
+              <div className="h-1.5 w-16 bg-[#d11a2a] mb-8 rounded-full shadow-[0_2px_10px_rgba(209,26,42,0.3)]" />
+
+              {/* DESCRIPTION */}
+              <p className="text-gray-500 font-medium text-xs md:text-sm leading-relaxed italic max-w-2xl">
                 Empowering your space with world-class engineering and sustainable lighting solutions
-                from our trusted global technology partners.
+                from our <span className="text-gray-900 font-bold">trusted global technology partners</span>.
               </p>
             </motion.div>
           </div>
@@ -300,53 +337,156 @@ export default function DisruptiveLandingPage() {
           </motion.div>
         </div>
       </section>
-      {/* --- 4. INFINITE LOGO SLIDER (PALAKI & DASHBOARD STYLE) --- */}
+      {/* --- 4. INFINITE LOGO SLIDER (CENTERED & CONTROLLED WIDTH) --- */}
       <section className="relative py-24 bg-white overflow-hidden border-y border-gray-100">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col lg:flex-row items-end justify-between gap-12 mb-16">
-            <div className="max-w-2xl">
-              <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-                <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[11px] font-black uppercase tracking-[0.3em] mb-4 bg-red-50 px-3 py-1 rounded-full">
-                  <Zap size={12} className="fill-current" /> Scalable Excellence
-                </span>
-                <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter uppercase leading-none">
-                  Our Disruptive <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-400">Global Network</span>
-                </h2>
-              </motion.div>
-            </div>
-            <div className="flex gap-8 md:gap-16">
-              {[{ label: "Partner Brands", value: "15+" }, { label: "Smart Projects", value: "250+" }].map((stat, i) => (
-                <div key={i} className="text-right">
-                  <div className="text-3xl md:text-5xl font-black text-gray-900 tracking-tighter italic">{stat.value}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{stat.label}</div>
+
+          {/* 1. CENTERED TITLE SECTION */}
+          <div className="text-center mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[11px] font-black uppercase tracking-[0.3em] mb-4 bg-red-50 px-3 py-1 rounded-full">
+                <Zap size={12} className="fill-current" /> Scalable Excellence
+              </span>
+              <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter uppercase leading-tight">
+                Our Disruptive <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-400">Partners</span>
+              </h2>
+              <div className="h-1.5 w-15 bg-[#d11a2a] mx-auto mt-6 rounded-full " />
+            </motion.div>
+          </div>
+
+          {/* 2. CONTROLLED WIDTH SLIDER CONTAINER */}
+          {/* Ginamit ang max-w-5xl para hindi masyadong malapad ang slider sa desktop */}
+          <div className="relative max-w-6xl mx-auto overflow-hidden">
+            <motion.div
+              className="flex whitespace-nowrap items-center"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{
+                duration: 30,
+                ease: "linear",
+                repeat: Infinity
+              }}
+            >
+              {[...Array(2)].map((_, outerIdx) => (
+                <div key={outerIdx} className="flex items-center shrink-0">
+                  {[
+                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
+                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
+                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
+                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
+                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
+                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
+                  ].map((logo, innerIdx) => (
+                    <div
+                      key={innerIdx}
+                      className="mx-10 md:mx-16 flex items-center justify-center shrink-0"
+                    >
+                      <img
+                        src={logo}
+                        alt="Partner Brand"
+                        className="h-16 md:h-28 w-auto object-contain hover:scale-110 transition-transform duration-500"
+                      />
+                    </div>
+                  ))}
                 </div>
               ))}
-            </div>
-          </div>
-        </div>
+            </motion.div>
 
-        <div className="relative flex overflow-hidden py-10 bg-gray-50/50">
-          <motion.div className="flex whitespace-nowrap" animate={{ x: ["0%", "-50%"] }} transition={{ duration: 25, ease: "linear", repeat: Infinity }}>
-            {[...Array(2)].map((_, outerIdx) => (
-              <div key={outerIdx} className="flex items-center">
-                {[
-                  "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
-                  "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
-                  "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
-                  "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
-                  "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
-                  "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
-                ].map((logo, innerIdx) => (
-                  <div key={innerIdx} className="mx-16 flex items-center justify-center group/logo">
-                    <img src={logo} alt="Partner" className="h-16 md:h-24 w-auto object-contain grayscale opacity-30 group-hover/logo:grayscale-0 group-hover/logo:opacity-100 group-hover/logo:scale-110 transition-all duration-700" />
-                  </div>
-                ))}
+            {/* Subtle Side Fades */}
+            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-gray-50 via-gray-50/40 to-transparent z-10 pointer-events-none" />
+            <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-gray-50 via-gray-50/40 to-transparent z-10 pointer-events-none" />
+          </div>
+
+        </div>
+      </section>
+
+      {/* --- 5. LATEST ARTICLES (CENTERED TITLE) --- */}
+      <section className="relative py-24 bg-[#fcfcfc] overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6">
+
+          {/* CENTERED HEADER SECTION */}
+          <div className="flex flex-col items-center justify-center text-center mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="flex flex-col items-center w-full"
+            >
+              {/* BADGE */}
+              <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[11px] font-black uppercase tracking-[0.3em] mb-4 bg-red-50 px-4 py-1.5 rounded-full">
+                <Zap size={12} className="fill-current" /> Knowledge Base
+              </span>
+
+              {/* TITLE - Inalis ang <br /> para hindi magpatong */}
+              <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter uppercase leading-tight whitespace-nowrap">
+                Latest <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-400">Insights</span>
+              </h2>
+
+              {/* ACCENT LINE */}
+              <div className="h-1.5 w-16 bg-[#d11a2a] mt-6 rounded-full" />
+            </motion.div>
+
+            {/* Explore All Link - Inilagay sa ilalim ng title para centered pa rin ang focus */}
+            <Link href="/blog" className="mt-8 group flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#d11a2a] transition-all">
+              Explore All Stories
+              <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all">
+                <ArrowRight size={16} />
               </div>
+            </Link>
+          </div>
+
+          {/* The Grid: 3 Columns Desktop / 1 Column Mobile */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {blogs.map((blog) => (
+              <Link href={`/blog/${blog.slug || blog.id}`} key={blog.id} className="group">
+                <div className="bg-white border border-gray-100 p-2 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(209,26,42,0.1)] h-full flex flex-col">
+
+                  {/* Image Container */}
+                  <div className="relative h-56 bg-gray-50 overflow-hidden mb-6">
+                    {blog.coverImage ? (
+                      <img
+                        src={blog.coverImage}
+                        alt={blog.title}
+                        className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110 p-4"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300 font-black italic text-[10px] uppercase">
+                        No Image Available
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Area */}
+                  <div className="px-4 pb-6 flex-grow flex flex-col">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="h-[1px] w-6 bg-[#d11a2a]" />
+                      <span className="text-[#d11a2a] text-[9px] font-black uppercase tracking-widest">
+                        {blog.category || "General"}
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-black text-gray-900 uppercase italic tracking-tighter leading-tight mb-4 group-hover:text-[#d11a2a] transition-colors line-clamp-2">
+                      {blog.title}
+                    </h3>
+
+                    <p className="text-gray-400 text-xs leading-relaxed mb-6 line-clamp-2 font-medium italic">
+                      {blog.sections?.[0]?.description || "Click to read more about this disruptive technology update."}
+                    </p>
+
+                    <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-900 group-hover:translate-x-2 transition-transform flex items-center gap-2">
+                        Read Full Story <ArrowRight size={12} className="text-[#d11a2a]" />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
             ))}
-          </motion.div>
-          <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-white via-white/80 to-transparent z-10" />
-          <div className="absolute inset-y-0 right-0 w-40 bg-gradient-to-l from-white via-white/80 to-transparent z-10" />
+          </div>
         </div>
       </section>
 
@@ -417,52 +557,7 @@ export default function DisruptiveLandingPage() {
 
             {/* NEWSLETTER / INSIGHTS */}
             <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl flex flex-col justify-between">
-              <div>
-                <h4 className="text-xl font-black uppercase tracking-tight mb-3">
-                  Industry Insights
-                </h4>
-
-                <p className="text-gray-400 text-sm leading-relaxed mb-6 max-w-md">
-                  Receive curated updates on smart lighting innovations, engineering
-                  breakthroughs, and industry best practices — delivered straight to
-                  your inbox.
-                </p>
-
-                <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10">
-                  <input
-                    type="email"
-                    placeholder="Enter your business email"
-                    className="
-                bg-transparent flex-1 px-4 py-2
-                text-sm text-white
-                placeholder:text-gray-500
-                outline-none
-              "
-                  />
-
-                  <button
-                    className="
-                group flex items-center gap-2
-                bg-[#d11a2a] px-4 py-3 rounded-xl
-                hover:bg-[#b11422]
-                transition-all duration-300
-                shadow-lg
-              "
-                  >
-                    <span className="hidden md:block text-[10px] font-black uppercase tracking-widest">
-                      Subscribe
-                    </span>
-                    <ArrowRight
-                      size={18}
-                      className="group-hover:translate-x-1 transition-transform"
-                    />
-                  </button>
-                </div>
-              </div>
-
-              <p className="text-[10px] text-gray-500 mt-4">
-                We respect your privacy. No spam, unsubscribe anytime.
-              </p>
+              <SignUpNewsletter></SignUpNewsletter>
             </div>
           </div>
 
@@ -481,7 +576,6 @@ export default function DisruptiveLandingPage() {
               Top <ChevronUp size={16} />
             </button>
           </div>
-
         </div>
       </footer>
 

@@ -8,7 +8,7 @@ import {
 } from "firebase/firestore";
 import { 
   Plus, Pencil, Trash2, Loader2, ImagePlus, X, 
-  AlignLeft, Layout, Save, FileText, Eye
+  AlignLeft, Layout, Save, FileText, Eye, Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { uploadToCloudinary } from "@/lib/cloudinary";
@@ -31,6 +31,7 @@ export default function BlogManager() {
   const [mainTitle, setMainTitle] = useState("");
   const [category, setCategory] = useState("Industry News");
   const [status, setStatus] = useState("Published");
+  const [website, setWebsite] = useState("Disruptive Solutions Inc"); // NEW STATE
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainImagePrev, setMainImagePrev] = useState<string | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
@@ -78,10 +79,16 @@ export default function BlogManager() {
         return sec;
       }));
 
+      // WEBSITE VALUE MAPPING
+      let websiteValue = "disruptivesolutionsinc";
+      if (website === "Ecoshift Corporation") websiteValue = "ecoshiftcorporation";
+      if (website === "VAH") websiteValue = "VAH";
+
       const blogData = {
         title: mainTitle,
         category,
         status,
+        website: websiteValue, // SAVING THE MAPPED VALUE
         coverImage: finalMainImage,
         sections: updatedSections,
         updatedAt: serverTimestamp(),
@@ -111,6 +118,7 @@ export default function BlogManager() {
     setMainImage(null);
     setSections([]);
     setStatus("Published");
+    setWebsite("Disruptive Solutions Inc"); // RESET WEBSITE
   };
 
   return (
@@ -145,12 +153,15 @@ export default function BlogManager() {
               <tr key={blog.id} className="hover:bg-gray-50/30 transition-colors group">
                 <td className="px-8 py-6">
                   <div className="w-20 h-14 rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-                    <img src={blog.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <img src={blog.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
                   </div>
                 </td>
                 <td className="px-8 py-6">
                   <h4 className="font-black text-gray-900 uppercase text-sm mb-1 truncate max-w-[300px]">{blog.title}</h4>
-                  <span className="text-[9px] font-black text-[#d11a2a] uppercase tracking-widest">{blog.category}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black text-[#d11a2a] uppercase tracking-widest">{blog.category}</span>
+                    <span className="text-[8px] font-bold text-gray-300 uppercase">| {blog.website || 'N/A'}</span>
+                  </div>
                 </td>
                 <td className="px-8 py-6 text-center">
                   <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
@@ -164,7 +175,12 @@ export default function BlogManager() {
                     <button onClick={() => {
                         setEditingId(blog.id); setMainTitle(blog.title); setCategory(blog.category);
                         setStatus(blog.status || "Published"); setMainImagePrev(blog.coverImage);
-                        setSections(blog.sections || []); setIsModalOpen(true);
+                        setSections(blog.sections || []); 
+                        // Reverse mapping for Edit mode
+                        if(blog.website === 'ecoshiftcorporation') setWebsite("Ecoshift Corporation");
+                        else if(blog.website === 'VAH') setWebsite("VAH");
+                        else setWebsite("Disruptive Solutions Inc");
+                        setIsModalOpen(true);
                     }} className="p-3 bg-gray-50 text-gray-400 hover:bg-black hover:text-white rounded-xl transition-all"><Pencil size={16}/></button>
                     <button onClick={() => confirm("Delete this story permanently?") && deleteDoc(doc(db, "blogs", blog.id))} className="p-3 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all"><Trash2 size={16}/></button>
                   </div>
@@ -225,6 +241,20 @@ export default function BlogManager() {
                       </select>
                     </div>
                     
+                    {/* UPDATED WEBSITE SELECT */}
+                    <div className="space-y-2">
+                      <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block">Target Website</span>
+                      <select 
+                        value={website} 
+                        onChange={(e) => setWebsite(e.target.value)} 
+                        className="font-black text-xs uppercase outline-none bg-transparent cursor-pointer text-gray-900 border-b-2 border-transparent focus:border-[#d11a2a] pb-1 transition-all"
+                      >
+                        <option>Disruptive Solutions Inc</option>
+                        <option>Ecoshift Corporation</option>
+                        <option>VAH</option>
+                      </select>
+                    </div>
+                    
                     <label className="ml-auto flex items-center gap-3 cursor-pointer bg-gray-900 text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#d11a2a] transition-all shadow-lg">
                       <ImagePlus size={16} /> {mainImagePrev ? "Replace Cover" : "Upload Cover"}
                       <input type="file" className="hidden" onChange={(e) => {
@@ -236,7 +266,7 @@ export default function BlogManager() {
                   
                   {mainImagePrev && (
                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative aspect-[21/9] rounded-[2.5rem] overflow-hidden shadow-2xl group">
-                      <img src={mainImagePrev} className="w-full h-full object-cover" />
+                      <img src={mainImagePrev} className="w-full h-full object-cover" alt="" />
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all" />
                     </motion.div>
                   )}
@@ -267,7 +297,7 @@ export default function BlogManager() {
                           <div className="grid md:grid-cols-2 gap-10 items-center">
                             <div className="relative aspect-square bg-white rounded-3xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden hover:border-[#d11a2a] transition-all group/img">
                               {section.imageUrl || section.imageFile ? (
-                                <img src={section.imageFile ? URL.createObjectURL(section.imageFile) : section.imageUrl} className="w-full h-full object-cover" />
+                                <img src={section.imageFile ? URL.createObjectURL(section.imageFile) : section.imageUrl} className="w-full h-full object-cover" alt="" />
                               ) : <div className="text-center space-y-2 text-gray-300 group-hover/img:text-[#d11a2a]"><ImagePlus className="mx-auto" size={40}/><span className="text-[9px] font-black uppercase tracking-widest block">Insert Image</span></div>}
                               <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => updateSection(section.id, { imageFile: e.target.files?.[0] })} />
                             </div>
