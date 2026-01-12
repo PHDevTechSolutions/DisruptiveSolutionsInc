@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, where } from "firebase/firestore";
 import {
     ArrowRight,
     ChevronUp,
@@ -29,7 +29,7 @@ export default function CareersPage() {
     const LOGO_WHITE = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
 
     useEffect(() => {
-        const q = query(collection(db, "careers"), orderBy("createdAt", "desc"));
+        const q = query(collection(db, "careers"), orderBy("createdAt", "desc"), where("website", "==", "Disruptive"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const jobsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setJobs(jobsData.filter((job: any) => job.status === "Open"));

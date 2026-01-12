@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Loader2, ChevronUp, Facebook, Instagram, Linkedin } from "lucide-react"; 
 import { db } from "@/lib/firebase"; 
 // Idinagdag ang 'limit' sa import
-import { collection, query, orderBy, onSnapshot, limit, } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, limit, where } from "firebase/firestore";
 
 // Inayos ang parenthesis dito
 export default function BlogPage() {
@@ -18,6 +18,7 @@ export default function BlogPage() {
         const q = query(
             collection(db, "blogs"), 
             orderBy("createdAt", "desc"), 
+            where("website", "==", "Disruptive"),
             limit(6) // Ginawa nating 6 para mas marami makita sa listahan
         );
         

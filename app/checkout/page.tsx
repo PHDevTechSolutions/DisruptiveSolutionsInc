@@ -5,10 +5,12 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ChevronLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { detectWebsite } from "@/lib/detect-website";
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const pathname = usePathname(); // ⬅ Get current path
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -39,8 +41,12 @@ export default function CheckoutPage() {
     if (cartItems.length === 0) return alert("Your cart is empty");
 
     setIsSubmitting(true);
+
     try {
-      // 1. SAVE TO FIREBASE
+      // 🔹 Detect website from pathname
+      const website = detectWebsite(pathname);
+
+      // 🔹 Save inquiry to Firestore
       const docRef = await addDoc(collection(db, "inquiries"), {
         customerDetails: formData,
         items: cartItems.map(item => ({
@@ -50,10 +56,11 @@ export default function CheckoutPage() {
           image: item.mainImage
         })),
         status: "pending",
+        website, // ⬅ NEW FIELD
         createdAt: serverTimestamp(),
       });
 
-      // 2. SEND EMAIL VIA API ROUTE
+      // 🔹 Send email
       await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,11 +72,12 @@ export default function CheckoutPage() {
             quantity: item.quantity || 1,
             image: item.mainImage
           })),
-          inquiryId: docRef.id
+          inquiryId: docRef.id,
+          website, // optional, include website in email
         }),
       });
 
-      // 3. SUCCESS UI & CLEANUP
+      // 🔹 Success UI & cleanup
       localStorage.removeItem("disruptive_quote_cart");
       window.dispatchEvent(new Event("cartUpdated"));
       setIsSuccess(true);
