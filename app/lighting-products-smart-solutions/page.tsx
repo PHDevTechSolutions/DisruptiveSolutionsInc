@@ -84,7 +84,7 @@ export default function BrandsPage() {
 useEffect(() => {
   const q = query(
     collection(db, "products"),
-    where("websites", "==", "Disruptive"),
+    where("website", "==", "Disruptive"),
     orderBy("createdAt", "desc")
   );
 
