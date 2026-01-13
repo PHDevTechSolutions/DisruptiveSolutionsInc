@@ -375,123 +375,148 @@ export default function ContactUsPage() {
                 </div>
             </section>
 
-            {/* --- CONTACT BLOCK --- */}
-            <section className="relative z-20 -mt-24 px-6 pb-24">
-                <div className="max-w-7xl mx-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-                        
-                        {/* Left: Info & Map */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <div className="bg-white p-10 rounded-[40px] shadow-2xl border border-gray-100">
-                                <h3 className="text-2xl font-black uppercase mb-8">Quick <span className="text-[#d11a2a]">Contacts</span></h3>
-                                <div className="space-y-6 mb-10">
-                                    <div className="flex gap-4 group cursor-pointer">
-                                        <div className="h-12 w-12 rounded-2xl bg-red-50 flex items-center justify-center text-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all"><Mail size={20} /></div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Email Us</p>
-                                            <p className="font-bold text-gray-900">info@disruptivesolutionsinc.com</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-4 group cursor-pointer">
-                                        <div className="h-12 w-12 rounded-2xl bg-red-50 flex items-center justify-center text-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all"><Phone size={20} /></div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Direct Line</p>
-                                            <p className="font-bold text-gray-900">+63 917 527 8819</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-4 group cursor-pointer">
-                                        <div className="h-12 w-12 rounded-2xl bg-red-50 flex items-center justify-center text-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all"><MapPin size={20} /></div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Headquarters</p>
-                                            <p className="font-bold text-gray-900 leading-tight">Primex Tower, EDSA, <br/>San Juan, Metro Manila</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    {socials.map((soc, i) => (
-                                        <a key={i} href={soc.href} className={`h-11 w-11 rounded-full bg-gray-50 flex items-center justify-center transition-all hover:text-white ${soc.color}`}><soc.icon size={18} /></a>
-                                    ))}
-                                </div>
+           {/* --- CONTACT BLOCK --- */}
+<section className="relative z-20 -mt-12 md:-mt-24 px-4 md:px-6 pb-16 md:pb-24">
+    <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 items-start">
+            
+            {/* Left: Info & Map */}
+            <div className="lg:col-span-4 space-y-6">
+                <div className="bg-white p-8 md:p-10 rounded-[32px] md:rounded-[40px] shadow-2xl border border-gray-100">
+                    <h3 className="text-xl md:text-2xl font-black uppercase mb-8">
+                        Quick <span className="text-[#d11a2a]">Contacts</span>
+                    </h3>
+                    
+                    <div className="space-y-6 mb-10">
+                        {/* Email */}
+                        <div className="flex gap-4 group cursor-pointer">
+                            <div className="h-12 w-12 shrink-0 rounded-2xl bg-red-50 flex items-center justify-center text-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all">
+                                <Mail size={20} />
                             </div>
-
-                            <div className="h-[400px] rounded-[40px] overflow-hidden border-8 border-white shadow-2xl relative">
-                                <Map center={[14.6019, 121.0590]} zoom={15} scrollWheelZoom={false}>
-                                    <MapTileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-                                    <MapMarker position={[14.6019, 121.0590]}>
-                                        <MapPopup>Disruptive Solutions HQ</MapPopup>
-                                    </MapMarker>
-                                </Map>
+                            <div className="min-w-0"> {/* min-w-0 prevents text overflow */}
+                                <p className="text-[11px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest">Email Us</p>
+                                <p className="font-bold text-gray-900 break-words text-sm md:text-base">info@disruptivesolutionsinc.com</p>
                             </div>
                         </div>
 
-                        {/* Right: Modern Form */}
-                        <div className="lg:col-span-8 bg-white p-8 md:p-16 rounded-[50px] shadow-[0_50px_100px_rgba(0,0,0,0.08)] border border-gray-50">
-                            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="md:col-span-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 block ml-2">Full Name</label>
-                                    <input 
-                                        required
-                                        value={formData.fullName}
-                                        onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                                        type="text" 
-                                        placeholder="John Doe" 
-                                        className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#d11a2a]/20 outline-none transition-all font-bold" 
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 block ml-2">Email Address</label>
-                                    <input 
-                                        required
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                        type="email" 
-                                        placeholder="john@company.com" 
-                                        className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#d11a2a]/20 outline-none transition-all font-bold" 
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 block ml-2">Phone Number</label>
-                                    <input 
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                        type="tel" 
-                                        placeholder="+63 900 000 0000" 
-                                        className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#d11a2a]/20 outline-none transition-all font-bold" 
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 block ml-2">Project Brief</label>
-                                    <textarea 
-                                        required
-                                        value={formData.message}
-                                        onChange={(e) => setFormData({...formData, message: e.target.value})}
-                                        rows={6} 
-                                        placeholder="Describe your lighting project or smart solution requirements..." 
-                                        className="w-full bg-gray-50 border-none rounded-[32px] px-6 py-4 focus:ring-2 focus:ring-[#d11a2a]/20 outline-none transition-all font-bold resize-none"
-                                    ></textarea>
-                                </div>
-                                
-                                <div className="md:col-span-2">
-                                    <motion.button
-                                        disabled={status === "loading"}
-                                        whileHover={{ scale: 1.01 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        type="submit"
-                                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl flex items-center justify-center gap-4 transition-all
-                                            ${status === "success" ? "bg-green-600 shadow-green-500/30" : 
-                                              status === "error" ? "bg-black" : "bg-[#d11a2a] shadow-red-500/30"} text-white`}
-                                    >
-                                        {status === "loading" ? "Processing..." : 
-                                         status === "success" ? "Message Sent!" : 
-                                         status === "error" ? "Try Again" : "Send Proposal"} 
-                                        <Send size={16} />
-                                    </motion.button>
-                                </div>
-                            </form>
+                        {/* Phone */}
+                        <div className="flex gap-4 group cursor-pointer">
+                            <div className="h-12 w-12 shrink-0 rounded-2xl bg-red-50 flex items-center justify-center text-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all">
+                                <Phone size={20} />
+                            </div>
+                            <div>
+                                <p className="text-[11px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest">Direct Line</p>
+                                <p className="font-bold text-gray-900 text-sm md:text-base">+63 917 527 8819</p>
+                            </div>
+                        </div>
+
+                        {/* Address */}
+                        <div className="flex gap-4 group cursor-pointer">
+                            <div className="h-12 w-12 shrink-0 rounded-2xl bg-red-50 flex items-center justify-center text-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all">
+                                <MapPin size={20} />
+                            </div>
+                            <div>
+                                <p className="text-[11px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest">Headquarters</p>
+                                <p className="font-bold text-gray-900 leading-tight text-sm md:text-base">
+                                    Primex Tower, EDSA, <br className="hidden md:block"/> San Juan, Metro Manila
+                                </p>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Socials */}
+                    <div className="flex flex-wrap gap-3">
+                        {socials.map((soc, i) => (
+                            <a key={i} href={soc.href} className={`h-11 w-11 rounded-full bg-gray-50 flex items-center justify-center transition-all hover:text-white ${soc.color}`}>
+                                <soc.icon size={18} />
+                            </a>
+                        ))}
+                    </div>
                 </div>
-            </section>
+
+                {/* Map - Hidden on very small screens or adjusted height */}
+                <div className="h-[300px] md:h-[400px] rounded-[32px] md:rounded-[40px] overflow-hidden border-4 md:border-8 border-white shadow-2xl relative">
+                    <Map center={[14.6019, 121.0590]} zoom={15} scrollWheelZoom={false}>
+                        <MapTileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                        <MapMarker position={[14.6019, 121.0590]}>
+                            <MapPopup>Disruptive Solutions HQ</MapPopup>
+                        </MapMarker>
+                    </Map>
+                </div>
+            </div>
+
+            {/* Right: Modern Form */}
+            <div className="lg:col-span-8 bg-white p-6 md:p-16 rounded-[40px] md:rounded-[50px] shadow-[0_50px_100px_rgba(0,0,0,0.08)] border border-gray-50">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                    
+                    <div className="md:col-span-2">
+                        <label className="text-[11px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 block ml-2">Full Name</label>
+                        <input 
+                            required
+                            value={formData.fullName}
+                            onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                            type="text" 
+                            placeholder="John Doe" 
+                            className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#d11a2a]/20 outline-none transition-all font-bold text-base md:text-sm" 
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[11px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 block ml-2">Email Address</label>
+                        <input 
+                            required
+                            value={formData.email}
+                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            type="email" 
+                            placeholder="john@company.com" 
+                            className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#d11a2a]/20 outline-none transition-all font-bold text-base md:text-sm" 
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[11px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 block ml-2">Phone Number</label>
+                        <input 
+                            value={formData.phone}
+                            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                            type="tel" 
+                            placeholder="+63 900 000 0000" 
+                            className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#d11a2a]/20 outline-none transition-all font-bold text-base md:text-sm" 
+                        />
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="text-[11px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 block ml-2">Project Brief</label>
+                        <textarea 
+                            required
+                            value={formData.message}
+                            onChange={(e) => setFormData({...formData, message: e.target.value})}
+                            rows={5} 
+                            placeholder="Describe your lighting project..." 
+                            className="w-full bg-gray-50 border-none rounded-[24px] md:rounded-[32px] px-6 py-4 focus:ring-2 focus:ring-[#d11a2a]/20 outline-none transition-all font-bold resize-none text-base md:text-sm"
+                        ></textarea>
+                    </div>
+                    
+                    <div className="md:col-span-2 pt-2">
+                        <motion.button
+                            disabled={status === "loading"}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.98 }}
+                            type="submit"
+                            className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.15em] md:tracking-[0.3em] text-[13px] md:text-xs shadow-2xl flex items-center justify-center gap-4 transition-all
+                                ${status === "success" ? "bg-green-600 shadow-green-500/30" : 
+                                  status === "error" ? "bg-black" : "bg-[#d11a2a] shadow-red-500/30"} text-white`}
+                        >
+                            {status === "loading" ? "Processing..." : 
+                             status === "success" ? "Message Sent!" : 
+                             status === "error" ? "Try Again" : "Send Proposal"} 
+                            <Send size={16} />
+                        </motion.button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
 
             {/* --- FOOTER --- */}
             <footer className="bg-[#0a0a0a] text-white pt-32 pb-12">
