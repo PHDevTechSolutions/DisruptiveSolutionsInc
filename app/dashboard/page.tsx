@@ -484,72 +484,74 @@ export default function DisruptiveLandingPage() {
           </motion.div>
         </div>
       </section>
-      {/* --- 4. INFINITE LOGO SLIDER (CENTERED & CONTROLLED WIDTH) --- */}
-      <section className="relative py-24 bg-white overflow-hidden border-y border-gray-100">
-        <div className="max-w-7xl mx-auto px-6">
+{/* --- 4. INFINITE LOGO SLIDER (OPTIMIZED SPEED) --- */}
+<section className="relative py-20 md:py-24 bg-white overflow-hidden border-y border-gray-100">
+  <div className="max-w-7xl mx-auto px-6">
 
-          {/* 1. CENTERED TITLE SECTION */}
-          <div className="text-center mb-16">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[11px] font-black uppercase tracking-[0.3em] mb-4 bg-red-50 px-3 py-1 rounded-full">
-                <Zap size={12} className="fill-current" /> Scalable Excellence
-              </span>
-              <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter uppercase leading-tight">
-                Our Disruptive <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-400">Partners</span>
-              </h2>
-              <div className="h-1.5 w-15 bg-[#d11a2a] mx-auto mt-6 rounded-full " />
-            </motion.div>
+    {/* 1. CENTERED TITLE SECTION */}
+    <div className="text-center mb-12 md:mb-16">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+      >
+        <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] mb-4 bg-red-50 px-3 py-1 rounded-full">
+          <Zap size={12} className="fill-current" /> Scalable Excellence
+        </span>
+        <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter uppercase leading-tight">
+          Our Disruptive <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-400">Partners</span>
+        </h2>
+        <div className="h-1.5 w-12 bg-[#d11a2a] mx-auto mt-6 rounded-full" />
+      </motion.div>
+    </div>
+
+    {/* 2. CONTROLLED WIDTH SLIDER CONTAINER */}
+    <div className="relative max-w-6xl mx-auto overflow-hidden">
+      <motion.div
+        className="flex whitespace-nowrap items-center"
+        animate={{ x: ["0%", "-50%"] }}
+        transition={{
+          // DYNAMIC SPEED: 15s sa mobile para mabilis, 30s sa desktop para swabe
+          duration: typeof window !== 'undefined' && window.innerWidth < 768 ? 15 : 30,
+          ease: "linear",
+          repeat: Infinity
+        }}
+      >
+        {[...Array(2)].map((_, outerIdx) => (
+          <div key={outerIdx} className="flex items-center shrink-0">
+            {[
+              "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
+              "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
+              "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
+              "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
+              "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
+              "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
+            ].map((logo, innerIdx) => (
+              <div
+                key={innerIdx}
+                // BINABAWASAN ANG MARGIN SA MOBILE (mx-6 vs mx-16)
+                className="mx-6 md:mx-16 flex items-center justify-center shrink-0"
+              >
+                <img
+                  src={logo}
+                  alt="Partner Brand"
+                  // PINALITAN ANG HEIGHT PARA HINDI SOBRANG LAKI SA CP (h-10 vs h-28)
+                  className="h-10 md:h-24 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-500 opacity-60 hover:opacity-100"
+                />
+              </div>
+            ))}
           </div>
+        ))}
+      </motion.div>
 
-          {/* 2. CONTROLLED WIDTH SLIDER CONTAINER */}
-          {/* Ginamit ang max-w-5xl para hindi masyadong malapad ang slider sa desktop */}
-          <div className="relative max-w-6xl mx-auto overflow-hidden">
-            <motion.div
-              className="flex whitespace-nowrap items-center"
-              animate={{ x: ["0%", "-50%"] }}
-              transition={{
-                duration: 30,
-                ease: "linear",
-                repeat: Infinity
-              }}
-            >
-              {[...Array(2)].map((_, outerIdx) => (
-                <div key={outerIdx} className="flex items-center shrink-0">
-                  {[
-                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
-                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
-                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
-                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
-                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
-                    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
-                  ].map((logo, innerIdx) => (
-                    <div
-                      key={innerIdx}
-                      className="mx-10 md:mx-16 flex items-center justify-center shrink-0"
-                    >
-                      <img
-                        src={logo}
-                        alt="Partner Brand"
-                        className="h-16 md:h-28 w-auto object-contain hover:scale-110 transition-transform duration-500"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </motion.div>
+      {/* Side Fades (Mas pinitas para sa mobile) */}
+      <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-white via-white/80 to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-white via-white/80 to-transparent z-10 pointer-events-none" />
+    </div>
 
-            {/* Subtle Side Fades */}
-            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-gray-50 via-gray-50/40 to-transparent z-10 pointer-events-none" />
-            <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-gray-50 via-gray-50/40 to-transparent z-10 pointer-events-none" />
-          </div>
-
-        </div>
-      </section>
+  </div>
+</section>
 
       {/* --- 5. LATEST ARTICLES (CENTERED TITLE) --- */}
       <section className="relative py-24 bg-[#fcfcfc] overflow-hidden">
