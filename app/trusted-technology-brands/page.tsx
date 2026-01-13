@@ -70,6 +70,27 @@ export default function BrandsShowcase() {
     { name: "Contact Us", href: "/contact-us" },
   ];
 
+  const BRANDS_CONFIG = [
+  {
+    id: "zumtobel",
+    name: "ZUMTOBEL",
+    slug: "/zumtobel-lighting-solutions", // Papunta sa ZumtobelHybridPage
+    logo: "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
+    description: "Global leader in holistic lighting solutions for professional applications.",
+    bgColor: "bg-[#f9f9f9]",
+    accentColor: "text-[#d11a2a]",
+  },
+  {
+    id: "lit",
+    name: "LIT",
+    slug: "/lit-lighting-solutions", // Papunta sa LitRedBlackPage
+    logo: "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
+    description: "Architectural lighting for modern, energy-efficient environments.",
+    bgColor: "bg-[#ffffff]",
+    accentColor: "text-black",
+  }
+];
+
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
@@ -206,49 +227,67 @@ export default function BrandsShowcase() {
             <div className="w-[1px] h-16 bg-gradient-to-b from-[#d11a2a] to-transparent" />
         </motion.div>
       </section>
+{/* --- MAIN CONTENT (BRAND SHOWCASE) --- */}
+<main className="flex-grow w-full relative z-20">
+  {BRANDS_CONFIG.map((brand) => (
+    <section key={brand.id} className={`w-full py-24 border-b border-gray-50 ${brand.bgColor} flex items-center justify-center`}>
+      <div className="max-w-[1400px] w-full px-8 md:px-12">
+        <div className="flex flex-col lg:flex-row gap-20 items-center">
+          
+          {/* --- LEFT SIDE: Brand Identity --- */}
+          <div className="w-full lg:w-[350px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-10">
+            <div className="h-16 md:h-20">
+              <img src={brand.logo} alt={brand.name} className="h-full w-auto object-contain" />
+            </div>
+            
+            <div className="space-y-4">
+              <h2 className={`text-3xl font-black italic tracking-tighter uppercase leading-tight ${brand.accentColor}`}>
+                {brand.name} <span className="text-black">COLLECTION</span>
+              </h2>
+              <p className="text-[13px] text-gray-500 font-bold uppercase tracking-wide leading-relaxed">
+                {brand.description}
+              </p>
+            </div>
 
-      {/* --- 3. MAIN CONTENT (BRAND SHOWCASE) --- */}
-      <main className="flex-grow w-full relative z-20">
-        {BRANDS_CONFIG.map((brand) => (
-          <section key={brand.id} className={`w-full py-24 border-b border-gray-50 ${brand.bgColor} flex items-center justify-center`}>
-            <div className="max-w-[1400px] w-full px-8 md:px-12">
-              <div className="flex flex-col lg:flex-row gap-20 items-center">
+            {/* HIWALAY NA BUTTON PARA SA CATALOGUE */}
+            <div className="w-full pt-4">
+              <Link 
+                href={brand.slug} 
+                className="group relative inline-flex items-center justify-between w-full md:w-auto md:min-w-[240px] px-8 py-5 bg-black text-white overflow-hidden transition-all hover:bg-[#d11a2a]"
+              >
+                <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.4em]">
+                  Enter {brand.name}
+                </span>
+                <ArrowRight size={18} className="relative z-10 group-hover:translate-x-3 transition-transform duration-500" />
                 
-                {/* --- LEFT SIDE: Brand Identity --- */}
-                <div className="w-full lg:w-[300px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-8">
-                  <div className="h-16 md:h-20">
-                    <img src={brand.logo} alt={brand.name} className="h-full w-auto object-contain" />
-                  </div>
-                  <div className="space-y-4">
-                    <h2 className={`text-2xl font-black italic tracking-tighter uppercase leading-tight ${brand.accentColor}`}>
-                      {brand.name} <span className="text-black">COLLECTION</span>
-                    </h2>
-                    <p className="text-xs text-gray-400 font-medium leading-relaxed">
-                      {brand.description}
-                    </p>
-                  </div>
-                  <Link href={`/lighting-products-smart-solutions?filter=${brand.name}`} className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] group border-b-2 border-transparent hover:border-[#d11a2a] pb-2 transition-all">
-                    View Catalogue <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
-                  </Link>
-                </div>
+                {/* Background Animation Effect */}
+                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+              </Link>
+              
+              <p className="mt-4 text-[9px] font-black text-gray-300 uppercase tracking-widest italic">
+                Explore dedicated technical solutions →
+              </p>
+            </div>
+          </div>
 
+          {/* --- RIGHT SIDE: Swiper remains the same but with improved card links --- */}
                 {/* --- RIGHT SIDE: Swiper --- */}
                 <div className="flex-1 w-full relative min-w-0">
-                  <Swiper
-                    modules={[Navigation, Autoplay]}
-                    spaceBetween={30}
-                    slidesPerView={1}
-                    breakpoints={{
-                      640: { slidesPerView: 2 },
-                      1024: { slidesPerView: 3 }
-                    }}
-                    autoplay={{ delay: 5000 }}
-                    navigation={{
-                      prevEl: `.prev-${brand.id}`,
-                      nextEl: `.next-${brand.id}`,
-                    }}
-                    className="w-full rounded-2xl"
-                  >
+<Swiper
+  modules={[Navigation, Autoplay]}
+  spaceBetween={16} // Mas maliit na gap sa mobile
+  slidesPerView={1.2} // Pakitang-tao yung susunod na card
+  breakpoints={{
+    640: { slidesPerView: 2, spaceBetween: 24 },
+    1024: { slidesPerView: 3, spaceBetween: 30 }
+  }}
+  autoplay={{ delay: 5000 }}
+  navigation={{
+    prevEl: `.prev-${brand.id}`,
+    nextEl: `.next-${brand.id}`,
+  }}
+  className="w-full rounded-2xl"
+>
                     {brandProducts[brand.id]?.map((product: any) => (
                       <SwiperSlide key={product.id} className="pb-10">
                         <Link href={`/lighting-products-smart-solutions/${product.id}`}>
@@ -286,12 +325,11 @@ export default function BrandsShowcase() {
                     </button>
                   </div>
                 </div>
-
-              </div>
-            </div>
-          </section>
-        ))}
-      </main>
+        </div>
+      </div>
+    </section>
+  ))}
+</main>
 
       {/* --- 4. FOOTER --- */}
       <footer className="bg-[#0a0a0a] text-white pt-32 pb-12 relative overflow-hidden">

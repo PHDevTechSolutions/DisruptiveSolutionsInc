@@ -28,49 +28,74 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
 
-  // --- HANDLE LOGIN / SIGNUP ---
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
-    setResetMessage("");
+ // --- HANDLE LOGIN / SIGNUP ---
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setError("");
+  setResetMessage("");
 
-    try {
-      if (isLogin) {
-        // LOG IN
-        await signInWithEmailAndPassword(auth, email, password);
-        router.push("/portal"); 
-      } else {
-        // SIGN UP
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+  try {
+    if (isLogin) {
+      // 1. LOG IN sa Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-        await updateProfile(user, { displayName: fullName });
+      // 2. SAVE TO LOCALSTORAGE para sa session persistence
+      const userData = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        website: "disruptivesolutionsinc", // Tagging the session
+        lastLogin: new Date().toISOString()
+      };
+      
+      localStorage.setItem("disruptive_user_session", JSON.stringify(userData));
 
-        // Save to Firestore
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          fullName: fullName,
-          email: email,
-          role: "customer",
-          createdAt: new Date().toISOString(),
-        });
+      router.push("/portal"); 
+    } else {
+      // SIGN UP sa Firebase
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-        router.push("/portal");
-      }
-    } catch (err: any) {
-      // Handle Firebase Errors
-      if (err.code === "auth/invalid-email") {
-        setError("THE EMAIL ADDRESS IS MALFORMED. PLEASE CHECK FOR SPACES.");
-      } else if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
-        setError("INVALID CREDENTIALS. PLEASE TRY AGAIN.");
-      } else {
-        setError(err.message.toUpperCase());
-      }
-    } finally {
-      setIsLoading(false);
+      await updateProfile(user, { displayName: fullName });
+
+      // 3. SAVE TO FIRESTORE (with website tag)
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        fullName: fullName,
+        email: email,
+        role: "customer",
+        website: "disruptivesolutionsinc", // Para sa admin dashboard filtering
+        createdAt: new Date().toISOString(),
+      });
+
+      // 4. SAVE TO LOCALSTORAGE (Signup session)
+      const userData = {
+        uid: user.uid,
+        email: email,
+        displayName: fullName,
+        website: "disruptivesolutionsinc",
+        createdAt: new Date().toISOString()
+      };
+
+      localStorage.setItem("disruptive_user_session", JSON.stringify(userData));
+
+      router.push("/portal");
     }
-  };
+  } catch (err: any) {
+    // ... handling errors (keep your existing error logic here)
+    if (err.code === "auth/invalid-email") {
+      setError("THE EMAIL ADDRESS IS MALFORMED. PLEASE CHECK FOR SPACES.");
+    } else if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+      setError("INVALID CREDENTIALS. PLEASE TRY AGAIN.");
+    } else {
+      setError(err.message.toUpperCase());
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // --- FORGOT PASSWORD LOGIC ---
   const handleForgotPassword = async () => {
