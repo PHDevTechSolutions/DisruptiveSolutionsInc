@@ -484,19 +484,19 @@ export default function DisruptiveLandingPage() {
           </motion.div>
         </div>
       </section>
-{/* --- 4. INFINITE LOGO SLIDER (OPTIMIZED SPEED) --- */}
-<section className="relative py-20 md:py-24 bg-white overflow-hidden border-y border-gray-100">
+{/* --- 4. INFINITE LOGO SLIDER (CLEAN & FAST) --- */}
+<section className="relative py-16 md:py-24 bg-white overflow-hidden border-y border-gray-100">
   <div className="max-w-7xl mx-auto px-6">
 
     {/* 1. CENTERED TITLE SECTION */}
-    <div className="text-center mb-12 md:mb-16">
+    <div className="text-center mb-10 md:mb-16">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
       >
         <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] mb-4 bg-red-50 px-3 py-1 rounded-full">
-          <Zap size={12} className="fill-current" /> Scalable Excellence
+          <Zap size={12} className="fill-[#d11a2a]" /> Scalable Excellence
         </span>
         <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter uppercase leading-tight">
           Our Disruptive <br />
@@ -506,14 +506,14 @@ export default function DisruptiveLandingPage() {
       </motion.div>
     </div>
 
-    {/* 2. CONTROLLED WIDTH SLIDER CONTAINER */}
+    {/* 2. SLIDER (NO GREY FILTER + FAST MOBILE) */}
     <div className="relative max-w-6xl mx-auto overflow-hidden">
       <motion.div
         className="flex whitespace-nowrap items-center"
         animate={{ x: ["0%", "-50%"] }}
         transition={{
-          // DYNAMIC SPEED: 15s sa mobile para mabilis, 30s sa desktop para swabe
-          duration: typeof window !== 'undefined' && window.innerWidth < 768 ? 15 : 30,
+          // 12s sa mobile (mabilis!), 25s sa desktop (swabe)
+          duration: typeof window !== 'undefined' && window.innerWidth < 768 ? 12 : 25,
           ease: "linear",
           repeat: Infinity
         }}
@@ -530,14 +530,14 @@ export default function DisruptiveLandingPage() {
             ].map((logo, innerIdx) => (
               <div
                 key={innerIdx}
-                // BINABAWASAN ANG MARGIN SA MOBILE (mx-6 vs mx-16)
-                className="mx-6 md:mx-16 flex items-center justify-center shrink-0"
+                className="mx-8 md:mx-16 flex items-center justify-center shrink-0"
               >
                 <img
                   src={logo}
                   alt="Partner Brand"
-                  // PINALITAN ANG HEIGHT PARA HINDI SOBRANG LAKI SA CP (h-10 vs h-28)
-                  className="h-10 md:h-24 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-500 opacity-60 hover:opacity-100"
+                  // Clean classes: tinanggal ang grayscale at opacity
+                  // mix-blend-multiply: tinatanggal ang white background ng image
+                  className="h-12 md:h-24 w-auto object-contain mix-blend-multiply brightness-100 contrast-100"
                 />
               </div>
             ))}
@@ -545,11 +545,10 @@ export default function DisruptiveLandingPage() {
         ))}
       </motion.div>
 
-      {/* Side Fades (Mas pinitas para sa mobile) */}
-      <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-white via-white/80 to-transparent z-10 pointer-events-none" />
-      <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-white via-white/80 to-transparent z-10 pointer-events-none" />
+      {/* Side Fades (Para maglaho yung logos sa dulo) */}
+      <div className="absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-white via-white/80 to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-white via-white/80 to-transparent z-10 pointer-events-none" />
     </div>
-
   </div>
 </section>
 
