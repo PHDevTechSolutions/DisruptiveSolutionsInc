@@ -1,19 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { 
-  ImageIcon,
-  Pencil,
-  Trash2,
-  ExternalLink,
-  Loader2,
-  Search,
-  Filter,
-  X
+  Pencil, 
+  Trash2, 
+  Loader2, 
+  Search, 
 } from "lucide-react";
 
-// UI Components (shadcn)
+// UI Components
 import { 
   Table, 
   TableBody, 
@@ -60,18 +56,16 @@ import {
 import { toast } from "sonner";
 
 export function AllProducts() {
-  // --- STATES ---
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [brandFilter, setBrandFilter] = useState("All Brands");
 
-  // Edit States
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // --- 1. FETCH DATA (Real-time) ---
+  // --- 1. FETCH DATA (Tumutugma sa format ng 'Add Product' natin) ---
   useEffect(() => {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -81,22 +75,25 @@ export function AllProducts() {
       }));
       setProducts(productList);
       setLoading(false);
+    }, (error) => {
+      console.error("Fetch error:", error);
+      toast.error("Failed to load products");
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  // --- 2. DELETE LOGIC ---
+  // --- 2. DELETE ---
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, "products", id));
       toast.success("Product deleted successfully");
     } catch (error) {
-      console.error("Delete error:", error);
       toast.error("Failed to delete product");
     }
   };
 
-  // --- 3. UPDATE LOGIC ---
+  // --- 3. EDIT & UPDATE ---
   const handleEditClick = (product: any) => {
     setEditingProduct(JSON.parse(JSON.stringify(product))); // Deep copy
     setIsEditOpen(true);
@@ -107,7 +104,7 @@ export function AllProducts() {
     setIsUpdating(true);
     try {
       const productRef = doc(db, "products", editingProduct.id);
-      const { id, ...dataToUpdate } = editingProduct;
+      const { id, ...dataToUpdate } = editingProduct; // Huwag isama ang ID sa database update
       await updateDoc(productRef, dataToUpdate);
       toast.success("Updated successfully!");
       setIsEditOpen(false);
@@ -118,31 +115,24 @@ export function AllProducts() {
     }
   };
 
-  const handleSpecChange = (blockId: string, newValue: string) => {
-    const updatedBlocks = editingProduct.descriptionBlocks.map((block: any) => 
-      block.id === blockId ? { ...block, value: newValue } : block
-    );
-    setEditingProduct({ ...editingProduct, descriptionBlocks: updatedBlocks });
-  };
-
-  // --- 4. FILTERING LOGIC ---
+  // --- 4. FILTER LOGIC ---
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchesBrand = brandFilter === "All Brands" || 
-                           (Array.isArray(p.brands) ? p.brands.includes(brandFilter) : p.brands === brandFilter);
+      // Single string ang 'brand' sa bagong database structure
+      const matchesBrand = brandFilter === "All Brands" || p.brand === brandFilter;
       const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+                           p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesBrand && matchesSearch;
     });
   }, [products, brandFilter, searchQuery]);
 
+  // Extract unique brands para sa dropdown filter
   const uniqueBrands = useMemo(() => {
     const brandsSet = new Set<string>();
     products.forEach((p: any) => {
-      if (Array.isArray(p.brands)) p.brands.forEach((b: string) => brandsSet.add(b));
-      else if (p.brands) brandsSet.add(p.brands);
+      if (p.brand) brandsSet.add(p.brand);
     });
-    return Array.from(brandsSet);
+    return Array.from(brandsSet).sort();
   }, [products]);
 
   return (
@@ -150,24 +140,23 @@ export function AllProducts() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-black uppercase italic tracking-tighter text-gray-900">Inventory</h2>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Manage your product database</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Manage your products</p>
         </div>
-
       </div>
 
-      {/* --- FILTERS --- */}
+      {/* --- SEARCH & FILTERS --- */}
       <div className="flex flex-wrap gap-3 items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <Input 
-            placeholder="Search products..." 
+            placeholder="Search name or SKU..." 
             className="pl-10 rounded-xl border-gray-100 bg-gray-50/50"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <select 
-          className="border rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider bg-gray-50/50 border-gray-100 outline-none"
+          className="border rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider bg-gray-50/50 border-gray-100 outline-none cursor-pointer"
           value={brandFilter}
           onChange={(e) => setBrandFilter(e.target.value)}
         >
@@ -180,13 +169,13 @@ export function AllProducts() {
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-gray-50/50">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[40px] px-6"><Checkbox /></TableHead>
-              <TableHead className="w-[80px]">Image</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest">Product Details</TableHead>
+            <TableRow>
+              <TableHead className="w-[80px] pl-6">Image</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest">Product Info</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest">SKU</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest">Brands</TableHead>
-              <TableHead className="text-right px-6 text-[10px] font-black uppercase tracking-widest">Actions</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest">Brand</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest">Price</TableHead>
+              <TableHead className="text-right pr-6 text-[10px] font-black uppercase tracking-widest">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,41 +186,46 @@ export function AllProducts() {
             ) : (
               filteredProducts.map((product) => (
                 <TableRow key={product.id} className="group hover:bg-gray-50/50 transition-colors">
-                  <TableCell className="px-6"><Checkbox /></TableCell>
-                  <TableCell>
-                    <div className="w-12 h-12 bg-gray-50 rounded-xl p-1 border border-gray-100">
-                      <img src={product.mainImage} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+                  <TableCell className="pl-6">
+                    <div className="w-12 h-12 bg-gray-50 rounded-xl p-1 border border-gray-100 overflow-hidden">
+                      <img src={product.mainImage} alt="" className="w-full h-full object-contain" />
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-bold text-sm text-gray-900 line-clamp-1">{product.name}</span>
-                      <span className="text-[10px] text-blue-600 font-bold uppercase">{product.categories?.[0] || "No Category"}</span>
+                      <span className="text-[9px] text-blue-600 font-black uppercase tracking-tighter">{product.category || "No Category"}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-[10px] font-black text-gray-400 uppercase">{product.sku}</TableCell>
+                  <TableCell className="text-[10px] font-black text-gray-400 uppercase">{product.sku || "---"}</TableCell>
                   <TableCell>
-                    <span className="text-[9px] font-black bg-gray-100 px-2 py-1 rounded text-gray-500 uppercase">
-                      {Array.isArray(product.brands) ? product.brands[0] : product.brands}
+                    <span className="text-[9px] font-black bg-slate-100 px-2 py-1 rounded text-slate-500 uppercase">
+                      {product.brand || "Generic"}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right px-6">
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-gray-900">₱{product.regularPrice}</span>
+                      {product.salePrice > 0 && <span className="text-[9px] text-red-500 font-bold line-through">₱{product.salePrice}</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right pr-6">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500" onClick={() => handleEditClick(product)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-50" onClick={() => handleEditClick(product)}>
                         <Pencil size={14} />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Trash2 size={14} /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50"><Trash2 size={14} /></Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-3xl">
+                        <AlertDialogContent className="rounded-3xl border-none">
                           <AlertDialogHeader>
                             <AlertDialogTitle className="font-black uppercase italic tracking-tighter">Delete Product?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-xs">Permanent deletion of {product.name}.</AlertDialogDescription>
+                            <AlertDialogDescription className="text-xs">Permanent deletion of {product.name}. This cannot be undone.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel className="rounded-xl border-none bg-gray-100 font-bold text-[10px] uppercase">Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(product.id)} className="rounded-xl bg-red-600 font-bold text-[10px] uppercase">Delete</AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDelete(product.id)} className="rounded-xl bg-red-600 font-bold text-[10px] uppercase">Confirm Delete</AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -246,51 +240,70 @@ export function AllProducts() {
 
       {/* --- EDIT SHEET --- */}
       <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <SheetContent className="sm:max-w-[600px] overflow-y-auto rounded-l-[40px] border-none shadow-2xl">
+        <SheetContent className="sm:max-w-[500px] overflow-y-auto rounded-l-[40px] border-none shadow-2xl">
           <SheetHeader className="pb-6 border-b">
             <SheetTitle className="text-3xl font-black uppercase italic tracking-tighter">Edit Product</SheetTitle>
-            <SheetDescription className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Update specification and meta data</SheetDescription>
+            <SheetDescription className="text-[10px] font-bold uppercase tracking-widest text-gray-400 tracking-tighter">Update your inventory data</SheetDescription>
           </SheetHeader>
 
           {editingProduct && (
-            <div className="space-y-8 py-8">
+            <div className="space-y-6 py-8">
               <div className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Product Name</Label>
-                  <Input value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="rounded-2xl py-6" />
+                  <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">Product Name</Label>
+                  <Input value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="rounded-2xl py-6 border-slate-100 font-bold" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">SKU</Label>
-                    <Input value={editingProduct.sku} onChange={(e) => setEditingProduct({...editingProduct, sku: e.target.value})} className="rounded-2xl py-6" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">Regular Price</Label>
+                    <Input type="number" value={editingProduct.regularPrice} onChange={(e) => setEditingProduct({...editingProduct, regularPrice: Number(e.target.value)})} className="rounded-2xl py-6 border-slate-100" />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Main Image URL</Label>
-                    <Input value={editingProduct.mainImage} onChange={(e) => setEditingProduct({...editingProduct, mainImage: e.target.value})} className="rounded-2xl py-6" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">Sale Price</Label>
+                    <Input type="number" value={editingProduct.salePrice} onChange={(e) => setEditingProduct({...editingProduct, salePrice: Number(e.target.value)})} className="rounded-2xl py-6 border-slate-100" />
                   </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">SKU / Model Number</Label>
+                  <Input value={editingProduct.sku} onChange={(e) => setEditingProduct({...editingProduct, sku: e.target.value})} className="rounded-2xl py-6 border-slate-100 uppercase" />
                 </div>
               </div>
 
+              {/* SPECIFICATIONS EDITING (Dito na-edit yung Watts, Voltage etc) */}
               <div className="space-y-4">
-                <h3 className="text-[11px] font-black uppercase italic text-red-600 border-b pb-2">Technical Blocks</h3>
-                {editingProduct.descriptionBlocks?.map((block: any) => (
-                  <div key={block.id} className="p-5 bg-gray-50 rounded-[25px] border border-gray-100 space-y-3">
-                    <div className="flex justify-between items-center">
-                      <Label className="text-[10px] font-black uppercase text-gray-500">{block.label}</Label>
-                    </div>
-                    <textarea 
-                      className="w-full min-h-[120px] p-4 text-sm rounded-2xl border border-gray-200 bg-white focus:outline-none focus:ring-4 ring-red-50 transition-all font-medium leading-relaxed"
-                      value={block.value}
-                      onChange={(e) => handleSpecChange(block.id, e.target.value)}
-                    />
-                    <p className="text-[9px] text-gray-400 font-bold uppercase">Format: Label: Value</p>
+                <h3 className="text-[11px] font-black uppercase italic text-blue-600 border-b pb-2 tracking-widest">Specifications</h3>
+                {editingProduct.specifications?.map((block: any, bIdx: number) => (
+                  <div key={bIdx} className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black uppercase text-slate-400">{block.label}</p>
+                    {block.rows?.map((row: any, rIdx: number) => (
+                      <div key={rIdx} className="grid grid-cols-2 gap-2">
+                        <Input 
+                          value={row.name} 
+                          className="h-8 text-xs bg-white rounded-lg" 
+                          onChange={(e) => {
+                            const newSpecs = [...editingProduct.specifications];
+                            newSpecs[bIdx].rows[rIdx].name = e.target.value;
+                            setEditingProduct({...editingProduct, specifications: newSpecs});
+                          }} 
+                        />
+                        <Input 
+                          value={row.value} 
+                          className="h-8 text-xs bg-white rounded-lg" 
+                          onChange={(e) => {
+                            const newSpecs = [...editingProduct.specifications];
+                            newSpecs[bIdx].rows[rIdx].value = e.target.value;
+                            setEditingProduct({...editingProduct, specifications: newSpecs});
+                          }} 
+                        />
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <SheetFooter className="pt-6 border-t mt-4">
+          <SheetFooter className="pt-6 border-t">
             <Button disabled={isUpdating} onClick={handleUpdate} className="w-full bg-[#d11a2a] hover:bg-red-700 text-white rounded-2xl py-8 font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-red-500/20 transition-all active:scale-95">
               {isUpdating ? <Loader2 className="animate-spin" /> : "Commit Changes"}
             </Button>
