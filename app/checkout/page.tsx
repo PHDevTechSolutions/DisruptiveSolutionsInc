@@ -14,8 +14,13 @@ export default function CheckoutPage() {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
-    firstName: "", lastName: "", streetAddress: "",
-    apartment: "", phone: "", email: "", orderNotes: "",
+    firstName: "", 
+    lastName: "", 
+    streetAddress: "",
+    apartment: "", 
+    phone: "", 
+    email: "", 
+    orderNotes: "",
   });
 
   useEffect(() => {
@@ -41,7 +46,9 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     try {
       // 1. SAVE TO FIREBASE
+      // Idinagdag ang 'type: "product"' para sa filtering sa admin panel
       const docRef = await addDoc(collection(db, "inquiries"), {
+        type: "product", // <--- IMPORTANT: Para sa admin panel filtering
         customerDetails: formData,
         items: cartItems.map(item => ({
           name: item.name,
@@ -54,20 +61,24 @@ export default function CheckoutPage() {
       });
 
       // 2. SEND EMAIL
-      await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerDetails: formData,
-          items: cartItems.map(item => ({
-            name: item.name,
-            sku: item.sku,
-            quantity: item.quantity || 1,
-            image: item.mainImage
-          })),
-          inquiryId: docRef.id
-        }),
-      });
+      try {
+        await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerDetails: formData,
+            items: cartItems.map(item => ({
+              name: item.name,
+              sku: item.sku,
+              quantity: item.quantity || 1,
+              image: item.mainImage
+            })),
+            inquiryId: docRef.id
+          }),
+        });
+      } catch (emailError) {
+        console.error("Email notification failed, but database record was created.");
+      }
 
       // 3. CLEANUP
       localStorage.removeItem("disruptive_quote_cart");
@@ -123,15 +134,24 @@ export default function CheckoutPage() {
                     <input required name="lastName" value={formData.lastName} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold" />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Email address *</label>
+                        <input required type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Phone Number *</label>
+                        <input required type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold" />
+                    </div>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Street address *</label>
                   <input required name="streetAddress" placeholder="House number and street name" value={formData.streetAddress} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold" />
                   <input name="apartment" placeholder="Apartment, suite, unit, etc. (optional)" value={formData.apartment} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold mt-2" />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Email address *</label>
-                  <input required type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full border-b border-gray-200 py-2 focus:border-[#d11a2a] outline-none text-sm font-bold" />
-                </div>
+
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Order notes (optional)</label>
                   <textarea name="orderNotes" value={formData.orderNotes} onChange={handleInputChange} className="w-full border border-gray-100 rounded-2xl p-4 min-h-[120px] focus:border-[#d11a2a] outline-none text-sm font-medium bg-gray-50/50" />

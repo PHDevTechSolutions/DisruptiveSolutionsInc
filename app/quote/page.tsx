@@ -71,34 +71,46 @@ export default function FreeQuote() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setStatus("idle");
+   const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus("idle");
 
-        try {
-            let finalFileUrl = "";
-            if (file) {
-                finalFileUrl = await uploadToCloudinary(file);
-            }
-
-            await addDoc(collection(db, "quotes"), {
-                ...formData,
-                attachmentUrl: finalFileUrl,
-                status: "pending",
-                createdAt: serverTimestamp(),
-            });
-
-            setStatus("success");
-            setFormData({ firstName: "", lastName: "", streetAddress: "", company: "", contactNumber: "", email: "", message: "" });
-            setFile(null);
-        } catch (error) {
-            console.error("Final Submission Error:", error);
-            setStatus("error");
-        } finally {
-            setLoading(false);
+    try {
+        let finalFileUrl = "";
+        if (file) {
+            finalFileUrl = await uploadToCloudinary(file);
         }
-    };
+
+        // 1. Siguraduhin na "inquiries" ang collection kung doon nagbabasa ang Sidebar
+        // 2. Idagdag ang status: "unread" at type: "quotation"
+        await addDoc(collection(db, "inquiries"), {
+            ...formData,
+            attachmentUrl: finalFileUrl,
+            status: "unread", // <--- Eto ang kailangan ng Sidebar Badge
+            type: "quotation", // <--- Para pumasok sa Quotation category
+            processStatus: "pending", // Pwede mong itago yung "pending" sa ibang field
+            createdAt: serverTimestamp(),
+        });
+
+        setStatus("success");
+        setFormData({ 
+            firstName: "", 
+            lastName: "", 
+            streetAddress: "", 
+            company: "", 
+            contactNumber: "", 
+            email: "", 
+            message: "" 
+        });
+        setFile(null);
+    } catch (error) {
+        console.error("Final Submission Error:", error);
+        setStatus("error");
+    } finally {
+        setLoading(false);
+    }
+};
 
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 20);

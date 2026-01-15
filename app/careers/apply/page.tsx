@@ -57,44 +57,50 @@ function ApplyFormContent() {
             setFile(e.target.files[0]);
         }
     };
+// --- SUBMIT LOGIC ---
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!file) return alert("Please upload your resume.");
 
-    // --- SUBMIT LOGIC ---
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!file) return alert("Please upload your resume.");
+    setIsSubmitting(true);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
 
-        setIsSubmitting(true);
-        const form = e.currentTarget;
-        const formData = new FormData(form);
+    try {
+        // 1. Upload sa Cloudinary
+        const resumeUrl = await uploadToCloudinary(file);
 
-        try {
-            // 1. Upload sa Cloudinary gamit ang lib mo
-            const resumeUrl = await uploadToCloudinary(file);
+        // 2. I-prepare ang data para sa "inquiries" collection
+        const applicationData = {
+            jobId: jobId,
+            jobTitle: jobData?.title || searchParams.get("jobTitle") || "Unknown",
+            fullName: formData.get("fullName"),
+            email: formData.get("email"),
+            phone: formData.get("phone"),
+            resumeUrl: resumeUrl,
+            
+            // --- ETO ANG MGA REQUIRED PARA SA SIDEBAR BADGE ---
+            type: "job",           // Para pumasok sa 'Job Application' category
+            status: "unread",      // Para mabilang sa notification badge
+            
+            // Pwede mong i-keep ang pending status para sa internal hiring process
+            internalStatus: "pending", 
+            appliedAt: serverTimestamp(),
+        };
 
-            // 2. Save sa Firestore
-            const applicationData = {
-                jobId: jobId,
-                jobTitle: jobData?.title || searchParams.get("jobTitle") || "Unknown",
-                fullName: formData.get("fullName"),
-                email: formData.get("email"),
-                phone: formData.get("phone"),
-                resumeUrl: resumeUrl,
-                status: "pending",
-                appliedAt: serverTimestamp(),
-            };
+        // Gagamit tayo ng "inquiries" na collection para isang listener na lang sa Sidebar
+        await addDoc(collection(db, "inquiries"), applicationData);
 
-            await addDoc(collection(db, "applications"), applicationData);
+        alert("Application submitted successfully!");
+        router.push("/careers"); 
 
-            alert("Application submitted successfully!");
-            router.push("/careers"); 
-
-        } catch (error: any) {
-            console.error("Submission Error:", error);
-            alert(error.message || "Something went wrong.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+    } catch (error: any) {
+        console.error("Submission Error:", error);
+        alert(error.message || "Something went wrong.");
+    } finally {
+        setIsSubmitting(false);
+    }
+};
 
     return (
         <div className="min-h-screen bg-[#fafafa] font-sans selection:bg-[#d11a2a]/10">

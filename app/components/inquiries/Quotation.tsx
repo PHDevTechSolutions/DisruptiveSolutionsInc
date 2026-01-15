@@ -9,21 +9,13 @@ import {
     onSnapshot, 
     doc, 
     deleteDoc,
-    updateDoc 
+    updateDoc,
+    where
 } from "firebase/firestore";
 import { 
-    Mail, 
-    Phone, 
-    FileText, 
-    Calendar, 
-    Trash2, 
-    ExternalLink,
-    Search,
-    User,
-    CheckCircle,
-    Clock,
-    MapPin,
-    Building2
+    Mail, Phone, FileText, Calendar, Trash2, 
+    ExternalLink, Search, User, CheckCircle, 
+    Clock, MapPin, Building2, X 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -31,11 +23,17 @@ export default function Quotation() {
     const [quotes, setQuotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [selectedQuote, setSelectedQuote] = useState<any>(null);
 
-    // --- REAL-TIME FETCH ---
+   // --- REAL-TIME FETCH (FILTERED FOR QUOTATIONS ONLY) ---
     useEffect(() => {
-        // 'quotes' ang collection name dito base sa logic mo kanina
-        const q = query(collection(db, "quotes"), orderBy("createdAt", "desc"));
+        // Nagdagdag tayo ng where("type", "==", "quotation")
+        // para hindi sumama ang mga "product" inquiries o orders dito.
+        const q = query(
+            collection(db, "inquiries"), 
+            where("type", "==", "quotation"), // FILTER: Quotes lang kukunin
+            orderBy("createdAt", "desc")
+        );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const quoteList = snapshot.docs.map(doc => ({
@@ -45,31 +43,51 @@ export default function Quotation() {
             setQuotes(quoteList);
             setLoading(false);
         }, (error) => {
-            console.error("Firebase Error:", error);
+            console.error("Firebase Fetch Error:", error);
             setLoading(false);
         });
 
         return () => unsubscribe();
     }, []);
 
+    // --- OPEN DIALOG & MARK AS READ ---
+    const handleViewDetails = async (quote: any) => {
+        setSelectedQuote(quote);
+        
+        // Pagbukas, matic na mag-uupdate ang unread status sa database
+        if (quote.status === "unread") {
+            try {
+                await updateDoc(doc(db, "inquiries", quote.id), { 
+                    status: "read" 
+                });
+            } catch (error) {
+                console.error("Error updating status:", error);
+            }
+        }
+    };
+
     // --- DELETE FUNCTION ---
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // Iwasan na bumukas ang dialog pag nag-delete
         if (confirm("Are you sure you want to delete this quote request?")) {
             try {
-                await deleteDoc(doc(db, "quotes", id));
+                await deleteDoc(doc(db, "inquiries", id));
             } catch (error) {
                 console.error("Error deleting:", error);
             }
         }
     };
 
-    // --- UPDATE STATUS ---
-    const toggleStatus = async (id: string, currentStatus: string) => {
-        const nextStatus = currentStatus === "reviewed" ? "pending" : "reviewed";
+    const formatDateTime = (timestamp: any) => {
+        if (!timestamp) return "No Date";
         try {
-            await updateDoc(doc(db, "quotes", id), { status: nextStatus });
-        } catch (error) {
-            console.error("Error updating status:", error);
+            const date = timestamp.toDate();
+            return new Intl.DateTimeFormat('en-US', {
+                month: 'short', day: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true 
+            }).format(date);
+        } catch (e) {
+            return "Invalid Date";
         }
     };
 
@@ -87,7 +105,7 @@ export default function Quotation() {
 
     return (
         <div className="space-y-8">
-            {/* Header & Search - Katulad ng Applications Page */}
+            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Project Quotations</h2>
@@ -98,7 +116,7 @@ export default function Quotation() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#d11a2a] transition-colors" size={18} />
                     <input 
                         type="text" 
-                        placeholder="Search by name, email or company..." 
+                        placeholder="Search..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-12 pr-6 py-4 bg-white border border-gray-100 rounded-2xl w-full md:w-80 shadow-sm focus:ring-2 focus:ring-[#d11a2a]/10 outline-none font-medium text-sm transition-all"
@@ -106,95 +124,42 @@ export default function Quotation() {
                 </div>
             </div>
 
-            {/* Quotations List */}
+            {/* List */}
             <div className="grid grid-cols-1 gap-4">
                 <AnimatePresence mode="popLayout">
                     {filteredQuotes.map((quote) => (
                         <motion.div
                             key={quote.id}
                             layout
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white border border-gray-100 p-6 rounded-[2rem] hover:shadow-xl hover:shadow-gray-200/40 transition-all group"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => handleViewDetails(quote)}
+                            className={`bg-white border p-6 rounded-[2rem] hover:shadow-xl transition-all cursor-pointer relative group ${
+                                quote.status === "unread" ? "border-l-4 border-l-[#d11a2a] border-gray-100" : "border-gray-100"
+                            }`}
                         >
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                                
-                                {/* Client Info - Gayang-gaya ang layout */}
                                 <div className="flex items-start gap-5">
-                                    <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-red-50 transition-colors">
-                                        <User className="text-gray-400 group-hover:text-[#d11a2a]" size={24} />
+                                    <div className="relative">
+                                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0">
+                                            <User className={quote.status === "unread" ? "text-[#d11a2a]" : "text-gray-400"} size={24} />
+                                        </div>
+                                        {quote.status === "unread" && (
+                                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#d11a2a] rounded-full border-2 border-white animate-pulse" />
+                                        )}
                                     </div>
                                     <div className="space-y-1">
-                                        <h3 className="text-lg font-black text-gray-900 leading-none">
-                                            {quote.firstName} {quote.lastName}
-                                        </h3>
-                                        <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                            <span className="flex items-center gap-1 text-[#d11a2a]">
-                                                <Building2 size={12} /> {quote.company || "Individual"}
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <Calendar size={12} /> {quote.createdAt?.toDate().toLocaleDateString()}
-                                            </span>
-                                            <span className="flex items-center gap-1 lowercase">
-                                                <MapPin size={12} /> {quote.streetAddress}
-                                            </span>
+                                        <h3 className="text-lg font-black text-gray-900 leading-none">{quote.firstName} {quote.lastName}</h3>
+                                        <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-gray-400 uppercase">
+                                            <span className="flex items-center gap-1 text-[#d11a2a]"><Building2 size={12} /> {quote.company || "Individual"}</span>
+                                            <span className="flex items-center gap-1"><Calendar size={12} /> {formatDateTime(quote.createdAt)}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Contact & Message Snippet */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-8 flex-1 px-0 lg:px-8">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-gray-50 rounded-lg text-gray-400"><Mail size={14} /></div>
-                                            <span className="text-sm font-bold text-gray-600 lowercase">{quote.email}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-gray-50 rounded-lg text-gray-400"><Phone size={14} /></div>
-                                            <span className="text-sm font-bold text-gray-600">{quote.contactNumber}</span>
-                                        </div>
-                                    </div>
-                                    <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Message Preview:</p>
-                                        <p className="text-xs text-gray-600 line-clamp-2 italic">"{quote.message || "No message."}"</p>
-                                    </div>
-                                </div>
-
-                                {/* Actions - Same buttons style */}
-                                <div className="flex items-center gap-2 pt-4 lg:pt-0 border-t lg:border-t-0 border-gray-50">
-                                    {/* Attachment Link */}
-                                    <a 
-                                        href={quote.attachmentUrl} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className={`flex-1 lg:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                            quote.attachmentUrl 
-                                            ? "bg-gray-900 text-white hover:bg-[#d11a2a]" 
-                                            : "bg-gray-100 text-gray-300 pointer-events-none"
-                                        }`}
-                                    >
-                                        <FileText size={14} /> {quote.attachmentUrl ? "View Brief" : "No File"} <ExternalLink size={12} />
-                                    </a>
-
-                                    {/* Status Toggle */}
-                                    <button 
-                                        onClick={() => toggleStatus(quote.id, quote.status)}
-                                        className={`p-3 rounded-xl transition-all ${
-                                            quote.status === "reviewed" 
-                                            ? "bg-green-100 text-green-600" 
-                                            : "bg-gray-100 text-gray-400 hover:bg-orange-50 hover:text-orange-500"
-                                        }`}
-                                        title="Mark as Reviewed"
-                                    >
-                                        <CheckCircle size={18} />
-                                    </button>
-
-                                    {/* Delete */}
-                                    <button 
-                                        onClick={() => handleDelete(quote.id)}
-                                        className="p-3 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all"
-                                    >
+                                <div className="flex items-center gap-2">
+                                    <button onClick={(e) => handleDelete(quote.id, e)} className="p-3 bg-gray-50 text-gray-400 hover:text-red-500 rounded-xl">
                                         <Trash2 size={18} />
                                     </button>
                                 </div>
@@ -202,13 +167,60 @@ export default function Quotation() {
                         </motion.div>
                     ))}
                 </AnimatePresence>
+            </div>
 
-                {filteredQuotes.length === 0 && (
-                    <div className="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-200">
-                        <p className="text-xs font-black text-gray-300 uppercase tracking-[0.3em]">No quotations found</p>
+            {/* --- DIALOG MODAL --- */}
+            <AnimatePresence>
+                {selectedQuote && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setSelectedQuote(null)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden"
+                        >
+                            <div className="p-8 space-y-6">
+                                <div className="flex justify-between items-start">
+                                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">{selectedQuote.firstName} {selectedQuote.lastName}</h2>
+                                    <button onClick={() => setSelectedQuote(null)} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100"><X size={20}/></button>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-6 rounded-3xl">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3 text-sm font-bold text-gray-600"><Mail size={16}/> {selectedQuote.email}</div>
+                                        <div className="flex items-center gap-3 text-sm font-bold text-gray-600"><Phone size={16}/> {selectedQuote.contactNumber}</div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3 text-sm font-bold text-gray-600"><MapPin size={16}/> {selectedQuote.streetAddress}</div>
+                                        <div className="flex items-center gap-3 text-sm font-bold text-gray-600 text-[#d11a2a]"><Building2 size={16}/> {selectedQuote.company || "Personal"}</div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Client Message:</p>
+                                    <div className="p-6 bg-white border border-gray-100 rounded-2xl italic text-gray-700 text-sm leading-relaxed">
+                                        "{selectedQuote.message || "No message provided."}"
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <a 
+                                        href={selectedQuote.attachmentUrl} target="_blank"
+                                        className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                                            selectedQuote.attachmentUrl ? "bg-gray-900 text-white hover:bg-red-600" : "bg-gray-100 text-gray-300 pointer-events-none"
+                                        }`}
+                                    >
+                                        <FileText size={18}/> {selectedQuote.attachmentUrl ? "Download Brief" : "No Attachment"}
+                                    </a>
+                                </div>
+                            </div>
+                        </motion.div>
                     </div>
                 )}
-            </div>
+            </AnimatePresence>
         </div>
     );
 }

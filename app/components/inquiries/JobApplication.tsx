@@ -2,27 +2,30 @@
 
 import React, { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { 
-    collection, 
-    query, 
-    orderBy, 
-    onSnapshot, 
-    doc, 
+import {
+    collection,
+    query,
+    orderBy,
+    onSnapshot,
+    doc,
     deleteDoc,
-    updateDoc 
+    updateDoc,
+    where
 } from "firebase/firestore";
-import { 
-    Mail, 
-    Phone, 
-    FileText, 
-    Calendar, 
-    Briefcase, 
-    Trash2, 
+import {
+    Mail,
+    Phone,
+    FileText,
+    Calendar,
+    Briefcase,
+    Trash2,
     ExternalLink,
     Search,
     User,
     CheckCircle,
-    Clock
+    Clock,
+    X,
+    ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -30,11 +33,15 @@ export default function ApplicationInquiries() {
     const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [selectedApp, setSelectedApp] = useState<any | null>(null);
 
-    // --- REAL-TIME FETCH ---
     useEffect(() => {
-        const q = query(collection(db, "applications"), orderBy("appliedAt", "desc"));
-        
+        const q = query(
+            collection(db, "inquiries"),
+            where("type", "==", "job"),
+            orderBy("appliedAt", "desc")
+        );
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const appList = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -47,28 +54,52 @@ export default function ApplicationInquiries() {
         return () => unsubscribe();
     }, []);
 
-    // --- DELETE FUNCTION ---
-    const handleDelete = async (id: string) => {
+    const formatDateTime = (timestamp: any) => {
+        if (!timestamp) return "---";
+        const date = timestamp.toDate();
+        return new Intl.DateTimeFormat('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }).format(date);
+    };
+
+    const markAsRead = async (id: string, currentStatus: string) => {
+        if (currentStatus === "unread") {
+            try {
+                await updateDoc(doc(db, "inquiries", id), { status: "read" });
+            } catch (error) {
+                console.error("Error marking as read:", error);
+            }
+        }
+    };
+
+    const handleDelete = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
         if (confirm("Are you sure you want to delete this application?")) {
             try {
-                await deleteDoc(doc(db, "applications", id));
+                await deleteDoc(doc(db, "inquiries", id));
+                if (selectedApp?.id === id) setSelectedApp(null);
             } catch (error) {
                 console.error("Error deleting:", error);
             }
         }
     };
 
-    // --- UPDATE STATUS ---
-    const toggleStatus = async (id: string, currentStatus: string) => {
-        const nextStatus = currentStatus === "pending" ? "reviewed" : "pending";
+    const toggleInternalStatus = async (e: React.MouseEvent, id: string, currentStatus: string) => {
+        e.stopPropagation();
+        const nextStatus = currentStatus === "reviewed" ? "pending" : "reviewed";
         try {
-            await updateDoc(doc(db, "applications", id), { status: nextStatus });
+            await updateDoc(doc(db, "inquiries", id), { internalStatus: nextStatus });
         } catch (error) {
             console.error("Error updating status:", error);
         }
     };
 
-    const filteredApps = applications.filter(app => 
+    const filteredApps = applications.filter(app =>
         app.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -80,19 +111,18 @@ export default function ApplicationInquiries() {
     );
 
     return (
-        <div className="space-y-8">
-            {/* Header & Search */}
+        <div className="space-y-8 relative">
+            {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Job Applications</h2>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Manage incoming resumes and candidates</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Manage resumes and candidates</p>
                 </div>
-                
                 <div className="relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#d11a2a] transition-colors" size={18} />
-                    <input 
-                        type="text" 
-                        placeholder="Search candidates..." 
+                    <input
+                        type="text"
+                        placeholder="Search candidates..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-12 pr-6 py-4 bg-white border border-gray-100 rounded-2xl w-full md:w-80 shadow-sm focus:ring-2 focus:ring-[#d11a2a]/10 outline-none font-medium text-sm transition-all"
@@ -100,7 +130,7 @@ export default function ApplicationInquiries() {
                 </div>
             </div>
 
-            {/* Applications List */}
+            {/* List Section */}
             <div className="grid grid-cols-1 gap-4">
                 <AnimatePresence mode="popLayout">
                     {filteredApps.map((app) => (
@@ -110,84 +140,144 @@ export default function ApplicationInquiries() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white border border-gray-100 p-6 rounded-[2rem] hover:shadow-xl hover:shadow-gray-200/40 transition-all group"
+                            onClick={() => {
+                                setSelectedApp(app);
+                                markAsRead(app.id, app.status);
+                            }}
+                            className={`bg-white border p-6 rounded-[2rem] hover:shadow-xl transition-all group cursor-pointer ${
+                                app.status === "unread" ? "border-l-4 border-l-[#d11a2a] border-gray-100" : "border-gray-100"
+                            }`}
                         >
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                                
-                                {/* Candidate Info */}
                                 <div className="flex items-start gap-5">
-                                    <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-red-50 transition-colors">
-                                        <User className="text-gray-400 group-hover:text-[#d11a2a]" size={24} />
+                                    <div className="relative">
+                                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-red-50 transition-colors">
+                                            <User className="text-gray-400 group-hover:text-[#d11a2a]" size={24} />
+                                        </div>
+                                        {app.status === "unread" && (
+                                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#d11a2a] rounded-full border-2 border-white animate-pulse" />
+                                        )}
                                     </div>
                                     <div className="space-y-1">
                                         <h3 className="text-lg font-black text-gray-900 leading-none">{app.fullName}</h3>
-                                        <div className="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                        <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
                                             <span className="flex items-center gap-1 text-[#d11a2a]">
                                                 <Briefcase size={12} /> {app.jobTitle}
                                             </span>
-                                            <span className="flex items-center gap-1">
-                                                <Calendar size={12} /> {app.appliedAt?.toDate().toLocaleDateString()}
+                                            <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
+                                                <Calendar size={12} className="text-gray-400" />
+                                                {formatDateTime(app.appliedAt)}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Contact Details */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-8">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-50 rounded-lg text-gray-400"><Mail size={14} /></div>
-                                        <span className="text-sm font-bold text-gray-600 lowercase">{app.email}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-50 rounded-lg text-gray-400"><Phone size={14} /></div>
-                                        <span className="text-sm font-bold text-gray-600">{app.phone}</span>
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex items-center gap-2 pt-4 lg:pt-0 border-t lg:border-t-0 border-gray-50">
-                                    {/* Resume Link */}
-                                    <a 
-                                        href={app.resumeUrl} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="flex-1 lg:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#d11a2a] transition-all"
-                                    >
-                                        <FileText size={14} /> View CV <ExternalLink size={12} />
-                                    </a>
-
-                                    {/* Status Toggle */}
+                                <div className="flex items-center gap-2">
                                     <button 
-                                        onClick={() => toggleStatus(app.id, app.status)}
-                                        className={`p-3 rounded-xl transition-all ${
-                                            app.status === "reviewed" 
-                                            ? "bg-green-100 text-green-600" 
-                                            : "bg-gray-100 text-gray-400 hover:bg-orange-50 hover:text-orange-500"
-                                        }`}
-                                        title="Mark as Reviewed"
+                                        onClick={(e) => toggleInternalStatus(e, app.id, app.internalStatus)}
+                                        className={`p-3 rounded-xl transition-all ${app.internalStatus === "reviewed" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400 hover:bg-green-50"}`}
                                     >
                                         <CheckCircle size={18} />
                                     </button>
-
-                                    {/* Delete */}
                                     <button 
-                                        onClick={() => handleDelete(app.id)}
+                                        onClick={(e) => handleDelete(e, app.id)}
                                         className="p-3 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all"
                                     >
                                         <Trash2 size={18} />
                                     </button>
+                                    <ChevronRight className="text-gray-300 group-hover:translate-x-1 transition-transform" />
                                 </div>
                             </div>
                         </motion.div>
                     ))}
                 </AnimatePresence>
-
                 {filteredApps.length === 0 && (
                     <div className="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-200">
                         <p className="text-xs font-black text-gray-300 uppercase tracking-[0.3em]">No applications found</p>
                     </div>
                 )}
             </div>
+
+            {/* Modal/Dialog Section */}
+            <AnimatePresence>
+                {selectedApp && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedApp(null)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden"
+                        >
+                            <div className="p-8 md:p-12">
+                                <button 
+                                    onClick={() => setSelectedApp(null)}
+                                    className="absolute top-8 right-8 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                >
+                                    <X size={20} className="text-gray-400" />
+                                </button>
+                                <div className="flex items-center gap-6 mb-8">
+                                    <div className="w-20 h-20 bg-red-50 rounded-[2rem] flex items-center justify-center">
+                                        <User className="text-[#d11a2a]" size={40} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase">{selectedApp.fullName}</h2>
+                                        <p className="text-[#d11a2a] font-bold uppercase tracking-widest text-sm">{selectedApp.jobTitle}</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-gray-50 rounded-2xl"><Mail size={20} className="text-gray-400" /></div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Address</p>
+                                                <p className="font-bold text-gray-700">{selectedApp.email}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-gray-50 rounded-2xl"><Phone size={20} className="text-gray-400" /></div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Phone Number</p>
+                                                <p className="font-bold text-gray-700">{selectedApp.phone}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-gray-50 rounded-2xl"><Calendar size={20} className="text-gray-400" /></div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Applied On</p>
+                                                <p className="font-bold text-gray-700">{formatDateTime(selectedApp.appliedAt)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <a
+                                        href={selectedApp.resumeUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 inline-flex items-center justify-center gap-3 px-8 py-5 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-[#d11a2a] transition-all"
+                                    >
+                                        <FileText size={18} /> View CV <ExternalLink size={14} />
+                                    </a>
+                                    <button 
+                                        onClick={() => setSelectedApp(null)}
+                                        className="px-8 py-5 border-2 border-gray-100 text-gray-400 rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-gray-50 transition-all"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

@@ -9,7 +9,8 @@ import {
     onSnapshot, 
     updateDoc, 
     doc,
-    deleteDoc 
+    deleteDoc,
+    where // Idinagdag para sa filtering
 } from "firebase/firestore";
 import { 
     Mail, 
@@ -20,7 +21,8 @@ import {
     User, 
     Trash2, 
     CheckCircle,
-    Search 
+    Search,
+    ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -29,8 +31,15 @@ export default function InquiriesPanel() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
+    // --- FETCH DATA ---
     useEffect(() => {
-        const q = query(collection(db, "inquiries"), orderBy("createdAt", "desc"));
+        // Sinisiguro nating 'product' inquiries lang ang kukunin dito
+        const q = query(
+            collection(db, "inquiries"), 
+            where("type", "==", "product"),
+            orderBy("createdAt", "desc")
+        );
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map((doc) => ({
                 id: doc.id,
@@ -38,10 +47,15 @@ export default function InquiriesPanel() {
             }));
             setInquiries(data);
             setLoading(false);
+        }, (error) => {
+            console.error("Firestore Error:", error);
+            setLoading(false);
         });
+
         return () => unsubscribe();
     }, []);
 
+    // --- ACTIONS ---
     const toggleStatus = async (id: string, currentStatus: string) => {
         const nextStatus = currentStatus === "pending" ? "reviewed" : "pending";
         try {
@@ -52,15 +66,28 @@ export default function InquiriesPanel() {
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm("Delete this product inquiry?")) {
-            await deleteDoc(doc(db, "inquiries", id));
+        if (confirm("Are you sure you want to delete this product inquiry?")) {
+            try {
+                await deleteDoc(doc(db, "inquiries", id));
+            } catch (error) {
+                console.error("Error deleting:", error);
+            }
         }
     };
 
-    const filteredInquiries = inquiries.filter(inq => 
-        `${inq.customerDetails.firstName} ${inq.customerDetails.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inq.customerDetails.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // --- SEARCH LOGIC (With Safety Checks) ---
+    const filteredInquiries = inquiries.filter(inq => {
+        // Gagamit ng Optional Chaining (?.) para hindi mag-crash kung undefined ang customerDetails
+        const firstName = inq.customerDetails?.firstName || "";
+        const lastName = inq.customerDetails?.lastName || "";
+        const email = inq.customerDetails?.email || "";
+        const fullName = `${firstName} ${lastName}`.toLowerCase();
+        
+        return (
+            fullName.includes(searchTerm.toLowerCase()) ||
+            email.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    });
 
     if (loading) return (
         <div className="flex items-center justify-center h-64 text-gray-400 font-bold uppercase tracking-widest text-xs">
@@ -109,11 +136,11 @@ export default function InquiriesPanel() {
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-black text-gray-900 leading-none uppercase">
-                                            {inquiry.customerDetails.firstName} {inquiry.customerDetails.lastName}
+                                            {inquiry.customerDetails?.firstName} {inquiry.customerDetails?.lastName}
                                         </h3>
                                         <div className="flex flex-wrap gap-4 mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                            <span className="flex items-center gap-1.5"><Mail size={12} className="text-[#d11a2a]"/> {inquiry.customerDetails.email}</span>
-                                            <span className="flex items-center gap-1.5"><Phone size={12} className="text-[#d11a2a]"/> {inquiry.customerDetails.phone || "N/A"}</span>
+                                            <span className="flex items-center gap-1.5"><Mail size={12} className="text-[#d11a2a]"/> {inquiry.customerDetails?.email}</span>
+                                            <span className="flex items-center gap-1.5"><Phone size={12} className="text-[#d11a2a]"/> {inquiry.customerDetails?.phone || "N/A"}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -156,12 +183,12 @@ export default function InquiriesPanel() {
                                             <MapPin size={14} className="text-[#d11a2a]"/> Delivery Address
                                         </h4>
                                         <p className="text-sm font-bold text-gray-700 leading-relaxed pl-6">
-                                            {inquiry.customerDetails.streetAddress}
-                                            {inquiry.customerDetails.apartment && <span className="block text-gray-400 font-medium italic mt-1">{inquiry.customerDetails.apartment}</span>}
+                                            {inquiry.customerDetails?.streetAddress}
+                                            {inquiry.customerDetails?.apartment && <span className="block text-gray-400 font-medium italic mt-1">{inquiry.customerDetails.apartment}</span>}
                                         </p>
                                     </div>
 
-                                    {inquiry.customerDetails.orderNotes && (
+                                    {inquiry.customerDetails?.orderNotes && (
                                         <div className="space-y-2">
                                             <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] pl-6">Customer Notes</h4>
                                             <div className="ml-6 p-4 bg-white border border-gray-100 rounded-2xl italic text-xs text-gray-600 shadow-sm">

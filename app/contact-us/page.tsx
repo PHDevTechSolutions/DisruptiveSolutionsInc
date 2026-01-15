@@ -78,26 +78,30 @@ export default function ContactUsPage() {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // --- HANDLERS ---
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setStatus("loading");
+// Hanapin ang handleSubmit function sa ContactUsPage mo at palitan ng ganito:
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("loading");
 
-        try {
-            await addDoc(collection(db, "inquiries"), {
-                ...formData,
-                submittedAt: serverTimestamp(),
-                source: "Contact Page"
-            });
-            setStatus("success");
-            setFormData({ fullName: "", email: "", phone: "", message: "" });
-            setTimeout(() => setStatus("idle"), 5000);
-        } catch (error) {
-            console.error("Firebase Error:", error);
-            setStatus("error");
-            setTimeout(() => setStatus("idle"), 5000);
-        }
-    };
+    try {
+        await addDoc(collection(db, "inquiries"), {
+            ...formData,
+            submittedAt: serverTimestamp(),
+            source: "Contact Page",
+            // --- ETO YUNG MGA DAGDAG ---
+            status: "unread",      // Para pumasok sa notification count
+            type: "customer",      // Para malaman ng sidebar na sa 'Customer Inquiries' ito dapat
+        });
+        
+        setStatus("success");
+        setFormData({ fullName: "", email: "", phone: "", message: "" });
+        setTimeout(() => setStatus("idle"), 5000);
+    } catch (error) {
+        console.error("Firebase Error:", error);
+        setStatus("error");
+        setTimeout(() => setStatus("idle"), 5000);
+    }
+};
 
     return (
         <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a]">

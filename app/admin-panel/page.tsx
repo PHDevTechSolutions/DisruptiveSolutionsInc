@@ -8,10 +8,10 @@ import AddNewProduct from "../components/products/AddnewProduct"
 import InquiriesPanel from "../components/inquiries/QuoteInquiries"
 import CareersManager from "../components/pages/CareersManager"
 import BlogManager from "../components/pages/BlogManager" 
-// 1. I-IMPORT ANG APPLICATION INQUIRIES
 import ApplicationInquiries from "../components/inquiries/JobApplication"
 import CustomerInquiries from "../components/inquiries/CustomerInquiries" 
 import Quotation from "../components/inquiries/Quotation" 
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,35 +26,32 @@ import {
 } from "@/components/ui/sidebar"
 
 export default function Page() {
+  // Gamitin natin ang activeView at setActiveView consistently
   const [activeView, setActiveView] = useState("All Product")
+
+  // Tama na ang type definition dito para mawala ang Error 7006
+  const handleNavigate = (view: string) => { 
+    setActiveView(view)
+  }
 
   const renderContent = () => {
     switch (activeView) {
       case "All Product":
         return <AllProducts />
-      
-      // MGA INQUIRIES SECTION
-      case "Orders": // Dating "Inquiries"
+      case "Orders":
         return <InquiriesPanel />
-
-      case "Job Application": // Ito yung bago nating ginawa
+      case "Job Application":
         return <ApplicationInquiries />
-
       case "Add new product":
         return <AddNewProduct />
-
       case "Quotation":
         return <Quotation />
-      // PAGES SECTION
       case "Careers": 
         return <CareersManager />
-
       case "Customer Inquiries": 
         return <CustomerInquiries />
-
       case "All Blogs": 
         return <BlogManager />
-      
       default:
         return <AllProducts />
     }
@@ -62,7 +59,8 @@ export default function Page() {
 
   return (
     <SidebarProvider>
-      <AppSidebar onNavigate={(view) => setActiveView(view)} />
+      {/* I-pass ang handleNavigate function */}
+      <AppSidebar onNavigate={handleNavigate} />
       
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
