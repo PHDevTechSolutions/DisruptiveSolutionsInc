@@ -64,7 +64,7 @@ export default function LoginPage() {
             <ShieldCheck className="text-white w-6 h-6" />
           </div>
           <CardTitle className="text-2xl font-black uppercase italic tracking-tighter text-slate-800">
-            TaskFlow Admin
+            CMS PANEL
           </CardTitle>
           <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
             Enter your credentials to manage inventory
