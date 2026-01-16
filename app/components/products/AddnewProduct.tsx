@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 
 // UI Components
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button" 
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
@@ -56,9 +56,15 @@ interface SidebarSectionProps {
   customAddLogic?: (val: string) => void;
   isDynamic?: boolean;
   onDeleteSection?: () => void;
+  multiSelect?: boolean; // Idinagdag para ma-control kung single o multi
 }
 
-export default function AddNewProduct() {
+interface AddNewProductProps {
+  editData?: any;
+  onFinished?: () => void;
+}
+
+export default function AddNewProduct({ editData, onFinished }: AddNewProductProps) {
   const CLOUDINARY_UPLOAD_PRESET = "taskflow_preset"; 
   const CLOUDINARY_CLOUD_NAME = "dvmpn8mjh";
 
@@ -90,7 +96,11 @@ export default function AddNewProduct() {
 
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [galleryImage, setGalleryImage] = useState<File | null>(null);
+  
+  const [existingMainImage, setExistingMainImage] = useState("");
+  const [existingGalleryImage, setExistingGalleryImage] = useState("");
 
+  // --- FETCH DATA ---
   useEffect(() => {
     const unsubCats = onSnapshot(collection(db, "categories"), (snap) => {
       setCategories(snap.docs.map(d => ({ id: d.id, name: d.data().name })));
@@ -112,6 +122,38 @@ export default function AddNewProduct() {
     return () => { unsubCats(); unsubBrands(); unsubWebs(); unsubCustom(); };
   }, []);
 
+  // --- AUTO-FILL LOGIC ---
+  useEffect(() => {
+    if (editData) {
+      setProductName(editData.name || "");
+      setShortDesc(editData.shortDescription || "");
+      setSku(editData.sku || "");
+      setRegPrice(editData.regularPrice?.toString() || "");
+      setSalePrice(editData.salePrice?.toString() || "");
+      setDescBlocks(editData.technicalSpecs || []);
+      setSelectedCats(editData.category ? [editData.category] : []);
+      setSelectedBrands(editData.brand ? [editData.brand] : []);
+      setSelectedWebs(editData.website ? [editData.website] : []);
+      setExistingMainImage(editData.mainImage || "");
+      setExistingGalleryImage(editData.galleryImage || "");
+
+      if (editData.dynamicSpecs && customSections.length > 0) {
+        setCustomSections(prevSections => 
+          prevSections.map(section => {
+            const matchingSpecs = editData.dynamicSpecs.filter(
+              (spec: any) => spec.title === section.title
+            );
+            return {
+              ...section,
+              selected: matchingSpecs.map((spec: any) => spec.value) 
+            };
+          })
+        );
+      }
+    }
+  }, [editData, customSections.length > 0]);
+
+  // --- ACTIONS ---
   const handleQuickAdd = async (colName: string, val: string, setVal: (v: string) => void) => {
     if (!val.trim()) return;
     try {
@@ -138,7 +180,7 @@ export default function AddNewProduct() {
       });
       setNewSectionTitle("");
       setIsAddingNewSection(false);
-      toast.success("New section added to DB");
+      toast.success("New section added");
     } catch (err) { toast.error("Error creating section"); }
   };
 
@@ -162,17 +204,23 @@ export default function AddNewProduct() {
   };
 
   const handlePublish = async () => {
-    if (!productName || !mainImage) return toast.error("Product Name and Featured Image are required!");
+    if (!productName || (!mainImage && !existingMainImage)) return toast.error("Required fields missing!");
+    
     setIsPublishing(true);
-    const publishToast = toast.loading("Publishing product...");
+    const publishToast = toast.loading(editData ? "Updating..." : "Publishing...");
+    
     try {
-      const mainUrl = await uploadToCloudinary(mainImage);
-      const galleryUrl = galleryImage ? await uploadToCloudinary(galleryImage) : "";
-      const dynamicSpecs = customSections
-        .filter(s => s.selected.length > 0)
-        .map(s => ({ title: s.title, value: s.selected[0] }));
+      const mainUrl = mainImage ? await uploadToCloudinary(mainImage) : existingMainImage;
+      const galleryUrl = galleryImage ? await uploadToCloudinary(galleryImage) : existingGalleryImage;
+      
+      const dynamicSpecs = customSections.flatMap(section => 
+        section.selected.map(val => ({
+          title: section.title,
+          value: val
+        }))
+      );
 
-      await addDoc(collection(db, "products"), {
+      const productPayload = {
         name: productName,
         shortDescription: shortDesc,
         sku,
@@ -185,12 +233,28 @@ export default function AddNewProduct() {
         category: selectedCats[0] || "Uncategorized",
         brand: selectedBrands[0] || "Generic", 
         website: selectedWebs[0] || "N/A", 
-        createdAt: serverTimestamp(),
-      });
-      toast.success("Product Published!", { id: publishToast });
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (error) { toast.error("Publishing failed", { id: publishToast }); }
-    finally { setIsPublishing(false); }
+        updatedAt: serverTimestamp(),
+      };
+
+      if (editData?.id) {
+        await updateDoc(doc(db, "products", editData.id), productPayload);
+        toast.success("Product Updated!", { id: publishToast });
+      } else {
+        await addDoc(collection(db, "products"), {
+          ...productPayload,
+          createdAt: serverTimestamp(),
+        });
+        toast.success("Product Published!", { id: publishToast });
+      }
+
+      if (onFinished) onFinished();
+      else setTimeout(() => window.location.reload(), 1500);
+
+    } catch (error) { 
+      toast.error("Operation failed", { id: publishToast }); 
+    } finally { 
+      setIsPublishing(false); 
+    }
   };
 
   return (
@@ -231,7 +295,7 @@ export default function AddNewProduct() {
                   <Label className="text-[15px] font-black uppercase text-slate-400 tracking-tighter">Gallery Image</Label>
                   <Label htmlFor="gallery-file" className="cursor-pointer">
                     <div className="border-2 border-dashed rounded-xl p-4 flex flex-col items-center bg-slate-50 hover:bg-slate-100 h-60 w-full justify-center transition-all border-slate-200">
-                      {galleryImage ? <img src={URL.createObjectURL(galleryImage)} className="h-full object-contain" /> : <><UploadCloud className="w-6 h-6 mb-1 text-slate-300"/><p className="text-[13px] font-bold text-slate-400 uppercase">Upload Gallery</p></>}
+                      {galleryImage ? <img src={URL.createObjectURL(galleryImage)} className="h-full object-contain" /> : existingGalleryImage ? <img src={existingGalleryImage} className="h-full object-contain" /> : <><UploadCloud className="w-6 h-6 mb-1 text-slate-300"/><p className="text-[13px] font-bold text-slate-400 uppercase">Upload Gallery</p></>}
                     </div>
                     <input type="file" id="gallery-file" className="hidden" onChange={(e) => setGalleryImage(e.target.files?.[0] || null)} />
                   </Label>
@@ -249,33 +313,78 @@ export default function AddNewProduct() {
       </div>
 
       <div className="space-y-6">
+        {/* Main Image Card */}
         <Card className="border-none ring-1 ring-slate-200 overflow-hidden shadow-sm">
           <CardHeader className="bg-slate-50/50 border-b py-3 text-center"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Featured Image</CardTitle></CardHeader>
           <CardContent className="pt-6">
             <Label htmlFor="main-file" className="cursor-pointer">
               <div className="aspect-square border-2 border-dashed rounded-2xl flex flex-col items-center justify-center hover:bg-blue-50/30 transition-all overflow-hidden bg-white border-slate-200">
-                {mainImage ? <img src={URL.createObjectURL(mainImage)} className="w-full h-full object-contain p-2" /> : <div className="text-center"><ImagePlus className="w-90 h-10 mb-2 text-blue-500 mx-auto opacity-40"/><span className="text-[10px] font-black uppercase text-slate-400 block">Upload Main Image</span></div>}
+                {mainImage ? <img src={URL.createObjectURL(mainImage)} className="w-full h-full object-contain p-2" /> : existingMainImage ? <img src={existingMainImage} className="w-full h-full object-contain p-2" /> : <div className="text-center"><ImagePlus className="w-90 h-10 mb-2 text-blue-500 mx-auto opacity-40"/><span className="text-[10px] font-black uppercase text-slate-400 block">Upload Main Image</span></div>}
               </div>
               <input type="file" id="main-file" className="hidden" onChange={(e) => setMainImage(e.target.files?.[0] || null)} />
             </Label>
           </CardContent>
         </Card>
 
+        {/* Classification Card */}
         <Card className="border-none ring-1 ring-slate-200 shadow-sm overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b py-3 text-center"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Classification</CardTitle></CardHeader>
           <CardContent className="space-y-6 pt-6">
-            <SidebarSection label="Website" icon={<Globe className="w-3 h-3"/>} items={websites} selected={selectedWebs} onCheck={(v: string) => setSelectedWebs(selectedWebs.includes(v) ? [] : [v])} val={newWeb} setVal={setNewWeb} onAdd={() => handleQuickAdd("websites", newWeb, setNewWeb)} onDelete={(id: string) => handleDeleteItem("websites", id)} />
-            <SidebarSection label="Category" icon={<Tag className="w-3 h-3"/>} items={categories} selected={selectedCats} onCheck={(v: string) => setSelectedCats(selectedCats.includes(v) ? [] : [v])} val={newCat} setVal={setNewCat} onAdd={() => handleQuickAdd("categories", newCat, setNewCat)} onDelete={(id: string) => handleDeleteItem("categories", id)} />
-            <SidebarSection label="Brand" icon={<Factory className="w-3 h-3"/>} items={brands} selected={selectedBrands} onCheck={(v: string) => setSelectedBrands(selectedBrands.includes(v) ? [] : [v])} val={newBrand} setVal={setNewBrand} onAdd={() => handleQuickAdd("brands", newBrand, setNewBrand)} onDelete={(id: string) => handleDeleteItem("brands", id)} />
+            
+            {/* Website Section */}
+            <SidebarSection 
+              label="Website" icon={<Globe className="w-3 h-3"/>} 
+              items={websites} selected={selectedWebs} 
+              onCheck={(v: string) => setSelectedWebs(selectedWebs.includes(v) ? [] : [v])} 
+              val={newWeb} setVal={setNewWeb} onAdd={() => handleQuickAdd("websites", newWeb, setNewWeb)} 
+              onDelete={(id: string) => handleDeleteItem("websites", id)} 
+            />
 
+            {/* MAIN CATEGORY - Ibinasura ang multi-check dito */}
+            <SidebarSection 
+              label="Category" icon={<Tag className="w-3 h-3"/>} 
+              items={categories} selected={selectedCats} 
+              onCheck={(v: string) => setSelectedCats(selectedCats.includes(v) ? [] : [v])} 
+              val={newCat} setVal={setNewCat} onAdd={() => handleQuickAdd("categories", newCat, setNewCat)} 
+              onDelete={(id: string) => handleDeleteItem("categories", id)} 
+            />
+
+            {/* Brand Section */}
+            <SidebarSection 
+              label="Brand" icon={<Factory className="w-3 h-3"/>} 
+              items={brands} selected={selectedBrands} 
+              onCheck={(v: string) => setSelectedBrands(selectedBrands.includes(v) ? [] : [v])} 
+              val={newBrand} setVal={setNewBrand} onAdd={() => handleQuickAdd("brands", newBrand, setNewBrand)} 
+              onDelete={(id: string) => handleDeleteItem("brands", id)} 
+            />
+
+            {/* CUSTOM SECTIONS - Ito ang multi-select */}
             <div className="pt-4 border-t border-slate-100 space-y-6">
-              <Label className="text-[9px] font-black uppercase text-blue-600 flex items-center gap-1"><Settings2 size={12}/> Custom Sections</Label>
+              <Label className="text-[9px] font-black uppercase text-blue-600 flex items-center gap-1">
+                <Settings2 size={12}/> Custom Sections
+              </Label>
+              
               {customSections.map((sec) => (
-                <div key={sec.id} className="relative p-3 rounded-2xl bg-slate-50/50 border border-slate-100 group">
+                <div key={sec.id} className="relative p-3 rounded-2xl bg-slate-50/50 border border-slate-100">
                   <SidebarSection 
-                    label={sec.title} icon={<Plus className="w-3 h-3 text-blue-500"/>} items={sec.items} selected={sec.selected} 
+                    label={sec.title} 
+                    icon={<Plus className="w-3 h-3 text-blue-500"/>} 
+                    items={sec.items} 
+                    selected={sec.selected} 
+                    multiSelect={true} // Inactivate ang multi-select dito
                     onCheck={(v: string) => {
-                      setCustomSections(prev => prev.map(s => s.id === sec.id ? {...s, selected: s.selected.includes(v) ? [] : [v]} : s));
+                      setCustomSections(prev => prev.map(s => {
+                        if (s.id === sec.id) {
+                          const isAlreadySelected = s.selected.includes(v);
+                          return {
+                            ...s,
+                            selected: isAlreadySelected
+                              ? s.selected.filter(item => item !== v)
+                              : [...s.selected, v]
+                          };
+                        }
+                        return s;
+                      }));
                     }}
                     val={""} setVal={() => {}} onAdd={() => {}} 
                     onDelete={async (itemId: string) => {
@@ -283,16 +392,21 @@ export default function AddNewProduct() {
                       await updateDoc(sRef, { items: sec.items.filter(i => i.id !== itemId) });
                     }} 
                     customAddLogic={(val: string) => handleAddChoiceToCustom(sec.id, val)}
-                    isDynamic={true} onDeleteSection={() => handleDeleteItem("custom_sections", sec.id)}
+                    isDynamic={true} 
+                    onDeleteSection={() => handleDeleteItem("custom_sections", sec.id)}
                   />
                 </div>
               ))}
+
               {!isAddingNewSection ? (
                 <Button variant="outline" className="w-full h-10 border-dashed border-2 rounded-xl text-[10px] font-black text-slate-400 hover:text-blue-500" onClick={() => setIsAddingNewSection(true)}>+ NEW SECTION</Button>
               ) : (
                 <div className="p-3 bg-white rounded-2xl border-2 border-blue-100 shadow-lg animate-in zoom-in duration-200">
-                  <Input placeholder="SECTION TITLE..." className="h-8 text-[10px] font-black rounded-lg border-none bg-slate-50 uppercase" value={newSectionTitle} onChange={e => setNewSectionTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleCreateNewSection()}/>
-                  <div className="flex gap-2 mt-2"><Button onClick={handleCreateNewSection} className="flex-1 h-7 bg-blue-600 rounded-lg text-[10px] font-bold text-white">SAVE</Button><Button onClick={() => setIsAddingNewSection(false)} variant="ghost" className="h-7 rounded-lg text-[10px] font-bold">CANCEL</Button></div>
+                  <Input placeholder="SECTION TITLE..." className="h-8 text-[10px] font-black rounded-lg border-none bg-slate-50 uppercase" value={newSectionTitle} onChange={e => setNewSectionTitle(e.target.value)} />
+                  <div className="flex gap-2 mt-2">
+                    <Button onClick={handleCreateNewSection} className="flex-1 h-7 bg-blue-600 rounded-lg text-[10px] font-bold text-white">SAVE</Button>
+                    <Button onClick={() => setIsAddingNewSection(false)} variant="ghost" className="h-7 rounded-lg text-[10px] font-bold">CANCEL</Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -300,14 +414,14 @@ export default function AddNewProduct() {
         </Card>
 
         <Button disabled={isPublishing} onClick={handlePublish} className="w-full bg-[#d11a2a] hover:bg-[#b01622] h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-red-200 transition-all active:scale-95">
-          {isPublishing ? <><Loader2 className="animate-spin mr-2"/> Publishing...</> : "Publish Product"}
+          {isPublishing ? <><Loader2 className="animate-spin mr-2"/> Processing...</> : editData ? "Update Product" : "Publish Product"}
         </Button>
       </div>
     </div>
   )
 }
 
-function SidebarSection({ label, icon, items, selected, onCheck, val, setVal, onAdd, onDelete, customAddLogic, isDynamic, onDeleteSection }: SidebarSectionProps) {
+function SidebarSection({ label, icon, items, selected, onCheck, val, setVal, onAdd, onDelete, customAddLogic, isDynamic, onDeleteSection, multiSelect = false }: SidebarSectionProps) {
   const [localVal, setLocalVal] = useState("");
   const handleInnerAdd = () => { if (isDynamic && customAddLogic) { customAddLogic(localVal); setLocalVal(""); } else { onAdd(); } };
 
@@ -317,20 +431,20 @@ function SidebarSection({ label, icon, items, selected, onCheck, val, setVal, on
         <Label className="text-[9px] font-black uppercase text-blue-600 flex items-center gap-1">{icon} {label}</Label>
         {isDynamic && (
           <AlertDialog>
-            <AlertDialogTrigger asChild><button className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-3 h-3"/></button></AlertDialogTrigger>
+            <AlertDialogTrigger asChild><button className="text-slate-300 hover:text-red-500"><Trash2 className="w-3 h-3"/></button></AlertDialogTrigger>
             <AlertDialogContent className="rounded-3xl border-none">
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-black uppercase italic">Delete Section?</AlertDialogTitle>
-                <AlertDialogDescription className="text-xs">This will permanently delete the <b>{label}</b> section from the database.</AlertDialogDescription>
+                <AlertDialogDescription className="text-xs">Permanently delete <b>{label}</b> section?</AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter><AlertDialogCancel className="rounded-xl bg-slate-100 text-[10px] uppercase font-bold">Cancel</AlertDialogCancel><AlertDialogAction onClick={onDeleteSection} className="rounded-xl bg-red-600 text-[10px] uppercase font-bold">Delete Section</AlertDialogAction></AlertDialogFooter>
+              <AlertDialogFooter><AlertDialogCancel className="rounded-xl text-[10px] uppercase font-bold">Cancel</AlertDialogCancel><AlertDialogAction onClick={onDeleteSection} className="rounded-xl bg-red-600 text-[10px] uppercase font-bold">Delete</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         )}
       </div>
       <div className="flex gap-1">
-        <Input className="h-7 text-[10px] bg-white rounded-lg" placeholder={`Add ${label}...`} value={isDynamic ? localVal : val} onChange={(e) => isDynamic ? setLocalVal(e.target.value) : setVal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleInnerAdd()} />
-        <Button size="sm" className="h-7 w-7 p-0 bg-blue-500 hover:bg-blue-600 rounded-lg shadow-sm" onClick={handleInnerAdd}><Plus className="w-4 h-4 text-white"/></Button>
+        <Input className="h-7 text-[10px] bg-white rounded-lg" placeholder={`Add to ${label}...`} value={isDynamic ? localVal : val} onChange={(e) => isDynamic ? setLocalVal(e.target.value) : setVal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleInnerAdd()} />
+        <Button size="sm" className="h-7 w-7 p-0 bg-blue-500 rounded-lg shadow-sm" onClick={handleInnerAdd}><Plus className="w-4 h-4 text-white"/></Button>
       </div>
       <div className="space-y-1 max-h-40 overflow-y-auto pr-2 border-l-2 border-slate-100 pl-2 custom-scrollbar">
         {items.map((item) => (
@@ -340,13 +454,13 @@ function SidebarSection({ label, icon, items, selected, onCheck, val, setVal, on
               <Label htmlFor={item.id} className={`text-[11px] font-bold cursor-pointer ${selected.includes(item.name) ? 'text-blue-700' : 'text-slate-600'}`}>{item.name}</Label>
             </div>
             <AlertDialog>
-              <AlertDialogTrigger asChild><button className="opacity-0 group-hover:opacity-100 transition-opacity p-1"><X className="w-3 h-3 text-red-300 hover:text-red-500" /></button></AlertDialogTrigger>
+              <AlertDialogTrigger asChild><button className="opacity-0 group-hover:opacity-100 p-1"><X className="w-3 h-3 text-red-300 hover:text-red-500" /></button></AlertDialogTrigger>
               <AlertDialogContent className="rounded-3xl border-none">
                 <AlertDialogHeader>
-                  <AlertDialogTitle className="font-black uppercase italic text-xl">Delete Item?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-xs font-medium">Permanently delete <b>{item.name}</b> from the {label} list?</AlertDialogDescription>
+                  <AlertDialogTitle className="font-black uppercase italic">Delete Item?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-xs font-medium">Delete <b>{item.name}</b>?</AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="gap-2"><AlertDialogCancel className="rounded-xl bg-slate-100 border-none font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction onClick={() => onDelete(item.id)} className="rounded-xl bg-red-600 hover:bg-red-700 font-bold text-[10px] uppercase">Delete</AlertDialogAction></AlertDialogFooter>
+                <AlertDialogFooter><AlertDialogCancel className="rounded-xl text-[10px] uppercase font-bold">Cancel</AlertDialogCancel><AlertDialogAction onClick={() => onDelete(item.id)} className="rounded-xl bg-red-600 text-[10px] uppercase font-bold">Delete</AlertDialogAction></AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           </div>

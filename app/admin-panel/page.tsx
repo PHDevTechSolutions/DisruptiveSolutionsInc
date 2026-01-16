@@ -4,14 +4,15 @@ import * as React from "react"
 import { useState } from "react"
 import { AppSidebar } from "../components/app-sidebar"
 import { AllProducts } from "../components/products/AllProducts"
-import AddNewProduct from "../components/products/AddnewProduct"
+import AddNewProduct from "../components/products/AddnewProduct";
 import InquiriesPanel from "../components/inquiries/QuoteInquiries"
 import CareersManager from "../components/pages/CareersManager"
 import BlogManager from "../components/pages/BlogManager" 
 import ApplicationInquiries from "../components/inquiries/JobApplication"
 import CustomerInquiries from "../components/inquiries/CustomerInquiries" 
 import Quotation from "../components/inquiries/Quotation" 
-
+import Categories from "../components/products/Category";
+import Application from "../components/products/Application";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -50,8 +51,12 @@ export default function Page() {
         return <CareersManager />
       case "Customer Inquiries": 
         return <CustomerInquiries />
+              case "Application": 
+        return <Application />
       case "All Blogs": 
         return <BlogManager />
+            case "Category": 
+        return <Categories />
       default:
         return <AllProducts />
     }

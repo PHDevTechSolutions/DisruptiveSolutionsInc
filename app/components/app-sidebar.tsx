@@ -87,6 +87,7 @@ export function AppSidebar({ onNavigate, ...props }: any) {
         icon: SquareTerminal,
         badge: counts.product > 0 ? counts.product : null,
         items: [
+          
           { title: "All Product", url: "#" },
           { title: "Add new product", url: "#" },
           { 
@@ -94,6 +95,8 @@ export function AppSidebar({ onNavigate, ...props }: any) {
             url: "#", 
             badge: counts.product > 0 ? counts.product : null 
           },
+          { title: "Application", url: "#" },
+          { title: "Category", url: "#" },
         ],
       },
       {

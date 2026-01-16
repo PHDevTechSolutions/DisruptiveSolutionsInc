@@ -7,6 +7,11 @@ import {
   Trash2, 
   Loader2, 
   Search, 
+  ArrowLeft,
+  PlusCircle,
+  Package,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 // UI Components
@@ -18,8 +23,8 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,16 +36,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 // Firebase
 import { db } from "@/lib/firebase";
@@ -50,22 +45,31 @@ import {
   query, 
   orderBy, 
   doc, 
-  deleteDoc, 
-  updateDoc 
+  deleteDoc 
 } from "firebase/firestore";
 import { toast } from "sonner";
+
+// SIGURADUHIN NA CAPITAL 'N' ANG FILENAME SA SIDEBAR MO
+import AddNewProduct from "./AddnewProduct";
 
 export function AllProducts() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [brandFilter, setBrandFilter] = useState("All Brands");
+  const [websiteFilter, setWebsiteFilter] = useState("All Websites");
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8; 
 
-  // --- 1. FETCH DATA (Tumutugma sa format ng 'Add Product' natin) ---
+  // View States
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+  // --- 1. FETCH DATA ---
   useEffect(() => {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -83,8 +87,45 @@ export function AllProducts() {
     return () => unsubscribe();
   }, []);
 
-  // --- 2. DELETE ---
-  const handleDelete = async (id: string) => {
+  // --- 2. FILTER LOGIC ---
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchesBrand = brandFilter === "All Brands" || p.brand === brandFilter;
+      const matchesWeb = websiteFilter === "All Websites" || p.website === websiteFilter;
+      const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesBrand && matchesWeb && matchesSearch;
+    });
+  }, [products, brandFilter, websiteFilter, searchQuery]);
+
+  // --- 3. PAGINATION LOGIC ---
+  // Reset to page 1 tuwing nag-sesearch o filter
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, brandFilter, websiteFilter]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredProducts, currentPage]);
+
+  const uniqueBrands = useMemo(() => {
+    const brandsSet = new Set<string>();
+    products.forEach((p: any) => { if (p.brand) brandsSet.add(p.brand); });
+    return Array.from(brandsSet).sort();
+  }, [products]);
+
+  const uniqueWebsites = useMemo(() => {
+    const websSet = new Set<string>();
+    products.forEach((p: any) => { if (p.website) websSet.add(p.website); });
+    return Array.from(websSet).sort();
+  }, [products]);
+
+  // --- 4. ACTIONS ---
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); 
     try {
       await deleteDoc(doc(db, "products", id));
       toast.success("Product deleted successfully");
@@ -93,58 +134,67 @@ export function AllProducts() {
     }
   };
 
-  // --- 3. EDIT & UPDATE ---
   const handleEditClick = (product: any) => {
-    setEditingProduct(JSON.parse(JSON.stringify(product))); // Deep copy
-    setIsEditOpen(true);
+    setSelectedProduct(product);
+    setIsEditing(true);
   };
 
-  const handleUpdate = async () => {
-    if (!editingProduct) return;
-    setIsUpdating(true);
-    try {
-      const productRef = doc(db, "products", editingProduct.id);
-      const { id, ...dataToUpdate } = editingProduct; // Huwag isama ang ID sa database update
-      await updateDoc(productRef, dataToUpdate);
-      toast.success("Updated successfully!");
-      setIsEditOpen(false);
-    } catch (error) {
-      toast.error("Update failed");
-    } finally {
-      setIsUpdating(false);
-    }
+  const handleAddNewClick = () => {
+    setSelectedProduct(null);
+    setIsEditing(true);
   };
 
-  // --- 4. FILTER LOGIC ---
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      // Single string ang 'brand' sa bagong database structure
-      const matchesBrand = brandFilter === "All Brands" || p.brand === brandFilter;
-      const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesBrand && matchesSearch;
-    });
-  }, [products, brandFilter, searchQuery]);
+  const handleBackToList = () => {
+    setSelectedProduct(null);
+    setIsEditing(false);
+  };
 
-  // Extract unique brands para sa dropdown filter
-  const uniqueBrands = useMemo(() => {
-    const brandsSet = new Set<string>();
-    products.forEach((p: any) => {
-      if (p.brand) brandsSet.add(p.brand);
-    });
-    return Array.from(brandsSet).sort();
-  }, [products]);
+  // --- RENDER CONDITION ---
+  if (isEditing) {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              onClick={handleBackToList}
+              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600"
+            >
+              <ArrowLeft size={16} /> Back to Inventory
+            </Button>
+            <div className="h-4 w-[1px] bg-slate-200" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">
+              {selectedProduct ? `Editing: ${selectedProduct?.name}` : "Adding New Product"}
+            </p>
+          </div>
+        </div>
+        <AddNewProduct 
+          editData={selectedProduct} 
+          onFinished={handleBackToList} 
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full space-y-4 p-2">
-      <div className="flex justify-between items-center mb-6">
+    <div className="w-full space-y-4 p-2 animate-in fade-in duration-500">
+      {/* HEADER SECTION */}
+      <div className="flex justify-between items-end mb-6">
         <div>
-          <h2 className="text-2xl font-black uppercase italic tracking-tighter text-gray-900">Inventory</h2>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Manage your products</p>
+          <h2 className="text-3xl font-black uppercase italic tracking-tighter text-gray-900 flex items-center gap-2">
+            <Package className="text-blue-600" size={28} /> Inventory
+          </h2>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Manage and update your products</p>
         </div>
+        <Button 
+          onClick={handleAddNewClick}
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-6 font-black uppercase text-[10px] tracking-widest h-12 shadow-lg shadow-blue-100 transition-all active:scale-95"
+        >
+          <PlusCircle className="mr-2 w-4 h-4" /> Add Product
+        </Button>
       </div>
 
-      {/* --- SEARCH & FILTERS --- */}
+      {/* FILTERS SECTION */}
       <div className="flex flex-wrap gap-3 items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -155,6 +205,7 @@ export function AllProducts() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        
         <select 
           className="border rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider bg-gray-50/50 border-gray-100 outline-none cursor-pointer"
           value={brandFilter}
@@ -163,69 +214,93 @@ export function AllProducts() {
           <option>All Brands</option>
           {uniqueBrands.map(brand => <option key={brand} value={brand}>{brand}</option>)}
         </select>
+
+        <select 
+          className="border rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider bg-gray-50/50 border-gray-100 outline-none cursor-pointer"
+          value={websiteFilter}
+          onChange={(e) => setWebsiteFilter(e.target.value)}
+        >
+          <option>All Websites</option>
+          {uniqueWebsites.map((web: string) => <option key={web} value={web}>{web}</option>)}
+        </select>
       </div>
 
-      {/* --- TABLE --- */}
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+      {/* TABLE SECTION */}
+      <div className="rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-gray-50/50">
-            <TableRow>
-              <TableHead className="w-[80px] pl-6">Image</TableHead>
+            <TableRow className="hover:bg-transparent border-none">
+              <TableHead className="w-[80px] pl-6 py-4">Image</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest">Product Info</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest">SKU</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest">Brand</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest">Price</TableHead>
-              <TableHead className="text-right pr-6 text-[10px] font-black uppercase tracking-widest">Actions</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest">Brand / Web</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">Price & Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="h-40 text-center"><Loader2 className="animate-spin mx-auto text-red-500" /></TableCell></TableRow>
-            ) : filteredProducts.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="h-40 text-center text-xs text-gray-400 font-bold uppercase">No products found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="h-60 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" size={32} /></TableCell></TableRow>
+            ) : paginatedProducts.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="h-60 text-center text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">No products found</TableCell></TableRow>
             ) : (
-              filteredProducts.map((product) => (
-                <TableRow key={product.id} className="group hover:bg-gray-50/50 transition-colors">
-                  <TableCell className="pl-6">
-                    <div className="w-12 h-12 bg-gray-50 rounded-xl p-1 border border-gray-100 overflow-hidden">
+              paginatedProducts.map((product) => (
+                <TableRow 
+                  key={product.id} 
+                  className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-gray-50"
+                  onClick={() => handleEditClick(product)}
+                >
+                  <TableCell className="pl-6 py-4">
+                    <div className="w-14 h-14 bg-white rounded-2xl p-1 border border-gray-100 shadow-sm overflow-hidden group-hover:scale-105 transition-transform">
                       <img src={product.mainImage} alt="" className="w-full h-full object-contain" />
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm text-gray-900 line-clamp-1">{product.name}</span>
+                    <div className="flex flex-col max-w-[250px]">
+                      <span className="font-black text-sm text-gray-900 line-clamp-1">{product.name}</span>
                       <span className="text-[9px] text-blue-600 font-black uppercase tracking-tighter">{product.category || "No Category"}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-[10px] font-black text-gray-400 uppercase">{product.sku || "---"}</TableCell>
+                  <TableCell className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{product.sku || "---"}</TableCell>
                   <TableCell>
-                    <span className="text-[9px] font-black bg-slate-100 px-2 py-1 rounded text-slate-500 uppercase">
-                      {product.brand || "Generic"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-gray-900">₱{product.regularPrice}</span>
-                      {product.salePrice > 0 && <span className="text-[9px] text-red-500 font-bold line-through">₱{product.salePrice}</span>}
+                    <div className="flex flex-col gap-1">
+                       <span className="w-fit text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase">{product.brand || "Generic"}</span>
+                       <span className="w-fit text-[8px] font-black bg-blue-50 px-2 py-0.5 rounded text-blue-500 uppercase">{product.website || "N/A"}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right pr-6">
+                    <div className="flex flex-col items-end mb-2">
+                      <span className="text-sm font-black text-gray-900 tracking-tighter">₱{product.regularPrice?.toLocaleString()}</span>
+                    </div>
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-50" onClick={() => handleEditClick(product)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-100 rounded-lg">
                         <Pencil size={14} />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50"><Trash2 size={14} /></Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg"
+                            onClick={(e) => e.stopPropagation()} 
+                          >
+                            <Trash2 size={14} />
+                          </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-3xl border-none">
+                        <AlertDialogContent className="rounded-[40px] border-none shadow-2xl">
                           <AlertDialogHeader>
-                            <AlertDialogTitle className="font-black uppercase italic tracking-tighter">Delete Product?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-xs">Permanent deletion of {product.name}. This cannot be undone.</AlertDialogDescription>
+                            <AlertDialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Delete Product?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                              You are about to delete <span className="text-red-500">{product.name}</span>. This action is permanent.
+                            </AlertDialogDescription>
                           </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="rounded-xl border-none bg-gray-100 font-bold text-[10px] uppercase">Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(product.id)} className="rounded-xl bg-red-600 font-bold text-[10px] uppercase">Confirm Delete</AlertDialogAction>
+                          <AlertDialogFooter className="gap-2 pt-4">
+                            <AlertDialogCancel className="rounded-2xl border-none bg-slate-100 font-black text-[10px] uppercase tracking-widest h-12 px-6">Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={(e) => handleDelete(e, product.id)} 
+                              className="rounded-2xl bg-red-600 hover:bg-red-700 font-black text-[10px] uppercase tracking-widest h-12 px-6 shadow-lg shadow-red-200"
+                            >
+                              Confirm Delete
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -238,78 +313,46 @@ export function AllProducts() {
         </Table>
       </div>
 
-      {/* --- EDIT SHEET --- */}
-      <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <SheetContent className="sm:max-w-[500px] overflow-y-auto rounded-l-[40px] border-none shadow-2xl">
-          <SheetHeader className="pb-6 border-b">
-            <SheetTitle className="text-3xl font-black uppercase italic tracking-tighter">Edit Product</SheetTitle>
-            <SheetDescription className="text-[10px] font-bold uppercase tracking-widest text-gray-400 tracking-tighter">Update your inventory data</SheetDescription>
-          </SheetHeader>
+      {/* NUMERICAL PAGINATION CONTROLS */}
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8 mb-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(prev => prev - 1)}
+            className="rounded-xl h-9 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600"
+          >
+            <ChevronLeft size={16} className="mr-1" /> Prev
+          </Button>
 
-          {editingProduct && (
-            <div className="space-y-6 py-8">
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">Product Name</Label>
-                  <Input value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="rounded-2xl py-6 border-slate-100 font-bold" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">Regular Price</Label>
-                    <Input type="number" value={editingProduct.regularPrice} onChange={(e) => setEditingProduct({...editingProduct, regularPrice: Number(e.target.value)})} className="rounded-2xl py-6 border-slate-100" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">Sale Price</Label>
-                    <Input type="number" value={editingProduct.salePrice} onChange={(e) => setEditingProduct({...editingProduct, salePrice: Number(e.target.value)})} className="rounded-2xl py-6 border-slate-100" />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">SKU / Model Number</Label>
-                  <Input value={editingProduct.sku} onChange={(e) => setEditingProduct({...editingProduct, sku: e.target.value})} className="rounded-2xl py-6 border-slate-100 uppercase" />
-                </div>
-              </div>
+          <div className="flex gap-1.5">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`h-9 w-9 rounded-xl text-[11px] font-black transition-all transform active:scale-90 ${
+                  currentPage === pageNum 
+                  ? "bg-blue-600 text-white shadow-xl shadow-blue-200 scale-110" 
+                  : "bg-white text-blue-400 border border-slate-100 hover:border-blue-200 hover:bg-blue-50"
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+          </div>
 
-              {/* SPECIFICATIONS EDITING (Dito na-edit yung Watts, Voltage etc) */}
-              <div className="space-y-4">
-                <h3 className="text-[11px] font-black uppercase italic text-blue-600 border-b pb-2 tracking-widest">Specifications</h3>
-                {editingProduct.specifications?.map((block: any, bIdx: number) => (
-                  <div key={bIdx} className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p className="text-[10px] font-black uppercase text-slate-400">{block.label}</p>
-                    {block.rows?.map((row: any, rIdx: number) => (
-                      <div key={rIdx} className="grid grid-cols-2 gap-2">
-                        <Input 
-                          value={row.name} 
-                          className="h-8 text-xs bg-white rounded-lg" 
-                          onChange={(e) => {
-                            const newSpecs = [...editingProduct.specifications];
-                            newSpecs[bIdx].rows[rIdx].name = e.target.value;
-                            setEditingProduct({...editingProduct, specifications: newSpecs});
-                          }} 
-                        />
-                        <Input 
-                          value={row.value} 
-                          className="h-8 text-xs bg-white rounded-lg" 
-                          onChange={(e) => {
-                            const newSpecs = [...editingProduct.specifications];
-                            newSpecs[bIdx].rows[rIdx].value = e.target.value;
-                            setEditingProduct({...editingProduct, specifications: newSpecs});
-                          }} 
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <SheetFooter className="pt-6 border-t">
-            <Button disabled={isUpdating} onClick={handleUpdate} className="w-full bg-[#d11a2a] hover:bg-red-700 text-white rounded-2xl py-8 font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-red-500/20 transition-all active:scale-95">
-              {isUpdating ? <Loader2 className="animate-spin" /> : "Commit Changes"}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(prev => prev + 1)}
+            className="rounded-xl h-9 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600"
+          >
+            Next <ChevronRight size={16} className="ml-1" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
