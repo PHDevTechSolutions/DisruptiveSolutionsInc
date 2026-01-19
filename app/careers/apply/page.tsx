@@ -66,30 +66,56 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
+    // Generate reference ID para sa email at database
+    const referenceId = `APP-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
     try {
         // 1. Upload sa Cloudinary
         const resumeUrl = await uploadToCloudinary(file);
 
-        // 2. I-prepare ang data para sa "inquiries" collection
+        // Kunin ang values mula sa form fields
+        const applicantName = formData.get("fullName") as string;
+        const applicantEmail = formData.get("email") as string;
+        const jobTitle = jobData?.title || searchParams.get("jobTitle") || "Unknown Position";
+
+        // 2. I-prepare ang data para sa "inquiries" collection (Firebase)
         const applicationData = {
+            referenceId: referenceId,
             jobId: jobId,
-            jobTitle: jobData?.title || searchParams.get("jobTitle") || "Unknown",
-            fullName: formData.get("fullName"),
-            email: formData.get("email"),
+            jobTitle: jobTitle,
+            fullName: applicantName,
+            email: applicantEmail,
             phone: formData.get("phone"),
             resumeUrl: resumeUrl,
-            
-            // --- ETO ANG MGA REQUIRED PARA SA SIDEBAR BADGE ---
-            type: "job",           // Para pumasok sa 'Job Application' category
-            status: "unread",      // Para mabilang sa notification badge
-            
-            // Pwede mong i-keep ang pending status para sa internal hiring process
+            type: "job",           
+            status: "unread",      
             internalStatus: "pending", 
             appliedAt: serverTimestamp(),
         };
 
-        // Gagamit tayo ng "inquiries" na collection para isang listener na lang sa Sidebar
+        // Save to Firebase
         await addDoc(collection(db, "inquiries"), applicationData);
+
+        // 3. I-SEND ANG EMAIL (Calling your API Route)
+        const emailRes = await fetch("/api/apply", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                jobId: jobId || referenceId,
+                jobTitle: jobTitle,
+                name: applicantName,
+                email: applicantEmail,
+                phone: formData.get("phone"),
+                linkedin: "", // Optional field
+                message: `New application received via website. Resume link: ${resumeUrl}`
+            }),
+        });
+
+        if (!emailRes.ok) {
+            console.warn("Firebase saved but email failed to send.");
+        }
 
         alert("Application submitted successfully!");
         router.push("/careers"); 

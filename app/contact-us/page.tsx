@@ -84,20 +84,42 @@ const handleSubmit = async (e: React.FormEvent) => {
     setStatus("loading");
 
     try {
+        // 1. SAVE TO FIREBASE
+        // Sine-save muna natin sa DB para sigurado tayong may record ka.
         await addDoc(collection(db, "inquiries"), {
             ...formData,
             submittedAt: serverTimestamp(),
             source: "Contact Page",
-            // --- ETO YUNG MGA DAGDAG ---
-            status: "unread",      // Para pumasok sa notification count
-            type: "customer",      // Para malaman ng sidebar na sa 'Customer Inquiries' ito dapat
+            status: "unread",    // Mahalaga ito para sa admin notification count
+            type: "customer",    // Para ma-filter sa dashboard
         });
+
+        // 2. SEND EMAIL NOTIFICATIONS (API Call)
+        // Gagamit tayo ng nested try-catch para kung mag-fail man ang email, 
+        // hindi mag-e-error ang buong process dahil saved na sa Firebase.
+        try {
+            const emailResponse = await fetch("/api/contact", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+
+            if (!emailResponse.ok) {
+                console.warn("Firebase saved, but Email failed to send.");
+            }
+        } catch (emailError) {
+            console.error("Email API Error:", emailError);
+        }
         
+        // 3. SUCCESS UI
         setStatus("success");
         setFormData({ fullName: "", email: "", phone: "", message: "" });
+        
+        // Balik sa idle after 5 seconds
         setTimeout(() => setStatus("idle"), 5000);
+
     } catch (error) {
-        console.error("Firebase Error:", error);
+        console.error("Main Process Error:", error);
         setStatus("error");
         setTimeout(() => setStatus("idle"), 5000);
     }

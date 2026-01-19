@@ -9,6 +9,7 @@ import Navbar from "../components/navigation/navbar";
 import Footer from "../components/navigation/footer";
 import Application from "../components/application";
 import ProductFilter from "../components/ProductFilter"; 
+import Highlights from "../components/Highlights";
 import {
   Loader2,
   X,
@@ -22,7 +23,6 @@ import {
 
 // --- INTERFACES ---
 interface FilterState {
-  [key: string]: string; 
   application: string;
   mountingType: string;
   colour: string;
@@ -33,6 +33,7 @@ interface FilterState {
   connection: string;
   fluxFrom: string;
   fluxTo: string;
+  [key: string]: any; // Pinapayagan ang dynamic key access para sa setFilters
 }
 
 export default function BrandsPage() {
@@ -84,7 +85,9 @@ export default function BrandsPage() {
       orderBy("createdAt", "desc")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setProducts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      console.log("Fetched Products:", data.length); // DEBUGGING
+      setProducts(data);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -113,19 +116,25 @@ export default function BrandsPage() {
     const activeCategoryNames = dbCategories.map((cat: any) => cat.title?.trim().toUpperCase());
 
     return products.filter((product) => {
+      // 1. Check kung ang product ay kabilang sa active categories
       const hasActiveCategory = product.dynamicSpecs?.some((spec: any) => 
         activeCategoryNames.includes(spec.value?.trim().toUpperCase())
       );
 
       if (!hasActiveCategory) return false;
 
+      // 2. Sidebar Filters Logic
       const activeEntries = Object.entries(filters).filter(([key, value]) => {
         return value !== "*" && value !== "" && key !== "fluxFrom" && key !== "fluxTo";
       });
 
       for (const [key, filterValue] of activeEntries) {
-        let productValue = product[key];
-        if (!productValue && product.technicalSpecs) {
+        let hasMatch = product.dynamicSpecs?.some((spec: any) => 
+            spec.title?.toLowerCase() === key.toLowerCase() && 
+            spec.value?.toLowerCase() === filterValue.toString().toLowerCase()
+        );
+
+        if (!hasMatch && product.technicalSpecs) {
           product.technicalSpecs.forEach((spec: any) => {
             const foundRow = spec.rows?.find((r: any) => 
               r.name.toLowerCase() === key.toLowerCase() || 
@@ -133,17 +142,16 @@ export default function BrandsPage() {
               (key === "lampType" && r.name.toLowerCase() === "lamp type") ||
               (key === "mountingType" && r.name.toLowerCase() === "mounting type")
             );
-            if (foundRow) productValue = foundRow.value;
+            if (foundRow && foundRow.value.toLowerCase().includes(filterValue.toString().toLowerCase())) {
+              hasMatch = true;
+            }
           });
         }
-        if (!productValue) return false;
-        if (Array.isArray(productValue)) {
-          if (!productValue.some(val => val.toLowerCase().includes(filterValue.toLowerCase()))) return false;
-        } else {
-          if (!productValue.toString().toLowerCase().includes(filterValue.toLowerCase())) return false;
-        }
+
+        if (!hasMatch) return false;
       }
 
+      // 3. Flux/Lumen Range Filter
       if (filters.fluxFrom || filters.fluxTo) {
         let productFlux = 0;
         product.technicalSpecs?.forEach((spec: any) => {
@@ -151,7 +159,7 @@ export default function BrandsPage() {
           if (row) productFlux = parseInt(row.value.replace(/[^0-9]/g, "")) || 0;
         });
         const from = parseInt(filters.fluxFrom) || 0;
-        const to = parseInt(filters.fluxTo) || Infinity;
+        const to = parseInt(filters.fluxTo) || 999999;
         if (productFlux < from || productFlux > to) return false;
       }
       return true;
@@ -192,8 +200,6 @@ export default function BrandsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10">
           
           <div className="lg:col-span-9 order-2 lg:order-1">
-            
-            {/* TAB SYSTEM */}
             <div className="mb-8 flex flex-col md:flex-row md:items-center gap-4 border-b border-gray-200">
               <span className="text-[11px] font-bold uppercase tracking-tight text-gray-900 pb-4 md:pb-0">Sort view according to:</span>
               <div className="flex">
@@ -217,7 +223,6 @@ export default function BrandsPage() {
               <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-[#d11a2a]" /></div>
             ) : (
               <>
-                {/* 1. CATEGORIES VIEW */}
                 {activeView === "CATEGORIES" && (
                   <div className="divide-y divide-gray-100">
                     {dbCategories.map((category, index) => {
@@ -266,7 +271,6 @@ export default function BrandsPage() {
                                           <div className="relative h-40 sm:h-48 md:h-56 w-full bg-[#fcfcfc] p-4 flex items-center justify-center overflow-hidden">
                                             <img src={product.mainImage} className="max-w-[85%] max-h-[85%] object-contain group-hover/card:scale-110 group-hover/card:blur-[4px] transition-all duration-700" alt={product.name} />
                                             
-                                            {/* HOVER SPECS TABLE */}
                                             <motion.div initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} className="absolute inset-0 bg-black/80 backdrop-blur-[3px] flex flex-col justify-center items-center p-4 opacity-0 group-hover/card:opacity-100 transition-all duration-300 z-30">
                                               <p className="text-[8px] font-black text-[#d11a2a] uppercase tracking-widest mb-3 italic border-b border-[#d11a2a]/40 pb-1 w-full text-center">Technical Specs</p>
                                               <table className="w-full border-collapse">
@@ -304,24 +308,32 @@ export default function BrandsPage() {
                   </div>
                 )}
 
-                {/* 2. APPLICATIONS VIEW */}
                 {activeView === "APPLICATIONS" && (
                   <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    
+                    <Application filteredProducts={filteredProducts} addToQuote={addToQuote} quoteCart={quoteCart} />
                   </div>
                 )}
 
-                {/* 3. HIGHLIGHTS VIEW */}
-                {activeView === "HIGHLIGHTS" && (
-                  <div className="py-20 text-center text-[10px] font-black uppercase italic tracking-widest text-gray-300">Highlights Section Coming Soon</div>
-                )}
+               {activeView === "HIGHLIGHTS" && (
+  <Highlights 
+    products={filteredProducts} 
+    addToQuote={addToQuote} 
+    quoteCart={quoteCart} 
+  />
+)}
               </>
             )}
           </div>
 
           <aside className="lg:col-span-3 order-1 lg:order-2">
             <div className="lg:sticky lg:top-24">
-               <ProductFilter products={products} productCount={filteredProducts.length} filters={filters} setFilters={setFilters} />
+              <ProductFilter 
+                products={products} 
+                productCount={filteredProducts.length} 
+                filters={filters} 
+                setFilters={setFilters} 
+                activeView={activeView}
+              />
             </div>
           </aside>
         </div>
@@ -329,7 +341,7 @@ export default function BrandsPage() {
 
       <Footer />
 
-      {/* FLOATING CART */}
+      {/* FLOATING CART BUTTON */}
       <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setIsCartOpen(true)} className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[1001] bg-[#d11a2a] text-white p-4 md:p-6 rounded-full shadow-2xl border-4 border-white">
         <ShoppingBag size={22} />
         {quoteCart.length > 0 && <span className="absolute -top-2 -right-2 bg-black text-white text-[11px] w-8 h-8 flex items-center justify-center rounded-full font-black border-2 border-white">{quoteCart.length}</span>}
@@ -346,6 +358,12 @@ export default function BrandsPage() {
                 <button onClick={() => setIsCartOpen(false)}><X size={20}/></button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {quoteCart.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-10">
+                    <ShoppingBag size={48} className="text-gray-200 mb-4" />
+                    <p className="text-gray-400 font-bold uppercase text-[10px]">Your list is empty</p>
+                  </div>
+                )}
                 {quoteCart.map((item) => (
                   <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-[28px] items-center">
                     <div className="w-16 h-16 bg-white p-2 rounded-xl flex items-center justify-center"><img src={item.mainImage} className="max-h-full object-contain" alt={item.name} /></div>

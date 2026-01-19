@@ -6,19 +6,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Loader2, ChevronUp, Facebook, Instagram, Linkedin } from "lucide-react"; 
 import { db } from "@/lib/firebase"; 
 // Idinagdag ang 'limit' sa import
-import { collection, query, orderBy, onSnapshot, limit, } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, limit, where,} from "firebase/firestore";
 import SignUpNewsletter from "../components/SignUpNewsletter"    
 // Inayos ang parenthesis dito
 export default function BlogPage() {
     const [blogs, setBlogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
      const LOGO_WHITE = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
-    // FETCH REAL BLOGS FROM FIREBASE
+// FETCH REAL BLOGS FROM FIREBASE (Filtered for Disruptive Solutions Inc)
     useEffect(() => {
         const q = query(
             collection(db, "blogs"), 
+            // 1. Idagdag ang filter para sa website field
+            where("website", "==", "disruptivesolutionsinc"),
             orderBy("createdAt", "desc"), 
-            limit(6) // Ginawa nating 6 para mas marami makita sa listahan
+            limit(6)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -27,6 +29,9 @@ export default function BlogPage() {
                 ...doc.data()
             }));
             setBlogs(fetchedBlogs);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching blogs:", error);
             setLoading(false);
         });
 

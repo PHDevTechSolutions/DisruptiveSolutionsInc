@@ -5,10 +5,10 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+// TAMA ✅
 import {
     ArrowRight,
     ChevronUp,
-    Briefcase,
     Globe,
     ChevronDown,
     CheckCircle2,
@@ -17,17 +17,19 @@ import {
     Target,
     Zap,
     Users
-} from "lucide-react";
+} from "lucide-react"; // Fixed imports based on your code
 
 export default function CareersPage() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [jobs, setJobs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedJob, setExpandedJob] = useState<string | null>(null);
+    const [activeCategory, setActiveCategory] = useState("All");
 
     const LOGO_RED = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-red-scaled.png";
     const LOGO_WHITE = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
 
+    // FETCH JOBS FROM FIREBASE
     useEffect(() => {
         const q = query(collection(db, "careers"), orderBy("createdAt", "desc"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -38,16 +40,14 @@ export default function CareersPage() {
         return () => unsubscribe();
     }, []);
 
-    const [activeCategory, setActiveCategory] = useState("All");
-
-    // Kunin ang lahat ng unique categories mula sa jobs data
-    const categories = ["All", ...Array.from(new Set(jobs.map(job => job.category)))];
-
+    // NAVBAR SCROLL EFFECT
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 20);
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
+
+    const categories = ["All", ...Array.from(new Set(jobs.map(job => job.category)))];
 
     const benefits = [
         { icon: <Zap className="text-[#d11a2a]" />, title: "Fast-Growing and Innovative", desc: "Be at the forefront of the Philippine tech-infrastructure shift." },
@@ -73,7 +73,7 @@ export default function CareersPage() {
                     <Link href="/">
                         <img src={LOGO_RED} alt="Logo" className="h-7 md:h-10 transition-all" />
                     </Link>
-                    <Link href="/dashboard" className="bg-[#d11a2a] text-white px-5 py-2 md:px-7 md:py-2.5 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">
+                    <Link href="/" className="bg-[#d11a2a] text-white px-5 py-2 md:px-7 md:py-2.5 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">
                         back home
                     </Link>
                 </div>
@@ -90,15 +90,23 @@ export default function CareersPage() {
                     </h1>
                 </div>
 
-                <br></br>
-
-                {/* --- JOB LIST --- */}
-
                 <div className="max-w-7xl mx-auto">
-                    <motion.div
-                        layout
-                        className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"
-                    >
+                    {/* --- CATEGORY FILTER --- */}
+                    <div className="flex flex-wrap gap-3 mb-12">
+                        {categories.map((cat) => (
+                            <button
+                                key={cat}
+                                onClick={() => setActiveCategory(cat)}
+                                className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    activeCategory === cat ? "bg-[#d11a2a] text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                                }`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+
+                    <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                         {loading ? (
                             [1, 2, 3, 4].map((i) => (
                                 <div key={i} className="h-64 w-full bg-gray-50 animate-pulse rounded-[2.5rem]" />
@@ -108,16 +116,15 @@ export default function CareersPage() {
                                 .filter(job => activeCategory === "All" || job.category === activeCategory)
                                 .map((job) => (
                                     <motion.div
-                                        layout // Ito ang magic para sa smooth transition ng surrounding elements
+                                        layout
                                         key={job.id}
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                        className={`relative rounded-[2rem] md:rounded-[2.5rem] border transition-shadow duration-500 h-fit ${expandedJob === job.id
+                                        className={`relative rounded-[2rem] md:rounded-[2.5rem] border transition-shadow duration-500 h-fit ${
+                                            expandedJob === job.id
                                                 ? 'bg-gray-50 border-[#d11a2a] shadow-2xl z-10'
                                                 : 'bg-white border-gray-100 hover:border-gray-300 hover:shadow-lg z-0'
-                                            }`}
+                                        }`}
                                     >
                                         <div
                                             className="p-8 md:p-10 cursor-pointer flex flex-col gap-6"
@@ -146,43 +153,40 @@ export default function CareersPage() {
                                             </div>
                                         </div>
 
-                                       {/* Hanapin ang part na ito sa page.tsx mo */}
-<AnimatePresence>
-    {expandedJob === job.id && (
-        <motion.div 
-            initial={{ height: 0, opacity: 0 }} 
-            animate={{ height: "auto", opacity: 1 }} 
-            exit={{ height: 0, opacity: 0 }} 
-            className="overflow-hidden"
-        >
-            <div className="px-6 md:px-10 pb-10 pt-6 border-t border-gray-200">
-                <h4 className="text-[9px] font-black uppercase text-[#d11a2a] tracking-widest mb-4">Qualifications:</h4>
-                <ul className="space-y-3 mb-8">
-                    {job.qualifications?.map((q: string, i: number) => (
-                        <li key={i} className="flex gap-3 text-sm text-gray-700 font-medium leading-tight">
-                            <CheckCircle2 size={16} className="text-[#d11a2a] shrink-0 mt-0.5" /> {q}
-                        </li>
-                    ))}
-                </ul>
+                                        <AnimatePresence>
+                                            {expandedJob === job.id && (
+                                                <motion.div 
+                                                    initial={{ height: 0, opacity: 0 }} 
+                                                    animate={{ height: "auto", opacity: 1 }} 
+                                                    exit={{ height: 0, opacity: 0 }} 
+                                                    className="overflow-hidden"
+                                                >
+                                                    <div className="px-6 md:px-10 pb-10 pt-6 border-t border-gray-200">
+                                                        <h4 className="text-[9px] font-black uppercase text-[#d11a2a] tracking-widest mb-4">Qualifications:</h4>
+                                                        <ul className="space-y-3 mb-8">
+                                                            {job.qualifications?.map((q: string, i: number) => (
+                                                                <li key={i} className="flex gap-3 text-sm text-gray-700 font-medium leading-tight">
+                                                                    <CheckCircle2 size={16} className="text-[#d11a2a] shrink-0 mt-0.5" /> {q}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
 
-                {/* DITO MO ILALAGAY YUNG <Link> COMPONENT */}
-                <Link 
-                    href={{
-                        pathname: '/careers/apply',
-                        query: { 
-                            jobId: job.id, 
-                            jobTitle: job.title 
-                        },
-                    }}
-                    className="w-full md:w-auto bg-gray-900 text-white px-8 py-5 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-[#d11a2a] transition-all shadow-lg flex items-center justify-center gap-3"
-                >
-                    Apply for this position <ArrowRight size={16} />
-                </Link>
-                
-            </div>
-        </motion.div>
-    )}
-</AnimatePresence>
+                                                        <Link 
+                                                            href={{
+                                                                pathname: '/careers/apply',
+                                                                query: { 
+                                                                    jobId: job.id, 
+                                                                    jobTitle: job.title 
+                                                                },
+                                                            }}
+                                                            className="w-full md:w-auto bg-gray-900 text-white px-8 py-5 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-[#d11a2a] transition-all shadow-lg flex items-center justify-center gap-3"
+                                                        >
+                                                            Apply for this position <ArrowRight size={16} />
+                                                        </Link>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </motion.div>
                                 ))
                         )}
@@ -211,7 +215,6 @@ export default function CareersPage() {
                                 className="bg-white p-8 md:p-10 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center text-center md:items-start md:text-left gap-4"
                             >
                                 <div className="p-4 bg-red-50 rounded-2xl">
-                                    {/* Ganito ang tamang paraan para i-render ang Lucide icons na nasa array */}
                                     {React.cloneElement(b.icon as React.ReactElement<any>, { size: 28 })}
                                 </div>
                                 <div>
@@ -220,22 +223,6 @@ export default function CareersPage() {
                                 </div>
                             </motion.div>
                         ))}
-                    </div>
-
-                    {/* FOOTER CTA */}
-                    <div className="mt-24 text-center">
-                        <div className="bg-white p-8 md:p-16 rounded-[3rem] border border-gray-100 shadow-xl max-w-4xl mx-auto relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-10"><Lightbulb size={120} /></div>
-                            <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-gray-900 mb-6">
-                                Still looking for your <br /> <span className="text-[#d11a2a]">spot on the team?</span>
-                            </h3>
-                            <p className="text-gray-500 font-medium mb-8 max-w-xl mx-auto text-sm md:text-base italic">
-                                We're always on the lookout for passionate people who want to make an impact.
-                            </p>
-                            <a href="mailto:info@disruptivesolutions.ph" className="inline-flex items-center gap-2 text-sm md:text-lg font-black text-[#d11a2a] border-b-2 border-[#d11a2a] pb-1 hover:text-gray-900 hover:border-gray-900 transition-all uppercase tracking-widest">
-                                info@disruptivesolutions.ph
-                            </a>
-                        </div>
                     </div>
                 </div>
             </section>

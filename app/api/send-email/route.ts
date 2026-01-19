@@ -27,9 +27,10 @@ export async function POST(req: Request) {
       </tr>
     `).join("");
 
-    const mailOptions = {
+    // --- 1. EMAIL PARA SA ADMIN ---
+    const adminMailOptions = {
       from: `"Disruptive Website" <${process.env.EMAIL_USER}>`,
-      to: "admin@disruptivesolutions.com", // PALITAN MO ITO NG EMAIL MO
+      to: "admin@disruptivesolutions.com", // Your admin email
       subject: `NEW INQUIRY: ${customerDetails.firstName} ${customerDetails.lastName} (#${inquiryId?.slice(-5)})`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px;">
@@ -55,10 +56,35 @@ export async function POST(req: Request) {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    // --- 2. EMAIL PARA SA CUSTOMER (Auto-Reply) ---
+    const customerMailOptions = {
+      from: `"Disruptive Solutions" <${process.env.EMAIL_USER}>`,
+      to: customerDetails.email, // E-mail ng customer na nag-fill up
+      subject: `Inquiry Received: #${inquiryId?.slice(-5)}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 30px; text-align: center;">
+          <h1 style="color: #d11a2a; font-style: italic;">THANK YOU!</h1>
+          <p style="color: #333; font-size: 16px;">Hi ${customerDetails.firstName},</p>
+          <p style="color: #666; line-height: 1.6;">We've received your inquiry. Our team is currently reviewing your product selection and will get back to you with a formal quote shortly.</p>
+          <div style="margin: 30px 0; padding: 20px; border: 1px dashed #d11a2a; border-radius: 10px; background: #fff5f5;">
+            <p style="margin: 0; font-weight: bold; color: #d11a2a;">REFERENCE ID: ${inquiryId?.slice(-5)}</p>
+          </div>
+          <p style="font-size: 12px; color: #999;">This is an automated response. Please do not reply to this email.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;"/>
+          <p style="font-weight: black; font-size: 10px; letter-spacing: 2px;">DISRUPTIVE SOLUTIONS INC.</p>
+        </div>
+      `,
+    };
+
+    // Ipadala ang dalawang email nang sabay
+    await Promise.all([
+      transporter.sendMail(adminMailOptions),
+      transporter.sendMail(customerMailOptions)
+    ]);
+
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error("Email Error:", error);
-    return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to send emails" }, { status: 500 });
   }
 }

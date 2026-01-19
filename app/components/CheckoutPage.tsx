@@ -36,14 +36,19 @@ export default function CheckoutPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cartItems.length === 0) return alert("Your cart is empty");
 
     setIsSubmitting(true);
+    
+    // Generate a simple Inquiry ID
+    const inquiryId = `DS-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
     try {
-      // I-save sa Firebase 'inquiries' collection
+      // 1. I-save sa Firebase 'inquiries' collection
       await addDoc(collection(db, "inquiries"), {
+        inquiryId: inquiryId,
         customerDetails: formData,
         items: cartItems.map(item => ({
           id: item.id,
@@ -53,10 +58,34 @@ export default function CheckoutPage() {
           image: item.mainImage
         })),
         status: "pending",
+        type: "quotation", // <--- HETO YUNG DAGDAG PARA SA DATABASE
         createdAt: serverTimestamp(),
       });
 
-      // Clear cart pagkatapos ng success
+      // 2. I-send ang Email gamit ang iyong API Route
+      const emailRes = await fetch("/api/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerDetails: formData,
+          items: cartItems.map(item => ({
+            name: item.name,
+            sku: item.sku,
+            quantity: item.quantity || 1,
+            image: item.mainImage 
+          })),
+          inquiryId: inquiryId,
+          type: "quotation", // <--- DAGDAG DIN DITO PARA SA API LOGIC
+        }),
+      });
+
+      if (!emailRes.ok) {
+        console.error("Email failed but database record was created.");
+      }
+
+      // 3. Success Actions
       localStorage.removeItem("disruptive_quote_cart");
       window.dispatchEvent(new Event("cartUpdated"));
       setIsSuccess(true);
@@ -65,6 +94,7 @@ export default function CheckoutPage() {
       setTimeout(() => {
         router.push("/");
       }, 3000);
+
     } catch (error) {
       console.error("Submission Error:", error);
       alert("Something went wrong. Please try again.");
