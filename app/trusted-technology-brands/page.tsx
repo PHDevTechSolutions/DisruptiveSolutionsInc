@@ -9,7 +9,9 @@ import { Navigation, Autoplay } from "swiper/modules";
 import { motion, AnimatePresence } from "framer-motion";
 import SignUpNewsletter from "../components/SignUpNewsletter";
 import Link from "next/link";
-
+import Navbar from "../components/navigation/navbar";
+import Footer from "../components/navigation/footer";
+import QuoteCartPanel from "../components/QuoteCartPanel";
 import { 
   Menu,
   ArrowRight, 
@@ -37,7 +39,7 @@ const BRANDS_CONFIG = [
   {
     id: "zumtobel",
     name: "Zumtobel", // Exact match sa "brand" field sa Firestore mo
-    slug: "/zumtobel-lighting-solutions",
+    slug: "/lighting-products-smart-solutions",
     logo: "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
     description: "Global leader in holistic lighting solutions for professional applications.",
     bgColor: "bg-[#f9f9f9]",
@@ -132,79 +134,7 @@ export default function BrandsShowcase() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans antialiased text-slate-900 overflow-x-hidden">
-      
-      {/* MOBILE NAV SIDEBAR */}
-      <AnimatePresence>
-        {isNavOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsNavOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-md z-[2000] lg:hidden"
-            />
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              className="fixed top-0 left-0 h-full w-[80%] bg-[#0a0a0a] z-[2001] lg:hidden flex flex-col shadow-2xl"
-            >
-              <div className="p-8 flex items-center justify-between border-b border-white/5">
-                <img src={LOGO_WHITE} alt="Logo" className="h-11 w-auto object-contain" />
-                <button onClick={() => setIsNavOpen(false)} className="text-white/40"><X size={20} /></button>
-              </div>
-              <div className="flex-grow py-4 px-2">
-                {navLinks.map((link, idx) => (
-                  <Link key={link.name} href={link.href} onClick={() => setIsNavOpen(false)} className="group flex items-center justify-between px-6 py-5 border-b border-white/5 relative">
-                    <span className="text-xs font-black uppercase tracking-widest text-white">{link.name}</span>
-                    <ArrowRight size={14} className="text-white/20" />
-                  </Link>
-                ))}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* DESKTOP NAV */}
-      <nav className="fixed top-0 left-0 w-full z-[1000] py-4 transition-all duration-500">
-        <motion.div
-          animate={{
-            backgroundColor: isScrolled ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0)",
-            backdropFilter: isScrolled ? "blur(16px)" : "blur(0px)",
-            height: isScrolled ? "70px" : "90px",
-          }}
-          className="absolute inset-0 -z-10"
-        />
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-full">
-          <Link href="/">
-            <img src={isScrolled ? LOGO_RED : LOGO_WHITE} alt="Logo" className="h-10 md:h-12 object-contain" />
-          </Link>
-
-          <div className="hidden lg:flex items-center gap-1 bg-white/10 rounded-full px-2 py-1 border border-white/10">
-            {navLinks.map((link) => (
-              <Link key={link.name} href={link.href} className={`px-5 py-2 text-[11px] font-black uppercase tracking-widest rounded-full transition-colors ${isScrolled ? "text-gray-900" : "text-white"} hover:bg-[#d11a2a] hover:text-white`}>
-                {link.name}
-              </Link>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4">
-             {userSession && (
-                <Link href="/catalog" className={`hidden lg:flex px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border-2 ${isScrolled ? "border-gray-200 text-gray-900" : "border-white/20 text-white"}`}>
-                  Catalog
-                </Link>
-             )}
-             <Link href="/quote" className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#d11a2a] text-white">
-               Free Quote
-             </Link>
-             <button className="lg:hidden p-2" onClick={() => setIsNavOpen(true)}>
-                <Menu className={isScrolled ? "text-black" : "text-white"} />
-             </button>
-          </div>
-        </div>
-      </nav>
+      <Navbar/>
 
       {/* HERO SECTION */}
       <section className="relative h-[60vh] w-full flex items-center justify-center bg-[#050505]">
@@ -279,16 +209,7 @@ export default function BrandsShowcase() {
         ))}
       </main>
 
-      {/* FOOTER */}
-      <footer className="bg-[#0a0a0a] text-white pt-32 pb-12">
-        <div className="max-w-7xl mx-auto px-6">
-           <SignUpNewsletter />
-           <div className="mt-20 pt-12 border-t border-white/5 flex justify-between items-center">
-             <p className="text-gray-600 text-[10px] font-black uppercase tracking-widest">© 2026 Disruptive Solutions Inc.</p>
-             <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="text-gray-500 hover:text-white transition-colors"><ChevronUp /></button>
-           </div>
-        </div>
-      </footer>
+      <Footer/>
     </div>
   );
 }

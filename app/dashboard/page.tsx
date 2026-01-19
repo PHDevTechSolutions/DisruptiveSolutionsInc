@@ -81,7 +81,7 @@ export default function DisruptiveLandingPage() {
       title: "Zumtobel's Lighting Solutions",
       description: "Global leader in premium lighting solutions, combines design, innovation and sustainability.",
       image: "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
-      href: "/zumtobel-lighting-solutions"
+      href: "/lighting-products-smart-solutions"
     },
     {
       category: "Power Solutions",

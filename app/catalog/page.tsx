@@ -3,42 +3,28 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Download, 
+  Send, 
   Search, 
   Image as ImageIcon, 
   ArrowLeft, 
-  ChevronUp,
-  Facebook,
-  Instagram,
-  Linkedin,
-  Twitter
+  X,
+  MailCheck,
+  CheckCircle2,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 
-// --- MOCK ASSETS (Siguraduhin na ang mga ito ay tama sa project mo) ---
-const LOGO_WHITE = "/logo-white.png"; // Palitan ng tamang path
-
-const socials = [
-  { icon: Facebook, color: "hover:text-blue-500", href: "#" },
-  { icon: Instagram, color: "hover:text-pink-500", href: "#" },
-  { icon: Linkedin, color: "hover:text-blue-400", href: "#" },
-  { icon: Twitter, color: "hover:text-sky-400", href: "#" },
-];
-
-const footerLinks = [
-  { name: "Home", href: "/" },
-  { name: "Solutions", href: "/solutions" },
-  { name: "Portal", href: "/portal" },
-  { name: "Contact", href: "/contact" },
-];
-
+// Siguraduhin na ang path ng firebase mo ay tama
+import { db } from "@/lib/firebase"; 
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import Footer from "../components/navigation/footer";
+// --- MOCK ASSETS ---
 const CATALOG_DATA = [
   {
     id: 1,
     title: "Interior Masterpieces 2026",
     description: "Our flagship collection of architectural lighting designs.",
     image: "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?q=80&w=2070",
-    fileUrl: "/downloads/interior-2026.pdf",
     category: "Architecture"
   },
   {
@@ -46,7 +32,6 @@ const CATALOG_DATA = [
     title: "The Industrial Series",
     description: "Rugged, raw, and disruptive lighting for modern spaces.",
     image: "https://images.unsplash.com/photo-1507413245164-6160d8298b31?q=80&w=2070",
-    fileUrl: "/downloads/industrial-series.pdf",
     category: "Industrial"
   },
   {
@@ -54,62 +39,177 @@ const CATALOG_DATA = [
     title: "Smart Home Integration",
     description: "Wireless controls and IoT-ready lighting ecosystems.",
     image: "https://images.unsplash.com/photo-1558002038-1055907df827?q=80&w=2070",
-    fileUrl: "/downloads/smart-tech.pdf",
     category: "Technology"
   },
 ];
 
-// Placeholder component kung wala ka pang Newsletter component
-const SignUpNewsletter = () => (
-  <div className="flex flex-col h-full">
-    <h4 className="text-xl font-black uppercase tracking-tighter mb-4 text-white">Get Tech Insights</h4>
-    <p className="text-gray-400 text-xs mb-6">Subscribe to receive the latest updates on disruptive lighting tech.</p>
-    <div className="flex gap-2">
-      <input type="email" placeholder="Email Address" className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-sm w-full outline-none focus:border-[#d11a2a] transition-all" />
-      <button className="bg-[#d11a2a] px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-[#b01624] transition-all">Join</button>
-    </div>
-  </div>
-);
-
 export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCatalog, setSelectedCatalog] = useState<any>(null);
+  const [formData, setFormData] = useState({ name: "", email: "" });
   
+  // Loading at Success States
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
   const filteredCatalogs = CATALOG_DATA.filter(item =>
     item.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+ const handleRequestAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // 1. Save sa Firebase (para may record ka sa DB)
+      await addDoc(collection(db, "catalog_requests"), {
+        requesterName: formData.name,
+        requesterEmail: formData.email,
+        catalogTitle: selectedCatalog.title,
+        status: "pending",
+        requestedAt: serverTimestamp(),
+      });
+
+      // 2. SEND EMAIL VIA API ROUTE (Hindi na kailangan ng mailto:)
+      await fetch("/api/catalog-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          catalogTitle: selectedCatalog.title,
+        }),
+      });
+
+      setIsSuccess(true);
+      
+      setTimeout(() => {
+        handleCloseModal();
+      }, 3000);
+
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error sending request.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedCatalog(null);
+    setFormData({ name: "", email: "" });
+    setIsSuccess(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#f8f9fa] selection:bg-[#d11a2a]/10 selection:text-[#d11a2a]">
-      {/* MAIN CONTENT WRAPPER */}
+      
+      {/* REQUEST MODAL */}
+      <AnimatePresence>
+        {selectedCatalog && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={handleCloseModal}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl p-8 md:p-10"
+            >
+              {!isSuccess ? (
+                <>
+                  <button onClick={handleCloseModal} className="absolute top-6 right-6 text-gray-400 hover:text-black transition-colors">
+                    <X size={20} />
+                  </button>
+
+                  <div className="mb-8">
+                    <div className="w-12 h-12 bg-[#d11a2a]/10 rounded-2xl flex items-center justify-center text-[#d11a2a] mb-6">
+                      <MailCheck size={24} />
+                    </div>
+                    <h2 className="text-2xl font-black uppercase italic tracking-tighter">Request Access</h2>
+                    <p className="text-gray-500 text-xs font-bold uppercase mt-2 tracking-widest">To: {selectedCatalog.title}</p>
+                  </div>
+
+                  <form onSubmit={handleRequestAccess} className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Full Name</label>
+                      <input 
+                        required
+                        type="text" 
+                        placeholder="Juan Dela Cruz"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-5 py-4 outline-none focus:border-[#d11a2a] transition-all font-bold text-sm"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Work Email</label>
+                      <input 
+                        required
+                        type="email" 
+                        placeholder="juan@company.com"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-5 py-4 outline-none focus:border-[#d11a2a] transition-all font-bold text-sm"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      />
+                    </div>
+                    <button 
+                      disabled={isSubmitting}
+                      type="submit"
+                      className="w-full bg-[#d11a2a] text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-red-500/20 hover:bg-black transition-all flex items-center justify-center gap-3 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? (
+                        <><Loader2 size={16} className="animate-spin" /> Processing...</>
+                      ) : (
+                        <>Submit Request <Send size={16} /></>
+                      )}
+                    </button>
+                  </form>
+                </>
+              ) : (
+                /* SUCCESS STATE VIEW */
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }} 
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="py-12 flex flex-col items-center text-center"
+                >
+                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
+                    <CheckCircle2 size={40} />
+                  </div>
+                  <h2 className="text-2xl font-black uppercase italic tracking-tighter mb-2">Request Sent!</h2>
+                  <p className="text-gray-500 text-sm font-medium leading-relaxed max-w-[240px]">
+                    Your request for <strong>{selectedCatalog.title}</strong> has been logged. Our team will contact you shortly.
+                  </p>
+                </motion.div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <main className="max-w-7xl mx-auto px-6 pt-32 pb-32">
-        
-        {/* HEADER SECTION */}
         <header className="mb-16">
           <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-[#d11a2a] transition-colors mb-8 group w-fit">
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em]">Back to Home</span>
           </Link>
-          
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="bg-[#d11a2a]/10 text-[#d11a2a] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                  Partner Access
-                </span>
-              </div>
-              <h1 className="text-5xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter">
-                Exclusive <span className="text-[#d11a2a]">Catalogs</span>
+              <h1 className="text-5xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter italic">
+                The <span className="text-[#d11a2a]">Archives</span>
               </h1>
               <p className="mt-4 text-gray-500 max-w-md font-medium leading-relaxed">
-                High-resolution assets and technical specifications for our latest disruptive lighting collections.
+                Log your request to receive technical specifications from our engineering team.
               </p>
             </div>
-
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#d11a2a] transition-colors" size={18} />
               <input 
                 type="text"
-                placeholder="Search catalogs..."
+                placeholder="Search collection..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="bg-white border border-gray-100 rounded-2xl py-4 pl-12 pr-6 w-full md:w-[300px] shadow-sm focus:ring-2 focus:ring-[#d11a2a]/20 focus:border-[#d11a2a] outline-none transition-all font-bold text-sm"
@@ -118,126 +218,40 @@ export default function CatalogPage() {
           </div>
         </header>
 
-        {/* GRID SECTION */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <AnimatePresence mode="popLayout">
             {filteredCatalogs.map((item) => (
               <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+                key={item.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 className="group bg-white rounded-[32px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-50"
               >
                 <div className="relative h-64 overflow-hidden">
-                  <img 
-                    src={item.image} 
-                    alt={item.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-8">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-8">
                     <span className="text-white/80 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                       <ImageIcon size={14} /> {item.category}
                     </span>
                   </div>
                 </div>
-
                 <div className="p-8">
-                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-gray-500 text-sm leading-relaxed mb-6 font-medium">
-                    {item.description}
-                  </p>
+                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">{item.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed mb-6 font-medium line-clamp-2">{item.description}</p>
                   
-                  <a 
-                    href={item.fileUrl}
-                    download
+                  <button 
+                    onClick={() => setSelectedCatalog(item)}
                     className="flex items-center justify-between w-full bg-gray-50 group-hover:bg-[#d11a2a] px-6 py-4 rounded-2xl transition-all duration-300"
                   >
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-900 group-hover:text-white">
-                      Download PDF
-                    </span>
-                    <Download size={18} className="text-[#d11a2a] group-hover:text-white" />
-                  </a>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-900 group-hover:text-white">Log Request</span>
+                    <Send size={18} className="text-[#d11a2a] group-hover:text-white" />
+                  </button>
                 </div>
               </motion.div>
             ))}
           </AnimatePresence>
         </div>
 
-        {filteredCatalogs.length === 0 && (
-          <div className="text-center py-20 bg-gray-50 rounded-[40px] border-2 border-dashed border-gray-200">
-            <Search className="mx-auto text-gray-300 mb-4" size={48} />
-            <p className="text-gray-400 font-black uppercase tracking-widest">No matching catalogs found</p>
-          </div>
-        )}
       </main>
-
-      {/* --- 5. MODERN FOOTER --- */}
-      <footer className="bg-[#0a0a0a] text-white pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-20 items-start">
-            {/* BRAND COLUMN */}
-            <div className="space-y-8">
-              <div className="h-12 flex items-center">
-                <span className="text-2xl font-black tracking-tighter uppercase">Disruptive<span className="text-[#d11a2a]">.</span></span>
-              </div>
-              <p className="text-gray-500 text-sm leading-relaxed max-w-sm font-medium">
-                The leading edge of lighting technology. Disrupting the standard to build a brighter, smarter world.
-              </p>
-              <div className="flex gap-4">
-                {socials.map((soc, i) => (
-                  <Link
-                    key={i}
-                    href={soc.href}
-                    className={`h-10 w-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer transition-all duration-300 hover:bg-white/10 hover:-translate-y-1 ${soc.color}`}
-                  >
-                    <soc.icon size={18} />
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* QUICK LINKS */}
-            <div className="space-y-6">
-              <h4 className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d11a2a]">
-                Quick Links
-              </h4>
-              <ul className="space-y-4">
-                {footerLinks.map((link) => (
-                  <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="text-gray-400 text-sm flex items-center gap-2 hover:text-white transition-colors group"
-                    >
-                      <span className="h-[2px] w-0 bg-[#d11a2a] group-hover:w-3 transition-all" />
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* NEWSLETTER */}
-            <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl">
-              <SignUpNewsletter />
-            </div>
-          </div>
-
-          {/* BOTTOM BAR */}
-          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-bold text-gray-500 tracking-[0.25em] uppercase">
-            <p>© 2026 Disruptive Solutions Inc.</p>
-            <button
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="flex items-center gap-2 hover:text-[#d11a2a] transition-all"
-            >
-              Top <ChevronUp size={16} />
-            </button>
-          </div>
-        </div>
-      </footer>
+              <Footer/>
     </div>
   );
 }

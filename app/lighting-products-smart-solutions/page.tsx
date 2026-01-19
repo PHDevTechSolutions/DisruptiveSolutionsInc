@@ -10,6 +10,8 @@ import Footer from "../components/navigation/footer";
 import Application from "../components/application";
 import ProductFilter from "../components/ProductFilter"; 
 import Highlights from "../components/Highlights";
+// --- COMPONENTS ---
+import QuoteCartPanel from "../components/QuoteCartPanel";
 import {
   Loader2,
   X,
@@ -57,6 +59,20 @@ export default function BrandsPage() {
     fluxFrom: "",
     fluxTo: ""
   });
+
+  const updateQuantity = (productId: string, delta: number) => {
+  const updatedCart = quoteCart.map((item) => {
+    if (item.id === productId) {
+      const newQty = (item.quantity || 1) + delta;
+      return { ...item, quantity: newQty > 0 ? newQty : 1 };
+    }
+    return item;
+  });
+  
+  setQuoteCart(updatedCart);
+  localStorage.setItem("disruptive_quote_cart", JSON.stringify(updatedCart));
+  // Optional: window.dispatchEvent(new Event("cartUpdated")); kung kailangan ng sync sa ibang page
+};
 
   // --- 1. FETCH CATEGORIES ---
   useEffect(() => {
@@ -341,39 +357,116 @@ export default function BrandsPage() {
 
       <Footer />
 
-      {/* FLOATING CART BUTTON */}
-      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setIsCartOpen(true)} className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[1001] bg-[#d11a2a] text-white p-4 md:p-6 rounded-full shadow-2xl border-4 border-white">
-        <ShoppingBag size={22} />
-        {quoteCart.length > 0 && <span className="absolute -top-2 -right-2 bg-black text-white text-[11px] w-8 h-8 flex items-center justify-center rounded-full font-black border-2 border-white">{quoteCart.length}</span>}
-      </motion.button>
-
       {/* CART DRAWER */}
-      <AnimatePresence>
+<AnimatePresence>
         {isCartOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-black/70 backdrop-blur-md z-[2000]" />
-            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[2001] shadow-2xl flex flex-col" >
+            {/* BACKDROP */}
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsCartOpen(false)} 
+              className="fixed inset-0 bg-black/70 backdrop-blur-md z-[2000]" 
+            />
+
+            {/* SIDE PANEL */}
+            <motion.div 
+              initial={{ x: "100%" }} 
+              animate={{ x: 0 }} 
+              exit={{ x: "100%" }} 
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[2001] shadow-2xl flex flex-col" 
+            >
+              {/* HEADER */}
               <div className="p-8 border-b flex items-center justify-between">
-                <h2 className="text-2xl font-black uppercase italic">My Quote List</h2>
-                <button onClick={() => setIsCartOpen(false)}><X size={20}/></button>
+                <div>
+                  <h2 className="text-2xl font-black uppercase italic leading-none">My Quote List</h2>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-widest">
+                    {quoteCart.length} Unique Items
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setIsCartOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X size={20}/>
+                </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {quoteCart.length === 0 && (
+
+              {/* LIST OF ITEMS */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#fcfcfc]">
+                {quoteCart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-10">
-                    <ShoppingBag size={48} className="text-gray-200 mb-4" />
-                    <p className="text-gray-400 font-bold uppercase text-[10px]">Your list is empty</p>
+                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-200 mb-4">
+                      <ShoppingBag size={40} />
+                    </div>
+                    <p className="text-gray-400 font-black uppercase text-[10px] tracking-widest">Your list is empty</p>
                   </div>
+                ) : (
+                  quoteCart.map((item) => (
+                    <div key={item.id} className="flex gap-4 p-4 bg-white border border-gray-100 rounded-[28px] items-center shadow-sm">
+                      {/* Product Image */}
+                      <div className="w-16 h-16 bg-gray-50 p-2 rounded-xl flex items-center justify-center shrink-0">
+                        <img src={item.mainImage} className="max-h-full object-contain" alt={item.name} />
+                      </div>
+
+                      {/* Product Name & Controls */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-[11px] font-black uppercase truncate leading-tight mb-2 italic">{item.name}</h4>
+                        
+                        {/* --- QUANTITY CONTROLS --- */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-100">
+                            <button 
+                              onClick={() => updateQuantity(item.id, -1)}
+                              className="w-7 h-7 flex items-center justify-center bg-white border border-gray-200 rounded-md hover:text-[#d11a2a] hover:border-[#d11a2a] transition-all"
+                            >
+                              <Minus size={12} strokeWidth={3} />
+                            </button>
+                            
+                            <span className="w-6 text-center text-[12px] font-black">
+                              {item.quantity || 1}
+                            </span>
+
+                            <button 
+                              onClick={() => updateQuantity(item.id, 1)}
+                              className="w-7 h-7 flex items-center justify-center bg-white border border-gray-200 rounded-md hover:text-[#d11a2a] hover:border-[#d11a2a] transition-all"
+                            >
+                              <Plus size={12} strokeWidth={3} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Delete Button */}
+                      <button 
+                        onClick={() => removeFromQuote(item.id)} 
+                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))
                 )}
-                {quoteCart.map((item) => (
-                  <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-[28px] items-center">
-                    <div className="w-16 h-16 bg-white p-2 rounded-xl flex items-center justify-center"><img src={item.mainImage} className="max-h-full object-contain" alt={item.name} /></div>
-                    <div className="flex-1"><h4 className="text-[12px] font-black uppercase truncate">{item.name}</h4></div>
-                    <button onClick={() => removeFromQuote(item.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={18} /></button>
-                  </div>
-                ))}
               </div>
-              <div className="p-8 border-t">
-                <Link href="/quote-request-form" className="block w-full py-6 text-center rounded-[24px] font-black uppercase bg-[#d11a2a] text-white shadow-xl hover:bg-black transition-all">Confirm & Request Quote</Link>
+
+              {/* FOOTER */}
+              <div className="p-8 border-t bg-white">
+                <Link 
+                  href="/checkout" 
+                  onClick={() => setIsCartOpen(false)}
+                  className={`block w-full py-6 text-center rounded-[24px] font-black uppercase text-[12px] tracking-[0.1em] transition-all shadow-xl active:scale-95 ${
+                    quoteCart.length === 0 
+                    ? "bg-gray-100 text-gray-400 pointer-events-none" 
+                    : "bg-[#d11a2a] text-white shadow-red-500/20 hover:bg-black"
+                  }`}
+                >
+                  Confirm & Request Quote
+                </Link>
+                <p className="text-center text-[9px] text-gray-400 font-bold uppercase mt-4 tracking-widest">
+                  Free of charge • Quick response
+                </p>
               </div>
             </motion.div>
           </>
