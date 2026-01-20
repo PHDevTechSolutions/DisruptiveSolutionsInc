@@ -13,10 +13,11 @@ import {
   Loader2, 
   ChevronLeft, 
   ChevronRight, 
-  ChevronUp,
-  Minus
+  X,
+  Minus,
+  Maximize2
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 // --- COMPONENTS ---
 import QuoteCartPanel from "../../components/QuoteCartPanel";
@@ -36,6 +37,7 @@ export default function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [selectedQty, setSelectedQty] = useState(1);
   const [isInCart, setIsInCart] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false); // State para sa Fullscreen
 
   const checkCartStatus = useCallback(() => {
     const savedCart = JSON.parse(localStorage.getItem("disruptive_quote_cart") || "[]");
@@ -97,6 +99,32 @@ export default function ProductDetails() {
   return (
     <>
     <QuoteCartPanel/>
+
+    {/* FULLSCREEN IMAGE OVERLAY */}
+    <AnimatePresence>
+      {isFullscreen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] bg-white flex items-center justify-center p-4 md:p-10 cursor-zoom-out"
+          onClick={() => setIsFullscreen(false)}
+        >
+          <button className="absolute top-8 right-8 p-3 bg-gray-100 rounded-full hover:bg-black hover:text-white transition-all">
+            <X size={24} />
+          </button>
+          <motion.img 
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 20 }}
+            src={product.mainImage} 
+            alt={product.name}
+            className="max-w-full max-h-full object-contain shadow-2xl rounded-2xl"
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
+
     <div className="min-h-screen bg-white pb-12 relative font-sans selection:bg-[#d11a2a] selection:text-white overflow-x-hidden">
       
       <nav className="p-4 md:p-5 border-b sticky top-0 bg-white/80 backdrop-blur-md z-50">
@@ -108,23 +136,32 @@ export default function ProductDetails() {
       </nav>
 
       <main className="max-w-6xl mx-auto px-4 md:px-6 mt-8 md:mt-12">
+        
+        {/* BREADCRUMBS */}
+        <nav className="flex items-center gap-2 mb-6 text-[9px] font-black uppercase tracking-widest text-gray-400">
+          <Link href="/" className="hover:text-black transition-colors">Home</Link>
+          <ChevronRight size={10} />
+          <Link href="/lighting-products-smart-solutions" className="hover:text-black transition-colors">Products</Link>
+          <ChevronRight size={10} />
+          <span className="text-[#d11a2a] italic">{product.name}</span>
+        </nav>
+
         <div className="grid lg:grid-cols-12 gap-8 md:gap-12 items-start">
           
-        {/* HERO IMAGE WITH MOUSE-FOLLOW ZOOM EFFECT */}
+          {/* HERO IMAGE WITH MOUSE-FOLLOW ZOOM & FULLSCREEN TRIGGER */}
           <div 
+            onClick={() => setIsFullscreen(true)}
             className="lg:col-span-5 bg-white rounded-2xl md:rounded-[32px] border border-gray-100 shadow-sm md:sticky md:top-24 flex items-center justify-center overflow-hidden group cursor-none relative aspect-square"
             onMouseMove={(e) => {
               const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
               const x = ((e.clientX - left) / width) * 100;
               const y = ((e.clientY - top) / height) * 100;
               
-              // I-set ang transform origin base sa position ng mouse
               const target = e.currentTarget.querySelector('.zoom-image') as HTMLElement;
               if (target) {
                 target.style.transformOrigin = `${x}% ${y}%`;
               }
 
-              // I-update ang custom cursor position
               const cursor = e.currentTarget.querySelector('.custom-cursor') as HTMLElement;
               if (cursor) {
                 cursor.style.left = `${e.clientX - left}px`;
@@ -135,14 +172,14 @@ export default function ProductDetails() {
             {/* Custom Magnifying Glass Cursor */}
             <div className="custom-cursor absolute pointer-events-none z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -translate-x-1/2 -translate-y-1/2 hidden md:block">
               <div className="bg-white/10 backdrop-blur-md p-3 rounded-full border border-white/40 shadow-2xl flex items-center justify-center">
-                <Plus size={20} className="text-black" strokeWidth={3} />
+                <Maximize2 size={20} className="text-black" strokeWidth={3} />
               </div>
             </div>
 
             {/* The Image Wrapper */}
             <motion.div 
               className="zoom-image w-full h-full p-6 md:p-10 flex items-center justify-center transition-transform duration-200 ease-out"
-              whileHover={{ scale: 2.5 }} // Mas malaking zoom para dama yung follow effect
+              whileHover={{ scale: 2.5 }}
             >
               <img 
                 src={product.mainImage} 
@@ -154,7 +191,7 @@ export default function ProductDetails() {
             {/* Instruction Label */}
             <div className="absolute bottom-6 left-6 z-10 pointer-events-none">
               <span className="text-[7px] font-black uppercase tracking-[0.3em] text-gray-300 group-hover:text-[#d11a2a] transition-colors">
-                Move mouse to inspect
+                Click to expand view
               </span>
             </div>
           </div>

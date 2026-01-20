@@ -384,21 +384,42 @@ const handleSubmit = async (e: React.FormEvent) => {
            </nav>
 
 
-            {/* --- HERO SECTION --- */}
+
+            {/* --- HERO SECTION (DARK) --- */}
             <section className="relative pt-52 pb-40 bg-[#0a0a0a] overflow-hidden">
-                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-transparent to-transparent" />
+                {/* Subtle Red Glow */}
+                <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/30 via-transparent to-transparent" />
+                
+                {/* Tech Grid Background */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.05]" 
+                    style={{ 
+                        backgroundImage: `linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)`, 
+                        backgroundSize: '60px 60px' 
+                    }} 
+                />
+
                 <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
-                    <motion.h1 
+                    <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-white text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] mb-8"
+                        transition={{ duration: 0.8 }}
                     >
-                        Connect <br /> with <span className="text-[#d11a2a] italic">Expertise.</span>
-                    </motion.h1>
-                    <p className="text-gray-400 max-w-2xl mx-auto text-lg font-medium leading-relaxed">
-                        Ready to disrupt the standard? Our engineers and design specialists are ready to turn your vision into a high-performance reality.
-                    </p>
+                        <span className="text-[#d11a2a] text-[10px] md:text-[12px] font-black uppercase tracking-[0.6em] mb-6 block italic">
+                            Contact Us
+                        </span>
+                        
+                        <h1 className="text-white text-6xl md:text-7xl font-black uppercase tracking-tighter leading-[0.8] mb-8">
+                           Let’s build better,<br /> 
+                            <span className="text-[#d11a2a] italic"> smarter environments together.</span>
+                        </h1>
+
+                        
+
+                    </motion.div>
                 </div>
+
+                {/* Smooth Transition to Form */}
+                <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent" />
             </section>
 
            {/* --- CONTACT BLOCK --- */}

@@ -202,12 +202,14 @@ export default function BrandsPage() {
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a] selection:text-white overflow-x-hidden">
       <Navbar />
-
-      <section className="relative h-[25vh] md:h-[40vh] w-full flex overflow-hidden bg-black">
-        <img src="https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80" className="w-full h-full object-cover brightness-[0.3]" alt="Hero" />
-        <div className="absolute bottom-6 left-6 md:bottom-12 md:left-12 z-10">
+            {/* HERO SECTION */}
+      <section className="relative h-[60vh] w-full flex items-center justify-center bg-[#050505]">
+        <div className="absolute inset-0 opacity-40">
+          <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80" className="w-full h-full object-cover" alt="Hero" />
+        </div>
+        <div className="relative z-10 text-center">
           <h1 className="text-white text-3xl md:text-7xl font-black uppercase tracking-tighter opacity-20 italic leading-none">
-            DISRUPTIVE <br /> SOLUTIONS
+            ZUMTOBEL BRANDS
           </h1>
         </div>
       </section>

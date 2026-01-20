@@ -380,47 +380,75 @@ export default function DisruptiveLandingPage() {
 
         </div>
       </nav>
+{/* --- 2. HERO SECTION (WITH IMAGE ON RIGHT) --- */}
+<section className="relative min-h-[105vh] flex items-center bg-[#0a0a0a] overflow-hidden pt-5">
+  {/* Background Elements */}
+  <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-transparent to-transparent" />
+  <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
+    style={{ 
+        backgroundImage: `linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)`, 
+        backgroundSize: '45px 45px' 
+    }} 
+  />
 
-{/* --- 2. HERO SECTION (RESPONSIVE FIXED) --- */}
-<section className="relative h-[85vh] flex items-center bg-[#111] overflow-hidden">
-  <div className="absolute inset-0 opacity-40 bg-cover bg-center" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1513506494265-99b15e8c0dc0?q=80&w=2070')` }} />
-  <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/20 to-transparent z-[1] hidden md:block" />
-  {/* Mobile Gradient Overlay para mas readable ang text pag naka-center */}
-  <div className="absolute inset-0 bg-black/50 z-[1] md:hidden" />
-  <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-[#f8f9fa] z-[2]" />
-
-  {/* Inalis ang ml-20 at mt-22, pinalitan ng responsive alignment */}
-  <div className="max-w-7xl w-full px-6 md:px-12 relative z-10 mx-auto md:ml-20 md:mt-22">
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      transition={{ duration: 0.8 }} 
-      className="text-center md:text-left flex flex-col items-center md:items-start"
-    >
-      <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-xs font-bold tracking-widest uppercase mb-4 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">
-        <Sparkles size={14} /> Innovation at our core
-      </span>
+  <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
       
-      <h1 className="text-white text-4xl md:text-7xl font-black leading-[1.1] tracking-tighter mb-6 uppercase">
-        Disruptive <br className="hidden md:block" /> Solutions <span className="text-[#d11a2a]">Inc.</span>
-      </h1>
-      
-      <p className="text-gray-300 text-base md:text-xl max-w-xl leading-relaxed mb-8">
-        We deliver premium, <span className="text-white font-medium">future-ready lighting solutions</span> that brighten spaces, cut costs, and power smarter business across the globe.
-      </p>
+      {/* LEFT SIDE: Text Content */}
+      <motion.div 
+        initial={{ opacity: 0, x: -30 }} 
+        animate={{ opacity: 1, x: 0 }} 
+        transition={{ duration: 0.8 }} 
+        className="text-center lg:text-left flex flex-col items-center lg:items-start"
+      >
+        <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-xs font-bold tracking-[0.3em] uppercase mb-6 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full backdrop-blur-md">
+          <Sparkles size={14} /> Innovation at our core
+        </span>
+        
+        <h1 className="text-white text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tighter mb-8 uppercase">
+          Disruptive <br /> Solutions <span className="text-[#d11a2a] italic">Inc.</span>
+        </h1>
+        
+        <p className="text-gray-400 text-base md:text-lg max-w-xl leading-relaxed mb-10">
+          We deliver premium, <span className="text-white font-semibold">future-ready lighting solutions</span> that brighten spaces, cut costs, and power smarter business across the globe.
+        </p>
 
-      {/* Optional: Dagdagan natin ng button sa hero para hindi "bitin" tignan sa CP */}
-      <div className="flex md:hidden">
-         <Link href="/lighting-products-smart-solutions" className="bg-[#d11a2a] text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest">
+        <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+          <Link href="/trusted-technology-brands" className="bg-[#d11a2a] text-white px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-lg shadow-red-900/20">
             Explore Products
-         </Link>
-      </div>
-    </motion.div>
+          </Link>
+        </div>
+      </motion.div>
+
+      {/* RIGHT SIDE: The Image with Floating Effect */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, x: 30 }} 
+        animate={{ opacity: 1, scale: 1, x: 0 }} 
+        transition={{ duration: 1, delay: 0.2 }}
+        className="relative hidden lg:block"
+      >
+        {/* Glow behind image */}
+        <div className="absolute -inset-4 bg-[#d11a2a]/20 blur-[100px] rounded-full" />
+        
+        <motion.div 
+          animate={{ y: [0, -20, 0] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          className="relative z-10"
+        >
+          
+        </motion.div>
+      </motion.div>
+
+    </div>
   </div>
+
+  {/* Smooth transition to the next section */}
+  <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#f8f9fa] to-transparent z-20" />
 </section>
 
       {/* --- 4. BRANDS SECTION (NOW WITH WRAPPED HREF) --- */}
       <section className="relative w-full bg-white overflow-hidden py-24">
+
         <div className="absolute inset-0 pointer-events-none opacity-[0.3]" style={{ backgroundImage: `linear-gradient(to right, #e5e7eb 1px, transparent 4px), linear-gradient(to bottom, #e5e7eb 1px, transparent 4px)`, backgroundSize: '40px 40px' }} />
 
         <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col items-center">

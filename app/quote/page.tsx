@@ -1,25 +1,22 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import {
     ArrowRight,
-    ChevronUp,
     Upload,
     Clock,
     CheckCircle2,
-    Facebook,
-    Instagram,
-    Linkedin,
-    Loader2,
-    Home // Idinagdag para sa icon
+    Loader2
 } from "lucide-react";
 
-// --- FIREBASE & CLOUDINARY LOGIC ---
+// --- EXTERNAL LOGIC ---
 import { db } from "@/lib/firebase"; 
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import Navbar from "../components/navigation/navbar";
+import Footer from "../components/navigation/footer";
 
+// --- CLOUDINARY UPLOAD FUNCTION ---
 const uploadToCloudinary = async (file: File) => {
     const formData = new FormData();
     const uploadPreset = "taskflow_preset";
@@ -48,7 +45,6 @@ const uploadToCloudinary = async (file: File) => {
 };
 
 export default function FreeQuote() {
-    const [isScrolled, setIsScrolled] = useState(false);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
 
@@ -61,112 +57,120 @@ export default function FreeQuote() {
         email: "",
         message: ""
     });
+    
     const [file, setFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const LOGO_RED = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-red-scaled.png";
-    const LOGO_WHITE = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setStatus("idle");
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setStatus("idle");
 
-    try {
-        let finalFileUrl = "";
-        if (file) {
-            finalFileUrl = await uploadToCloudinary(file);
+        try {
+            // 1. Upload to Cloudinary if file exists
+            let finalFileUrl = "";
+            if (file) {
+                finalFileUrl = await uploadToCloudinary(file);
+            }
+
+            const submissionData = {
+                ...formData,
+                attachmentUrl: finalFileUrl,
+                status: "unread",
+                type: "quotation",
+                processStatus: "pending",
+                createdAt: new Date(),
+            };
+
+            // 2. Save to Firebase
+            await addDoc(collection(db, "inquiries"), {
+                ...submissionData,
+                createdAt: serverTimestamp(),
+            });
+
+            // 3. Send Email via API Route
+            const emailRes = await fetch("/api/quote", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(submissionData),
+            });
+
+            if (!emailRes.ok) throw new Error("Email sending failed");
+
+            setStatus("success");
+            setFormData({ 
+                firstName: "", lastName: "", streetAddress: "", 
+                company: "", contactNumber: "", email: "", message: "" 
+            });
+            setFile(null);
+        } catch (error) {
+            console.error("Submission Error:", error);
+            setStatus("error");
+        } finally {
+            setLoading(false);
         }
-
-        // 1. Siguraduhin na "inquiries" ang collection kung doon nagbabasa ang Sidebar
-        // 2. Idagdag ang status: "unread" at type: "quotation"
-        await addDoc(collection(db, "inquiries"), {
-            ...formData,
-            attachmentUrl: finalFileUrl,
-            status: "unread", // <--- Eto ang kailangan ng Sidebar Badge
-            type: "quotation", // <--- Para pumasok sa Quotation category
-            processStatus: "pending", // Pwede mong itago yung "pending" sa ibang field
-            createdAt: serverTimestamp(),
-        });
-
-        setStatus("success");
-        setFormData({ 
-            firstName: "", 
-            lastName: "", 
-            streetAddress: "", 
-            company: "", 
-            contactNumber: "", 
-            email: "", 
-            message: "" 
-        });
-        setFile(null);
-    } catch (error) {
-        console.error("Final Submission Error:", error);
-        setStatus("error");
-    } finally {
-        setLoading(false);
-    }
-};
-
-    useEffect(() => {
-        const handleScroll = () => setIsScrolled(window.scrollY > 20);
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+    };
 
     return (
         <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a] selection:text-white overflow-x-hidden">
-            
-            {/* --- 1. NAVIGATION --- */}
-            <nav className="fixed top-0 left-0 w-full z-[1000] py-4 transition-all duration-500">
-                <motion.div
-                    initial={false}
-                    animate={{
-                        backgroundColor: isScrolled ? "rgba(255, 255, 255, 0.95)" : "rgba(255, 255, 255, 0)",
-                        backdropFilter: isScrolled ? "blur(20px)" : "blur(0px)",
-                        boxShadow: isScrolled ? "0 4px 30px rgba(0, 0, 0, 0.03)" : "0 0px 0px rgba(0,0,0,0)",
-                        height: isScrolled ? "60px" : "80px",
-                    }}
-                    className="absolute inset-0 transition-all duration-500"
-                />
-                <div className="max-w-7xl mx-auto px-6 flex items-center justify-between relative z-10 h-full">
-                    <Link href="/">
-                        <img src={LOGO_RED} alt="Logo" className="h-8 md:h-12 w-auto object-contain" />
-                    </Link>
-                    {/* BACK TO HOME BUTTON */}
-                    <Link href="/" className="flex items-center gap-2 px-5 py-2 md:px-8 md:py-3 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all bg-[#d11a2a] text-white shadow-lg shadow-red-500/30 hover:bg-black">
-                        <Home size={14} className="hidden md:block" /> Back to Home
-                    </Link>
-                </div>
-            </nav>
+            <Navbar />
 
-            {/* --- 2. HERO SECTION --- */}
-            <section className="relative pt-32 md:pt-48 pb-12 md:pb-24 px-6 overflow-hidden">
-                <div className="absolute inset-0 pointer-events-none opacity-[0.2] z-0" style={{ backgroundImage: `linear-gradient(to right, #e5e7eb 1px, transparent 4px), linear-gradient(to bottom, #e5e7eb 1px, transparent 4px)`, backgroundSize: '30px 30px' }} />
-                <div className="max-w-7xl mx-auto text-center relative z-10">
-                    <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-                        <span className="text-[#d11a2a] text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-6 block italic">Priority Service Request</span>
-                        <h1 className="text-4xl md:text-8xl font-black text-gray-900 tracking-tighter uppercase leading-[1] md:leading-[0.9] mb-6 md:mb-10">
-                            Get Your Custom <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-gray-400">Quote</span>
+            {/* --- HERO SECTION (DARK) --- */}
+            <section className="relative pt-52 pb-40 bg-[#0a0a0a] overflow-hidden">
+                {/* Subtle Red Glow */}
+                <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/30 via-transparent to-transparent" />
+                
+                {/* Tech Grid Background */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.05]" 
+                    style={{ 
+                        backgroundImage: `linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)`, 
+                        backgroundSize: '60px 60px' 
+                    }} 
+                />
+
+                <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8 }}
+                    >
+                        <span className="text-[#d11a2a] text-[10px] md:text-[12px] font-black uppercase tracking-[0.6em] mb-6 block italic">
+                            Precision Engineering
+                        </span>
+                        
+                        <h1 className="text-white text-6xl md:text-7xl font-black uppercase tracking-tighter leading-[0.8] mb-8">
+                           Partner with a Trusted<br /> 
+                            <span className="text-[#d11a2a] italic">Industrial Lighting Provider.</span>
                         </h1>
-                        <div className="inline-flex items-center gap-2 md:gap-3 bg-white/80 backdrop-blur-md px-5 py-3 md:px-8 md:py-4 rounded-xl md:rounded-2xl border border-gray-200 shadow-xl">
-                            <Clock size={16} className="text-[#d11a2a]" />
-                            <p className="text-gray-600 text-[9px] md:text-[11px] font-black uppercase tracking-widest">Response Guaranteed <span className="hidden md:inline text-gray-900 border-l border-gray-300 ml-2 pl-2">Within 30 Minutes</span></p>
+
+                        
+
+                        <div className="inline-flex items-center gap-3 bg-white/5 backdrop-blur-md px-6 py-3 rounded-full border border-white/10">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-white/70 text-[10px] font-black uppercase tracking-widest">
+                                Provide your project details below and our team will respond with your quote within 30 minutes
+                            </span>
                         </div>
                     </motion.div>
                 </div>
+
+                {/* Smooth Transition to Form */}
+                <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent" />
             </section>
 
-            {/* --- 3. FORM SECTION --- */}
-            <section className="pb-20 md:pb-32 px-4 md:px-6">
+            {/* --- FORM SECTION --- */}
+            <section className="relative -mt-20 pb-20 md:pb-32 px-4 md:px-6 z-20">
                 <div className="max-w-4xl mx-auto">
-                    <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[30px] md:rounded-[40px] shadow-2xl border border-gray-100 overflow-hidden">
-                        
+                    <motion.div 
+                        initial={{ opacity: 0, y: 40 }} 
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="bg-white rounded-[30px] md:rounded-[40px] shadow-2xl border border-gray-100 overflow-hidden"
+                    >
                         {status === "success" ? (
                             <div className="p-12 md:p-20 text-center space-y-6">
                                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-16 h-16 md:w-20 md:h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
@@ -218,7 +222,7 @@ export default function FreeQuote() {
                                     >
                                         <input type="file" ref={fileInputRef} onChange={(e) => setFile(e.target.files?.[0] || null)} className="hidden" />
                                         <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
-                                            {loading ? <Loader2 className="animate-spin text-[#d11a2a]" /> : <Upload size={20} className={file ? "text-[#d11a2a]" : "text-gray-400"} />}
+                                            <Upload size={20} className={file ? "text-[#d11a2a]" : "text-gray-400"} />
                                         </div>
                                         <p className="text-[10px] md:text-sm font-bold text-gray-900 uppercase text-center">{file ? file.name : "Tap to upload files"}</p>
                                     </div>
@@ -246,25 +250,7 @@ export default function FreeQuote() {
                 </div>
             </section>
 
-            {/* --- 4. FOOTER --- */}
-            <footer className="bg-[#0a0a0a] text-white pt-16 md:pt-24 pb-12">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-12">
-                        <img src={LOGO_WHITE} alt="Logo" className="h-8 md:h-10" />
-                        <div className="flex gap-6">
-                            <Facebook size={18} className="text-gray-500 hover:text-[#d11a2a] cursor-pointer" />
-                            <Instagram size={18} className="text-gray-500 hover:text-[#d11a2a] cursor-pointer" />
-                            <Linkedin size={18} className="text-gray-500 hover:text-[#d11a2a] cursor-pointer" />
-                        </div>
-                    </div>
-                    <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] font-bold text-gray-500 tracking-[0.2em] uppercase">
-                        <p>© 2026 Disruptive Solutions Inc.</p>
-                        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-2 hover:text-[#d11a2a]">
-                            Back to Top <ChevronUp size={14} />
-                        </button>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
 }
