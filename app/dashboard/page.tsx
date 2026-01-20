@@ -61,7 +61,7 @@ export default function DisruptiveLandingPage() {
     { name: "Home", href: "/dashboard" },
     { name: "Product & Solutions", href: "/lighting-products-smart-solutions" },
     { name: "Brands", href: "trusted-technology-brands" },
-    { name: "Contact Us", href: "/contact-us" },
+    { name: "Contact", href: "/contact-us" },
   ];
 
   const footerLinks = [
@@ -212,7 +212,7 @@ export default function DisruptiveLandingPage() {
                   onClick={() => setIsNavOpen(false)}
                   className="flex items-center justify-between group"
                 >
-                  <span className="text-[11px] font-black uppercase tracking-widest text-white">Start a Project</span>
+                  <span className="text-[11px] font-black uppercase tracking-widest text-white">Free Quote</span>
                   <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-[#d11a2a] group-hover:border-[#d11a2a] transition-all">
                     <Zap size={14} className="text-white fill-white" />
                   </div>
@@ -381,14 +381,23 @@ export default function DisruptiveLandingPage() {
         </div>
       </nav>
 {/* --- 2. HERO SECTION (WITH IMAGE ON RIGHT) --- */}
-<section className="relative min-h-[105vh] flex items-center bg-[#0a0a0a] overflow-hidden pt-5">
-  {/* Background Elements */}
-  <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-transparent to-transparent" />
-  <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
-    style={{ 
-        backgroundImage: `linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)`, 
-        backgroundSize: '45px 45px' 
-    }} 
+<section className="relative min-h-[112vh] flex items-center bg-[#0a0a0a] overflow-hidden pt-1">
+  
+  {/* --- 1. THE BACKGROUND IMAGE LAYER --- */}
+  <div className="absolute inset-0 z-0">
+    <img 
+      src="https://disruptivesolutionsinc.com/wp-content/uploads/2025/09/HOME-PAGE-HERO.png" // Palitan mo ng sarili mong image URL
+      alt="Engineering Background"
+      className="w-full h-full object-cover opacity-40 grayscale-[10%]" 
+    />
+    {/* Dark Overlays para mabasa ang text */}
+    <div className="absolute inset-0 bg-black/60 md:bg-black/40" />
+    <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
+  </div>
+
+  {/* Background Glows (Engineering Vibes) */}
+  <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/40 via-transparent to-transparent z-[1]" />
+  <div className="absolute inset-0 pointer-events-none opacity-[0.05] z-[1]" 
   />
 
   <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
@@ -405,45 +414,59 @@ export default function DisruptiveLandingPage() {
           <Sparkles size={14} /> Innovation at our core
         </span>
         
-        <h1 className="text-white text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tighter mb-8 uppercase">
+        <h1 className="text-white text-5xl md:text-7xl lg:text-7xl font-black leading-[0.9] tracking-tighter mb-8 uppercase drop-shadow-2xl">
           Disruptive <br /> Solutions <span className="text-[#d11a2a] italic">Inc.</span>
         </h1>
         
-        <p className="text-gray-400 text-base md:text-lg max-w-xl leading-relaxed mb-10">
+        <p className="text-gray-300 text-base md:text-lg max-w-lg leading-relaxed mb-10 font-medium">
           We deliver premium, <span className="text-white font-semibold">future-ready lighting solutions</span> that brighten spaces, cut costs, and power smarter business across the globe.
         </p>
 
         <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-          <Link href="/trusted-technology-brands" className="bg-[#d11a2a] text-white px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-lg shadow-red-900/20">
+          <Link href="/trusted-technology-brands" className="bg-[#d11a2a] text-white px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-xl shadow-red-900/30">
             Explore Products
           </Link>
         </div>
       </motion.div>
 
-      {/* RIGHT SIDE: The Image with Floating Effect */}
+      {/* RIGHT SIDE: Ang dating Floating Image box, ngayon pwede nating gawing "Tech Frame" */}
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, x: 30 }} 
         animate={{ opacity: 1, scale: 1, x: 0 }} 
         transition={{ duration: 1, delay: 0.2 }}
         className="relative hidden lg:block"
       >
-        {/* Glow behind image */}
-        <div className="absolute -inset-4 bg-[#d11a2a]/20 blur-[100px] rounded-full" />
-        
         <motion.div 
-          animate={{ y: [0, -20, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          animate={{ y: [0, -15, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           className="relative z-10"
         >
-          
+          {/* Isang Glassmorphism Card para sa Stats sa tapat ng image */}
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl">
+            <h2 className="text-[#d11a2a] font-black text-4xl mb-2 tracking-tighter italic">99.9%</h2>
+            <p className="text-white font-bold uppercase text-[10px] tracking-[0.3em] mb-8">System Reliability</p>
+            
+            <div className="space-y-6">
+              {[
+                { label: "Precision Engineering", val: "100%" },
+                { label: "Energy Savings", val: "75%" },
+                { label: "Global Reach", val: "24/7" },
+              ].map((stat, i) => (
+                <div key={i} className="flex justify-between items-end border-b border-white/10 pb-2">
+                  <span className="text-gray-400 text-[10px] font-bold uppercase">{stat.label}</span>
+                  <span className="text-white font-black text-sm tracking-widest">{stat.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </motion.div>
       </motion.div>
 
     </div>
   </div>
 
-  {/* Smooth transition to the next section */}
-  <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#f8f9fa] to-transparent z-20" />
+  {/* Transition to next section */}
+  <div className="absolute bottom-0 left-0 w-full h-18 bg-gradient-to-t from-[#f8f9fa] to-transparent z-20" />
 </section>
 
       {/* --- 4. BRANDS SECTION (NOW WITH WRAPPED HREF) --- */}

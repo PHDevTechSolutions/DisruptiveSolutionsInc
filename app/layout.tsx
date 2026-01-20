@@ -12,20 +12,45 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// --- UPDATED METADATA ---
+// --- FULLY UPDATED METADATA ---
 export const metadata: Metadata = {
-  // Title Configuration
   title: {
-    default: "Disruptive Solutions Inc.", // Default title para sa homepage
-    template: "%s | Disruptive Solutions Inc.", // Template para sa ibang pages (e.g., "About | Disruptive...")
+    default: "Disruptive Solutions Inc.",
+    template: "%s | Disruptive Solutions Inc.",
   },
   description: "Innovative lighting and smart solutions for modern spaces.",
   
   // Icon Configuration
   icons: {
-    icon: "/favicon.ico", // Siguraduhin na ang file na ito ay nasa loob ng /public folder
-    shortcut: "/favicon.png",
-    apple: "/apple-touch-icon.png", // Optional: para sa iPhone home screen
+    icon: "/images/icon.png",
+    shortcut: "/images/icon.png",
+    apple: "/images/icon.png",
+  },
+
+  // OpenGraph Configuration (Para sa Facebook, LinkedIn, etc.)
+  openGraph: {
+    title: "Disruptive Solutions Inc.",
+    description: "Innovative lighting and smart solutions for modern spaces.",
+    url: "https://disruptivesolutionsinc.com", // Palitan mo ng actual domain niyo
+    siteName: "Disruptive Solutions Inc.",
+    images: [
+      {
+        url: "/images/icon.png", // thumbnail na lalabas sa shares
+        width: 800,
+        height: 600,
+        alt: "Disruptive Solutions Logo",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+
+  // Twitter Configuration (Para sa X/Twitter cards)
+  twitter: {
+    card: "summary_large_image",
+    title: "Disruptive Solutions Inc.",
+    description: "Innovative lighting and smart solutions.",
+    images: ["/images/icon.png"],
   },
 };
 
@@ -36,9 +61,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        {/* Kahit hindi maglagay ng <link> dito, automatic na babasahin ni Next.js ang icons sa metadata */}
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

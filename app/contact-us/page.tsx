@@ -45,7 +45,7 @@ export default function ContactUsPage() {
         { name: "Home", href: "/" },
         { name: "Product & Solutions", href: "/lighting-products-smart-solutions" },
         { name: "Brands", href: "/trusted-technology-brands" },
-        { name: "Contact Us", href: "/contact-us" },
+        { name: "Contact", href: "/contact-us" },
     ];
 
     const socials = [

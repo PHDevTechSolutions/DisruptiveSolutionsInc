@@ -242,89 +242,185 @@ export default function BrandsPage() {
             ) : (
               <>
                 {activeView === "CATEGORIES" && (
-                  <div className="divide-y divide-gray-100">
-                    {dbCategories.map((category, index) => {
-                      const categoryProducts = filteredProducts.filter((p) => 
-                        p.dynamicSpecs?.some((spec: any) => 
-                          spec.value?.trim().toUpperCase() === category.title?.trim().toUpperCase()
-                        )
-                      );
+  <div className="divide-y divide-gray-100 animate-in fade-in duration-500">
+    {dbCategories.map((category, index) => {
+      // 1. I-filter ang products na pasok sa category na ito
+      const categoryProducts = filteredProducts.filter((p) =>
+        p.dynamicSpecs?.some((spec: any) =>
+          spec.value?.trim().toUpperCase() === category.title?.trim().toUpperCase()
+        )
+      );
 
-                      const isOpen = openCategoryId === category.id;
-                      if (Object.values(filters).some(v => v !== "*" && v !== "") && categoryProducts.length === 0) return null;
+      // 2. HIDE LOGIC: Kung walang produkto sa category na ito (kahit dahil sa filter), wag i-render
+      if (categoryProducts.length === 0) return null;
 
-                      return (
-                        <div key={category.id} className="overflow-hidden border-b border-gray-50">
-                          <button 
-                            onClick={() => setOpenCategoryId(isOpen ? null : category.id)}
-                            className={`w-full flex items-start justify-between p-4 md:p-8 transition-all hover:bg-gray-50 ${isOpen ? 'bg-gray-50' : ''}`}
-                          >
-                            <div className="flex gap-4 md:gap-8 text-left">
-                              <div className="w-10 h-10 md:w-14 md:h-14 bg-white border border-gray-200 flex items-center justify-center shrink-0 overflow-hidden rounded-lg shadow-sm">
-                                {category.imageUrl ? (
-                                  <img src={category.imageUrl} className="w-full h-full object-cover" alt={category.title} />
-                                ) : (
-                                  <span className="text-[10px] font-bold text-gray-300">0{index + 1}</span>
-                                )}
-                              </div>
-                              <h3 className={`text-sm md:text-xl font-black tracking-tighter uppercase ${isOpen ? 'text-[#d11a2a]' : 'text-gray-900'}`}>{category.title}</h3>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <span className="hidden md:block text-[9px] font-black bg-white border px-3 py-1 rounded-full uppercase italic">{categoryProducts.length} Items</span>
-                              {isOpen ? <Minus size={16} className="text-[#d11a2a]" /> : <Plus size={16} className="text-gray-300" />}
-                            </div>
-                          </button>
+      const isOpen = openCategoryId === category.id;
 
-                          <AnimatePresence>
-                            {isOpen && (
-                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-[#fcfcfc]">
-                                <div className="p-4 md:p-8 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                                  {categoryProducts.map((product) => {
-                                    const isInCart = quoteCart.some(item => item.id === product.id);
-                                    const firstGroup = product.technicalSpecs?.[0];
+      return (
+        <div key={category.id} className="overflow-hidden border-b border-gray-50">
+          {/* CATEGORY HEADER BUTTON */}
+          <button
+            onClick={() => setOpenCategoryId(isOpen ? null : category.id)}
+            className={`w-full flex items-start justify-between p-4 md:p-8 transition-all hover:bg-gray-50 ${
+              isOpen ? "bg-gray-50" : ""
+            }`}
+          >
+<div className="flex gap-6 md:gap-10 text-left items-center">
+  {/* NILAKIHAN ANG CONTAINER: Mula w-14 naging w-20/24 */}
+  <div className="w-16 h-16 md:w-24 md:h-24 bg-white border border-gray-200 flex items-center justify-center shrink-0 overflow-hidden rounded-xl shadow-md transition-transform duration-500 group-hover:scale-105">
+    {category.imageUrl ? (
+      <img
+        src={category.imageUrl}
+        className="w-full h-full object-cover" // Kung gusto mong hindi maputol ang image, gamitin ang 'object-contain' at dagdagan ng p-2
+        alt={category.title}
+      />
+    ) : (
+      <span className="text-xs font-black text-gray-300">
+        0{index + 1}
+      </span>
+    )}
+  </div>
 
-                                    return (
-                                      <div key={product.id} className="bg-white rounded-xl md:rounded-[24px] overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-500 flex flex-col group/card relative">
-                                        <Link href={`/lighting-products-smart-solutions/${product.id}`}>
-                                          <div className="relative h-40 sm:h-48 md:h-56 w-full bg-[#fcfcfc] p-4 flex items-center justify-center overflow-hidden">
-                                            <img src={product.mainImage} className="max-w-[85%] max-h-[85%] object-contain group-hover/card:scale-110 group-hover/card:blur-[4px] transition-all duration-700" alt={product.name} />
-                                            
-                                            <motion.div initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} className="absolute inset-0 bg-black/80 backdrop-blur-[3px] flex flex-col justify-center items-center p-4 opacity-0 group-hover/card:opacity-100 transition-all duration-300 z-30">
-                                              <p className="text-[8px] font-black text-[#d11a2a] uppercase tracking-widest mb-3 italic border-b border-[#d11a2a]/40 pb-1 w-full text-center">Technical Specs</p>
-                                              <table className="w-full border-collapse">
-                                                <tbody className="divide-y divide-white/10">
-                                                  {firstGroup?.rows?.slice(0, 5).map((row: any, i: number) => (
-                                                    <tr key={i}>
-                                                      <td className="py-1.5 text-[7px] md:text-[8px] font-bold text-gray-400 uppercase italic">{row.name}</td>
-                                                      <td className="py-1.5 text-[8px] md:text-[9px] font-black text-white uppercase text-right">{row.value || "—"}</td>
-                                                    </tr>
-                                                  ))}
-                                                </tbody>
-                                              </table>
-                                              <div className="mt-4 flex items-center gap-1 text-white text-[7px] font-black uppercase bg-[#d11a2a] px-3 py-1.5 rounded-full">Full Details <ChevronRight size={10} /></div>
-                                            </motion.div>
+  <div className="flex flex-col justify-center">
+    {/* NILAKIHAN ANG TEXT PARA SUMABAY SA IMAGE */}
+    <h3
+      className={`text-lg md:text-1xl font-black tracking-tighter uppercase transition-colors ${
+        isOpen ? "text-[#d11a2a]" : "text-gray-900"
+      }`}
+    >
+      {category.title}
+    </h3>
+    <p className="text-[10px] md:text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">
+      {categoryProducts.length} Premium Products
+    </p>
+  </div>
+</div>
 
-                                            <div className="absolute top-2 left-2 bg-white/95 px-2 py-1 rounded-lg text-[7px] md:text-[8px] font-black uppercase border border-gray-100 z-10">{product.sku}</div>
-                                          </div>
-                                        </Link>
-                                        <div className="p-4 md:p-5 flex flex-col flex-1 border-t border-gray-50 bg-white z-20">
-                                          <h4 className="text-[10px] md:text-[11px] font-black uppercase italic leading-tight line-clamp-2 min-h-[32px]">{product.name}</h4>
-                                          <button onClick={() => addToQuote(product)} className={`mt-4 w-full py-2.5 md:py-3 text-[8px] md:text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all ${isInCart ? "bg-green-600 text-white" : "bg-gray-900 text-white hover:bg-[#d11a2a]"}`}>
-                                            {isInCart ? <><Check size={12} strokeWidth={3} /> Added</> : <><Plus size={12} strokeWidth={3} /> Add to Quote</>}
-                                          </button>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      );
-                    })}
-                  </div>
+            <div className="flex items-center gap-4">
+              <span className="hidden md:block text-[9px] font-black bg-white border px-3 py-1 rounded-full uppercase italic shadow-sm">
+                {categoryProducts.length} Items
+              </span>
+              <div className="p-2 bg-white rounded-full border border-gray-100 shadow-sm">
+                {isOpen ? (
+                  <Minus size={16} className="text-[#d11a2a]" />
+                ) : (
+                  <Plus size={16} className="text-gray-400" />
                 )}
+              </div>
+            </div>
+          </button>
+
+          {/* PRODUCT GRID SECTION */}
+          <AnimatePresence>
+            {isOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+                className="bg-[#fcfcfc]"
+              >
+                <div className="p-4 md:p-8 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                  {categoryProducts.map((product) => {
+                    const isInCart = quoteCart.some((item) => item.id === product.id);
+                    const firstGroup = product.technicalSpecs?.[0];
+
+                    return (
+                      <div
+                        key={product.id}
+                        className="bg-white rounded-xl md:rounded-[24px] overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-500 flex flex-col group/card relative"
+                      >
+<Link href={`/lighting-products-smart-solutions/${product.id}`}>
+  {/* 1. Nilakihan ang height (h-64 hanggang h-80) at binawasan ang padding (p-2) */}
+  <div className="relative h-64 sm:h-72 md:h-80 w-full bg-[#fcfcfc] p-2 flex items-center justify-center overflow-hidden">
+    
+    {/* 2. Ginawang max-w-[95%] at max-h-[95%] para sakop ang buong box */}
+    <img 
+      src={product.mainImage} 
+      className="max-w-[95%] max-h-[95%] object-contain group-hover/card:scale-105 group-hover/card:blur-[4px] transition-all duration-700" 
+      alt={product.name} 
+    />
+    
+    {/* HOVER SPECS OVERLAY (Walang bago dito, pero mas malaki na ang view area mo) */}
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      whileHover={{ opacity: 1 }} 
+      className="absolute inset-0 bg-black/80 backdrop-blur-[3px] flex flex-col justify-center items-center p-6 opacity-0 group-hover/card:opacity-100 transition-all duration-300 z-30"
+    >
+      <p className="text-[9px] font-black text-[#d11a2a] uppercase tracking-widest mb-3 italic border-b border-[#d11a2a]/40 pb-1 w-full text-center">
+        Technical Specs
+      </p>
+      <table className="w-full border-collapse">
+        <tbody className="divide-y divide-white/10">
+          {firstGroup?.rows?.slice(0, 6).map((row: any, i: number) => (
+            <tr key={i}>
+              <td className="py-2 text-[8px] font-bold text-gray-400 uppercase italic">{row.name}</td>
+              <td className="py-2 text-[9px] font-black text-white uppercase text-right">{row.value || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-5 flex items-center gap-1 text-white text-[8px] font-black uppercase bg-[#d11a2a] px-4 py-2 rounded-full">
+        Full Details <ChevronRight size={12} />
+      </div>
+    </motion.div>
+
+    {/* SKU Tag */}
+    <div className="absolute top-3 left-3 bg-white/95 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-gray-100 z-10 shadow-sm">
+      {product.sku}
+    </div>
+  </div>
+</Link>
+                        <div className="p-4 md:p-5 flex flex-col flex-1 border-t border-gray-50 bg-white z-20">
+                          <h4 className="text-[10px] md:text-[11px] font-black uppercase italic leading-tight line-clamp-2 min-h-[32px]">
+                            {product.name}
+                          </h4>
+                          <button
+                            onClick={() => addToQuote(product)}
+                            className={`mt-4 w-full py-2.5 md:py-3 text-[8px] md:text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm ${
+                              isInCart
+                                ? "bg-green-600 text-white"
+                                : "bg-gray-900 text-white hover:bg-[#d11a2a] hover:shadow-lg"
+                            }`}
+                          >
+                            {isInCart ? (
+                              <>
+                                <Check size={12} strokeWidth={3} /> Added
+                              </>
+                            ) : (
+                              <>
+                                <Plus size={12} strokeWidth={3} /> Add to Quote
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    })}
+
+    {/* OPTIONAL: EMPTY STATE kapag lahat ng category ay walang laman dahil sa filter */}
+    {dbCategories.every(cat => 
+      !filteredProducts.some(p => 
+        p.dynamicSpecs?.some((spec: any) => 
+          spec.value?.trim().toUpperCase() === cat.title?.trim().toUpperCase()
+        )
+      )
+    ) && (
+      <div className="py-20 text-center">
+        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">
+          No products found matching your filters.
+        </p>
+      </div>
+    )}
+  </div>
+)}
 
                 {activeView === "APPLICATIONS" && (
                   <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
