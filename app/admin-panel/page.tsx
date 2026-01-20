@@ -13,6 +13,9 @@ import CustomerInquiries from "../components/inquiries/CustomerInquiries"
 import Quotation from "../components/inquiries/Quotation" 
 import Categories from "../components/products/Category";
 import Application from "../components/products/Application";
+import CatalogManager from "../components/pages/CatalogManager"
+import ProjectManager from "../components/pages/ProjectManager"
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -49,6 +52,10 @@ export default function Page() {
         return <Quotation />
       case "Careers": 
         return <CareersManager />
+              case "Projects": 
+        return <ProjectManager />
+      case "Catalog": 
+        return <CatalogManager />
       case "Customer Inquiries": 
         return <CustomerInquiries />
               case "Application": 

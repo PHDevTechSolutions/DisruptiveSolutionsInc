@@ -7,10 +7,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import SignUpNewsletter from "../components/SignUpNewsletter"
+import Footer from "../components/navigation/footer";
+
 import {
   Menu, X, FileSignature, ArrowRight, Sparkles, ChevronUp,
   MessageSquare, Send, Brain, Zap, Code, Facebook,
-  Instagram, Linkedin, Video, ShieldCheck, User, LogOut, Plus
+  Instagram, Linkedin, Video, ShieldCheck, User, LogOut, Plus, Loader2
 } from "lucide-react";
 
 // --- MOCK UI COMPONENTS (Para sa Chat Widget) ---
@@ -39,6 +41,10 @@ export default function DisruptiveLandingPage() {
   const pathname = usePathname();
   const [userSession, setUserSession] = useState<any>(null);
 
+
+  // --- NEW: PROJECT FETCHING STATE ---
+  const [fetchedProjects, setFetchedProjects] = useState<any[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
   // Check session on mount
   useEffect(() => {
     const session = localStorage.getItem("disruptive_user_session");
@@ -53,6 +59,24 @@ export default function DisruptiveLandingPage() {
     setUserSession(null);
     window.location.reload(); // Refresh para bumalik sa default nav
   };
+
+  // --- NEW: FETCH PROJECTS FROM FIREBASE (LIMIT 4) ---
+  useEffect(() => {
+    const q = query(
+      collection(db, "projects"), 
+      orderBy("createdAt", "desc"), 
+      limit(4) 
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setFetchedProjects(data);
+      setProjectsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const LOGO_RED = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-red-scaled.png";
   const LOGO_WHITE = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
@@ -469,7 +493,7 @@ export default function DisruptiveLandingPage() {
   <div className="absolute bottom-0 left-0 w-full h-18 bg-gradient-to-t from-[#f8f9fa] to-transparent z-20" />
 </section>
 
-      {/* --- 4. BRANDS SECTION (NOW WITH WRAPPED HREF) --- */}
+{/* --- 4. BRANDS SECTION (NOW WITH WRAPPED HREF) --- */}
       <section className="relative w-full bg-white overflow-hidden py-24">
 
         <div className="absolute inset-0 pointer-events-none opacity-[0.3]" style={{ backgroundImage: `linear-gradient(to right, #e5e7eb 1px, transparent 4px), linear-gradient(to bottom, #e5e7eb 1px, transparent 4px)`, backgroundSize: '40px 40px' }} />
@@ -535,6 +559,8 @@ export default function DisruptiveLandingPage() {
           </motion.div>
         </div>
       </section>
+
+      
 {/* --- 4. INFINITE LOGO SLIDER (CLEAN & FAST) --- */}
 <section className="relative py-16 md:py-24 bg-white overflow-hidden border-y border-gray-100">
   <div className="max-w-7xl mx-auto px-6">
@@ -603,8 +629,107 @@ export default function DisruptiveLandingPage() {
   </div>
 </section>
 
+{/* --- RECENT PROJECTS SECTION (WITH LOGO HOVER & SIDE MARGINS) --- */}
+<section className="relative w-full bg-white py-16 md:py-24">
+  {/* Side Margins: px-8 mobile, px-20 desktop */}
+  <div className="max-w-7xl mx-auto px-8 md:px-20">
+    
+    {/* HEADER SECTION */}
+    <div className="flex flex-col items-center justify-center text-center mb-16 max-w-3xl mx-auto">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        whileInView={{ opacity: 1, y: 0 }} 
+        viewport={{ once: true }} 
+        transition={{ duration: 0.8 }} 
+        className="flex flex-col items-center"
+      >
+        <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] mb-6 bg-red-50 px-5 py-2 rounded-full border border-red-100/50">
+          <Zap size={12} className="fill-[#d11a2a]" /> Portfolios
+        </span>
+        <h2 className="text-3xl md:text-6xl font-black text-gray-900 tracking-[-0.04em] uppercase leading-[0.9] mb-8">
+          Featured <br className="md:hidden" /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Projects</span>
+        </h2>
+        <div className="h-1.5 w-16 bg-[#d11a2a] mb-8 rounded-full shadow-[0_2px_10px_rgba(209,26,42,0.3)]" />
+        <p className="text-gray-500 font-medium text-[10px] md:text-sm leading-relaxed italic max-w-2xl">
+          Our projects showcase the creativity, precision, and innovation that define our brand. <span className="text-gray-900 font-bold">These collaborations reflect our commitment to quality, delivering high-impact solutions to industry leaders.</span>
+        </p>
+      </motion.div>
+    </div>
+
+    {/* GRID: 2 COLUMNS ALWAYS */}
+    <div className="grid grid-cols-2 gap-4 md:gap-8">
+      {projectsLoading ? (
+        <div className="col-span-full py-10 flex justify-center w-full">
+          <Loader2 className="animate-spin text-[#d11a2a]" size={30} />
+        </div>
+      ) : (
+        fetchedProjects.map((project) => (
+          <motion.div 
+            key={project.id} 
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <Link href={``} className="group relative h-[180px] md:h-[400px] block rounded-2xl md:rounded-[40px] overflow-hidden bg-gray-900 shadow-lg border border-gray-100">
+              {/* Main Project Image */}
+              <img 
+                src={project.imageUrl} 
+                alt={project.title} 
+                className="w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-700 ease-out" 
+              />
+              
+              {/* Default Gradient Overlay (Bottom text readability) */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 group-hover:opacity-0 transition-opacity duration-500" />
+              
+              {/* --- HOVER OVERLAY: Lilitaw lang 'to pag hinover --- */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-[#d11a2a]/40 to-black/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center p-2 md:p-8 text-center">
+                {project.logoUrl && (
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    className="w-full flex justify-center items-center px-4"
+                  >
+                    {/* Logo: Pinalaki gaya ng request mo */}
+                    <img 
+                      src={project.logoUrl} 
+                      alt="Client Logo" 
+                      className="w-24 h-24 md:w-48 md:h-48 object-contain drop-shadow-2xl" 
+                    />
+                  </motion.div>
+                )}
+
+              </div>
+
+              {/* Static Content (Bottom Labels) - Nawawala pag hinover para clear yung Logo */}
+              <div className="absolute inset-0 p-4 md:p-10 flex flex-col justify-end group-hover:opacity-0 transition-opacity duration-300">
+                <div className="mb-2">
+                  
+                </div>
+                <h3 className="text-[10px] md:text-2xl font-black text-white uppercase mb-1 tracking-tighter leading-tight line-clamp-2">
+                  {project.title}
+                </h3>
+              </div>
+            </Link>
+          </motion.div>
+        ))
+      )}
+    </div>
+
+    {/* SEE MORE BUTTON */}
+    <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="mt-15 flex justify-center">
+      <Link href="/projects" className="group flex flex-col items-center gap-3">
+         <span className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 group-hover:text-[#d11a2a] transition-colors">Full Portfolio</span>
+         <div className="w-10 h-10 md:w-14 md:h-14 rounded-full border border-gray-100 flex items-center justify-center group-hover:bg-[#d11a2a] group-hover:border-[#d11a2a] transition-all duration-500">
+            <Plus size={18} className="text-gray-400 group-hover:text-white group-hover:rotate-90 transition-all duration-500" />
+         </div>
+      </Link>
+    </motion.div>
+  </div>
+</section>
+
+
       {/* --- 5. LATEST ARTICLES (CENTERED TITLE) --- */}
-      <section className="relative py-24 bg-[#fcfcfc] overflow-hidden">
+      <section className="relative py-1 bg-[#fcfcfc] overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
 
           {/* CENTERED HEADER SECTION */}
@@ -696,94 +821,8 @@ export default function DisruptiveLandingPage() {
         </div>
       </section>
 
-
-
-      {/* --- 5. MODERN FOOTER (ENHANCED & ALIGNED) --- */}
-      <footer className="bg-[#0a0a0a] text-white pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-6">
-
-          {/* TOP GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-20 items-start">
-
-            {/* BRAND COLUMN */}
-            <div className="space-y-8">
-              <img src={LOGO_WHITE} alt="Logo" className="h-12" />
-
-              <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
-                The leading edge of lighting technology. Disrupting the standard to
-                build a brighter, smarter world.
-              </p>
-
-              <div className="flex gap-4">
-                {socials.map((soc, i) => (
-                  <div
-                    key={i}
-                    className={`
-                h-10 w-10 rounded-full
-                bg-white/5 border border-white/10
-                flex items-center justify-center
-                cursor-pointer
-                transition-all duration-300
-                hover:bg-white/10 hover:-translate-y-1
-                ${soc.color}
-              `}
-                  >
-                    <soc.icon size={18} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* QUICK LINKS */}
-            <div className="space-y-6">
-              <h4 className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d11a2a]">
-                Quick Links
-              </h4>
-
-              <ul className="space-y-4">
-                {footerLinks.map((link) => (
-                  <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="
-                  text-gray-400 text-sm
-                  flex items-center gap-2
-                  hover:text-white
-                  transition-colors
-                  group
-                "
-                    >
-                      <span className="h-[2px] w-0 bg-[#d11a2a] group-hover:w-3 transition-all" />
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* NEWSLETTER / INSIGHTS */}
-            <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl flex flex-col justify-between">
-              <SignUpNewsletter></SignUpNewsletter>
-            </div>
-          </div>
-
-          {/* BOTTOM BAR */}
-          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-bold text-gray-500 tracking-[0.25em] uppercase">
-            <p>© 2026 Disruptive Solutions Inc.</p>
-
-            <button
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="
-          flex items-center gap-2
-          hover:text-[#d11a2a]
-          transition-all
-        "
-            >
-              Top <ChevronUp size={16} />
-            </button>
-          </div>
-        </div>
-      </footer>
+      
+<Footer/>
     </div>
   );
 }

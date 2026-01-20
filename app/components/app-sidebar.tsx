@@ -130,6 +130,8 @@ export function AppSidebar({ onNavigate, ...props }: any) {
         items: [
           { title: "All Blogs", url: "#" },
           { title: "Careers", url: "#" },
+          { title: "Catalog", url: "#" },
+          { title: "Projects", url: "#" },
         ],
       },
     ],
