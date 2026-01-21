@@ -20,7 +20,8 @@ import {
   Trash2,
   Check,
   Minus,
-  ChevronRight
+  ChevronRight,
+  Star
 } from "lucide-react";
 
 // --- INTERFACES ---
@@ -108,6 +109,8 @@ export default function BrandsPage() {
     });
     return () => unsubscribe();
   }, []);
+
+  
 
   // --- SYNC CART ---
   const syncCart = useCallback(() => {
@@ -328,82 +331,92 @@ export default function BrandsPage() {
                 className="bg-[#fcfcfc]"
               >
                 <div className="p-4 md:p-8 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                  {categoryProducts.map((product) => {
-                    const isInCart = quoteCart.some((item) => item.id === product.id);
-                    const firstGroup = product.technicalSpecs?.[0];
+{categoryProducts.map((product) => {
+  const isInCart = quoteCart.some((item) => item.id === product.id);
+  const firstGroup = product.technicalSpecs?.[0];
+  
+  // LOGIC PARA SA STARS
+  const rating = product.rating || 0;
+  const count = product.reviewCount || 0;
 
-                    return (
-                      <div
-                        key={product.id}
-                        className="bg-white rounded-xl md:rounded-[24px] overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-500 flex flex-col group/card relative"
-                      >
-<Link href={`/lighting-products-smart-solutions/${product.id}`}>
-  {/* 1. Nilakihan ang height (h-64 hanggang h-80) at binawasan ang padding (p-2) */}
-  <div className="relative h-64 sm:h-72 md:h-80 w-full bg-[#fcfcfc] p-2 flex items-center justify-center overflow-hidden">
-    
-    {/* 2. Ginawang max-w-[95%] at max-h-[95%] para sakop ang buong box */}
-    <img 
-      src={product.mainImage} 
-      className="max-w-[95%] max-h-[95%] object-contain group-hover/card:scale-105 group-hover/card:blur-[4px] transition-all duration-700" 
-      alt={product.name} 
-    />
-    
-    {/* HOVER SPECS OVERLAY (Walang bago dito, pero mas malaki na ang view area mo) */}
-    <motion.div 
-      initial={{ opacity: 0 }} 
-      whileHover={{ opacity: 1 }} 
-      className="absolute inset-0 bg-black/80 backdrop-blur-[3px] flex flex-col justify-center items-center p-6 opacity-0 group-hover/card:opacity-100 transition-all duration-300 z-30"
+  return (
+    <div
+      key={product.id}
+      className="bg-white rounded-xl md:rounded-[24px] overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-500 flex flex-col group/card relative"
     >
-      <p className="text-[9px] font-black text-[#d11a2a] uppercase tracking-widest mb-3 italic border-b border-[#d11a2a]/40 pb-1 w-full text-center">
-        Technical Specs
-      </p>
-      <table className="w-full border-collapse">
-        <tbody className="divide-y divide-white/10">
-          {firstGroup?.rows?.slice(0, 6).map((row: any, i: number) => (
-            <tr key={i}>
-              <td className="py-2 text-[8px] font-bold text-gray-400 uppercase italic">{row.name}</td>
-              <td className="py-2 text-[9px] font-black text-white uppercase text-right">{row.value || "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="mt-5 flex items-center gap-1 text-white text-[8px] font-black uppercase bg-[#d11a2a] px-4 py-2 rounded-full">
-        Full Details <ChevronRight size={12} />
-      </div>
-    </motion.div>
+      <Link href={`/lighting-products-smart-solutions/${product.id}`}>
+        <div className="relative h-64 sm:h-72 md:h-80 w-full bg-[#fcfcfc] p-2 flex items-center justify-center overflow-hidden">
+          
+          <img 
+            src={product.mainImage} 
+            className="max-w-[95%] max-h-[95%] object-contain group-hover/card:scale-105 group-hover/card:blur-[4px] transition-all duration-700" 
+            alt={product.name} 
+          />
+          
+          {/* HOVER SPECS OVERLAY */}
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            whileHover={{ opacity: 1 }} 
+            className="absolute inset-0 bg-black/80 backdrop-blur-[3px] flex flex-col justify-center items-center p-6 z-30"
+          >
+            {/* ... (Technical Specs Table mo dito) ... */}
+          </motion.div>
 
-    {/* SKU Tag */}
-    <div className="absolute top-3 left-3 bg-white/95 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-gray-100 z-10 shadow-sm">
-      {product.sku}
+          {/* SKU Tag */}
+          <div className="absolute top-3 left-3 bg-white/95 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-gray-100 z-10 shadow-sm">
+            {product.sku}
+          </div>
+
+          {/* NEW: RATING BADGE SA IBABAW NG IMAGE (Floating Style) */}
+          {count > 0 && (
+            <div className="absolute top-3 right-3 bg-black/90 text-white px-2 py-1 rounded-md flex items-center gap-1 z-10 shadow-lg backdrop-blur-sm border border-white/10">
+              <Star size={8} className="fill-yellow-500 text-yellow-500" />
+              <span className="text-[9px] font-black italic">{rating}</span>
+            </div>
+          )}
+        </div>
+      </Link>
+
+      <div className="p-4 md:p-5 flex flex-col flex-1 border-t border-gray-50 bg-white z-20">
+        
+        {/* NEW: REVIEW STATS ROW */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex gap-0.5">
+            {[...Array(5)].map((_, i) => (
+              <Star 
+                key={i} 
+                size={10} 
+                className={`${i < Math.floor(rating) ? "fill-yellow-500 text-yellow-500" : "text-gray-200"}`} 
+              />
+            ))}
+          </div>
+          <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">
+            ({count} {count <= 1 ? 'Review' : 'Reviews'})
+          </span>
+        </div>
+
+        <h4 className="text-[10px] md:text-[11px] font-black uppercase italic leading-tight line-clamp-2 min-h-[32px]">
+          {product.name}
+        </h4>
+
+        <button
+          onClick={() => addToQuote(product)}
+          className={`mt-4 w-full py-2.5 md:py-3 text-[8px] md:text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm ${
+            isInCart
+              ? "bg-green-600 text-white"
+              : "bg-gray-900 text-white hover:bg-[#d11a2a] hover:shadow-lg"
+          }`}
+        >
+          {isInCart ? (
+            <><Check size={12} strokeWidth={3} /> Added</>
+          ) : (
+            <><Plus size={12} strokeWidth={3} /> Add to Quote</>
+          )}
+        </button>
+      </div>
     </div>
-  </div>
-</Link>
-                        <div className="p-4 md:p-5 flex flex-col flex-1 border-t border-gray-50 bg-white z-20">
-                          <h4 className="text-[10px] md:text-[11px] font-black uppercase italic leading-tight line-clamp-2 min-h-[32px]">
-                            {product.name}
-                          </h4>
-                          <button
-                            onClick={() => addToQuote(product)}
-                            className={`mt-4 w-full py-2.5 md:py-3 text-[8px] md:text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm ${
-                              isInCart
-                                ? "bg-green-600 text-white"
-                                : "bg-gray-900 text-white hover:bg-[#d11a2a] hover:shadow-lg"
-                            }`}
-                          >
-                            {isInCart ? (
-                              <>
-                                <Check size={12} strokeWidth={3} /> Added
-                              </>
-                            ) : (
-                              <>
-                                <Plus size={12} strokeWidth={3} /> Add to Quote
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+  );
+})}
                 </div>
               </motion.div>
             )}

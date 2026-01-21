@@ -16,8 +16,6 @@ import {
     EyeOff,
     Menu,
     X,
-    Package,
-    Calendar,
     User,
     Home
 } from "lucide-react";
@@ -27,10 +25,13 @@ import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut, updatePassword } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
 
+// COMPONENT IMPORT
+import QuotationModal from "../components/portal/QuotationModal";
+
 export default function PortalPage() {
     // --- UI STATES ---
     const [activeTab, setActiveTab] = useState("quotes");
-    const [isSidebarOpen, setSidebarOpen] = useState(false); // DEFAULT IS FALSE
+    const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
 
@@ -48,6 +49,7 @@ export default function PortalPage() {
 
     const router = useRouter();
 
+    // System Clock
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
@@ -55,6 +57,7 @@ export default function PortalPage() {
 
     const formattedTime = currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
+    // Fetch Inquiries
     const fetchInquiriesByEmail = async (targetEmail: string) => {
         setInquiriesLoading(true);
         try {
@@ -70,6 +73,13 @@ export default function PortalPage() {
         } finally {
             setInquiriesLoading(false);
         }
+    };
+
+    // Sync state kapag nag-update sa modal
+    const handleUpdateInquiry = (id: string, newStatus: string) => {
+        setInquiries((prev) => prev.map(inq => 
+            inq.id === id ? { ...inq, status: newStatus } : inq
+        ));
     };
 
     useEffect(() => {
@@ -135,7 +145,7 @@ export default function PortalPage() {
     return (
         <div className="min-h-screen bg-[#050505] text-white flex font-sans overflow-hidden relative">
             
-            {/* 1. MOBILE OVERLAY - Only shows when sidebar is open on mobile */}
+            {/* MOBILE OVERLAY */}
             <AnimatePresence>
                 {isSidebarOpen && (
                     <motion.div 
@@ -148,18 +158,16 @@ export default function PortalPage() {
                 )}
             </AnimatePresence>
 
-            {/* 2. SIDEBAR - Hidden by default on mobile (-translate-x-full) */}
+            {/* SIDEBAR */}
             <aside className={`
                 fixed lg:relative z-[70] h-screen transition-all duration-500 ease-in-out border-r border-white/5 bg-[#0a0a0a] flex flex-col
                 ${isSidebarOpen ? "translate-x-0 w-72 shadow-2xl" : "-translate-x-full lg:translate-x-0 w-72"}
-                /* On Desktop (lg), it is always visible and width is 72 */
                 lg:translate-x-0
             `}>
                 <div className="p-8 flex items-center justify-between">
-                    <h2 className="font-black italic tracking-tighter text-xl text-white">
-                        DISRUPTIVE <span className="text-[#d11a2a]">OS</span>
+                    <h2 className="font-black italic tracking-tighter text-xl text-white uppercase">
+                        Disruptive <span className="text-[#d11a2a]">OS</span>
                     </h2>
-                    {/* Close button for mobile */}
                     <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 text-gray-500 hover:text-white transition-colors">
                         <X size={24} />
                     </button>
@@ -187,25 +195,17 @@ export default function PortalPage() {
                 </div>
             </aside>
 
-            {/* 3. MAIN CONTENT */}
+            {/* MAIN CONTENT */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
-                
-                {/* HEADER */}
                 <header className="h-20 border-b border-white/5 flex items-center justify-between px-6 lg:px-8 bg-[#0a0a0a]/40 backdrop-blur-xl shrink-0">
                     <div className="flex items-center gap-4">
-                        {/* Hamburger button - Visible only on mobile */}
-                        <button 
-                            onClick={() => setSidebarOpen(true)} 
-                            className="lg:hidden p-2.5 bg-[#d11a2a]/10 border border-[#d11a2a]/20 rounded-xl text-[#d11a2a] active:scale-95 transition-all"
-                        >
+                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2.5 bg-[#d11a2a]/10 border border-[#d11a2a]/20 rounded-xl text-[#d11a2a] active:scale-95 transition-all">
                             <Menu size={24}/>
                         </button>
-                        
                         <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
                             <span className="hidden sm:inline">Portal</span> <ChevronRight size={14} className="hidden sm:inline" /> <span className="text-white">{activeTab}</span>
                         </div>
                     </div>
-                    
                     <div className="flex items-center gap-4">
                         <div className="hidden sm:block text-right">
                             <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">System Time</p>
@@ -217,10 +217,8 @@ export default function PortalPage() {
                     </div>
                 </header>
 
-                {/* CONTENT AREA */}
                 <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar">
                     <AnimatePresence mode="wait">
-                        
                         {activeTab === "overview" && (
                             <motion.div key="ov" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6 lg:space-y-8">
                                 <h1 className="text-3xl lg:text-4xl font-black uppercase tracking-tighter italic">
@@ -251,8 +249,10 @@ export default function PortalPage() {
                                             >
                                                 <div className="flex flex-col sm:flex-row justify-between gap-4">
                                                     <div className="space-y-3">
-                                                        <span className="text-[8px] font-black bg-[#d11a2a] px-3 py-1 rounded-full uppercase">{inq.status || "Pending"}</span>
-                                                        <h4 className="text-lg font-black uppercase italic">#{inq.id.slice(-6).toUpperCase()}</h4>
+                                                        <span className={`text-[8px] font-black px-3 py-1 rounded-full uppercase ${inq.status === "finished" || inq.status === "reviewed" ? "bg-green-600" : "bg-[#d11a2a]"}`}>
+                                                            {inq.status || "Pending"}
+                                                        </span>
+                                                        <h4 className="text-lg font-black uppercase italic text-white">#{inq.id.slice(-6).toUpperCase()}</h4>
                                                         <div className="flex -space-x-2">
                                                             {inq.items?.map((item: any, i: number) => (
                                                                 <img key={i} src={item.image} className="w-10 h-10 rounded-lg bg-white p-1 border border-black/10 object-contain shadow-xl" alt="thumb" />
@@ -290,23 +290,15 @@ export default function PortalPage() {
                                                 value={newPassword}
                                                 onChange={(e) => setNewPassword(e.target.value)}
                                                 placeholder="MINIMUM 6 CHARACTERS"
-                                                className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-sm font-bold outline-none focus:border-[#d11a2a] transition-all"
+                                                className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-sm font-bold outline-none focus:border-[#d11a2a] transition-all text-white"
                                                 required
                                             />
-                                            <button 
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
-                                            >
+                                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
                                                 {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
                                             </button>
                                         </div>
                                     </div>
-                                    <button 
-                                        type="submit" 
-                                        disabled={updatingStatus.loading}
-                                        className="w-full bg-white text-black py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#d11a2a] hover:text-white transition-all disabled:opacity-50"
-                                    >
+                                    <button type="submit" disabled={updatingStatus.loading} className="w-full bg-white text-black py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#d11a2a] hover:text-white transition-all disabled:opacity-50">
                                         {updatingStatus.loading ? "Updating System..." : "Save New Password"}
                                     </button>
                                     {updatingStatus.message && (
@@ -317,69 +309,20 @@ export default function PortalPage() {
                                 </form>
                             </motion.div>
                         )}
-
                     </AnimatePresence>
                 </div>
             </main>
 
-            {/* QUOTATION MODAL - Logic remain same */}
-            <AnimatePresence>
-                {selectedInquiry && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div 
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setSelectedInquiry(null)}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-                        />
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[40px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-                        >
-                             <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
-                                <div>
-                                    <span className="text-[8px] font-black bg-[#d11a2a] px-3 py-1 rounded-full uppercase mb-2 inline-block">
-                                        {selectedInquiry.status || "Processing"}
-                                    </span>
-                                    <h3 className="text-2xl font-black italic tracking-tighter uppercase">Quotation Details</h3>
-                                </div>
-                                <button onClick={() => setSelectedInquiry(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                                    <X size={24} />
-                                </button>
-                            </div>
+            {/* QUOTATION MODAL COMPONENT */}
+            <QuotationModal 
+                isOpen={!!selectedInquiry}
+                onClose={() => setSelectedInquiry(null)}
+                inquiry={selectedInquiry}
+                userData={userData}
+                email={email}
+                onUpdate={handleUpdateInquiry}
+            />
 
-                            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-                                <div className="space-y-4">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-[#d11a2a]">Requested Items</p>
-                                    <div className="grid gap-3">
-                                        {selectedInquiry.items?.map((item: any, i: number) => (
-                                            <div key={i} className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
-                                                <img src={item.image} className="w-16 h-16 rounded-xl bg-white p-1 object-contain" alt="product" />
-                                                <div className="flex-1">
-                                                    <h5 className="text-xs font-black uppercase">{item.name || "Product Name"}</h5>
-                                                    <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Qty: {item.quantity || 1}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-white/5 p-6 rounded-[24px] border border-white/5">
-                                        <div className="flex items-center gap-2 text-[#d11a2a] mb-2"><Calendar size={14}/> <span className="text-[9px] font-black uppercase">Date Filed</span></div>
-                                        <p className="text-xs font-bold">{selectedInquiry.createdAt?.toDate().toLocaleDateString()}</p>
-                                    </div>
-                                    <div className="bg-white/5 p-6 rounded-[24px] border border-white/5">
-                                        <div className="flex items-center gap-2 text-[#d11a2a] mb-2"><Package size={14}/> <span className="text-[9px] font-black uppercase">Reference ID</span></div>
-                                        <p className="text-xs font-bold">#{selectedInquiry.id.slice(-8).toUpperCase()}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }
@@ -407,7 +350,7 @@ function StatCard({ label, value, trend }: any) {
     return (
         <div className="bg-white/5 border border-white/10 p-6 rounded-[32px] group relative overflow-hidden">
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4">{label}</p>
-            <div className="text-lg lg:text-xl font-black tracking-tighter truncate">{value}</div>
+            <div className="text-lg lg:text-xl font-black tracking-tighter truncate text-white">{value}</div>
             <div className="mt-2 text-[9px] font-bold text-[#d11a2a] uppercase flex items-center gap-2">
                 <Clock size={10} /> {trend}
             </div>

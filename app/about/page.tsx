@@ -6,6 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import { motion, AnimatePresence } from "framer-motion"
 import { Menu, Zap, Lightbulb, Target, ArrowRight, ChevronUp, Check, Facebook, Linkedin, Twitter, X, ShieldCheck, FileSignature, User, LogOut  } from "lucide-react"
 import SignUpNewsletter from "../components/SignUpNewsletter" 
+import Footer from "../components/navigation/footer";
 
 export default function DisruptiveLandingPage() {
     const [isScrolled, setIsScrolled] = useState(false)
@@ -468,51 +469,7 @@ export default function DisruptiveLandingPage() {
                 </div>
             </section>
 
-            {/* --- 5. FOOTER --- */}
-            <footer className="bg-[#0a0a0a] text-white pt-24 pb-12">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-20 items-start">
-                        <div className="space-y-8">
-                            <img src={LOGO_WHITE} alt="Logo" className="h-12" />
-                            <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
-                                The leading edge of lighting technology. Disrupting the standard to build a brighter, smarter world.
-                            </p>
-                            <div className="flex gap-4">
-                                {socials.map((soc, i) => (
-                                    <div key={i} className={`h-10 w-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer transition-all duration-300 hover:bg-white/10 hover:-translate-y-1 ${soc.color}`}>
-                                        <soc.icon size={18} />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            <h4 className="text-[11px] font-black uppercase tracking-[0.25em] text-[#d11a2a]">Quick Links</h4>
-                            <ul className="space-y-4">
-                                {footerLinks.map((link) => (
-                                    <li key={link.name}>
-                                        <Link href={link.href} className="text-gray-400 text-sm flex items-center gap-2 hover:text-white transition-colors group">
-                                            <span className="h-[2px] w-0 bg-[#d11a2a] group-hover:w-3 transition-all" />
-                                            {link.name}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl flex flex-col justify-between">
-                            <SignUpNewsletter />
-                        </div>
-                    </div>
-
-                    <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-bold text-gray-500 tracking-[0.25em] uppercase">
-                        <p>© 2026 Disruptive Solutions Inc.</p>
-                        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-2 hover:text-[#d11a2a] transition-all">
-                            Top <ChevronUp size={16} />
-                        </button>
-                    </div>
-                </div>
-            </footer>
+            <Footer/>
         </div>
     )
 }

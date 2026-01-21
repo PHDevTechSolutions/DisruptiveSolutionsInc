@@ -17,6 +17,9 @@ import CatalogManager from "../components/pages/CatalogManager"
 import ProjectManager from "../components/pages/ProjectManager"
 import BrandsManager from "../components/pages/BrandsManager"
 import PartnersManager from "../components/pages/PartnersManager"
+import Reviews from "../components/products/Reviews";
+import  Activity from "../components/reports/ActivityLogs"
+import HomePopup from "../components/pages/HomePage"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -49,6 +52,8 @@ export default function Page() {
         return <ApplicationInquiries />
       case "Add new product":
         return <AddNewProduct />
+      case "Reviews":
+        return <Reviews/> 
       case "Quotation":
         return <Quotation />
       case "Careers": 
@@ -65,6 +70,10 @@ export default function Page() {
         return <CustomerInquiries />
               case "Application": 
         return <Application />
+          case "HomePopup": 
+        return <HomePopup/>
+      case "Activity logs": 
+        return <Activity/>
       case "All Blogs": 
         return <BlogManager />
             case "Category": 

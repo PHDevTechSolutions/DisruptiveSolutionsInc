@@ -97,6 +97,7 @@ export function AppSidebar({ onNavigate, ...props }: any) {
           },
           { title: "Application", url: "#" },
           { title: "Category", url: "#" },
+          { title: "Reviews", url: "#" },
         ],
       },
       {
@@ -134,6 +135,15 @@ export function AppSidebar({ onNavigate, ...props }: any) {
           { title: "Projects", url: "#" },
           { title: "Brands", url: "#" },
           { title: "Partners", url: "#" },
+          { title: "HomePopup", url: "#" },
+        ],
+      },
+      {
+        title: "Reports",
+        url: "#",
+        icon: BookOpen,
+        items: [
+          { title: "Activity logs", url: "#" },
         ],
       },
     ],
