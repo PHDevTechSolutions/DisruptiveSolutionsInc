@@ -788,13 +788,13 @@ const getGridConfig = () => {
     </div>
 
     {/* SEE MORE BUTTON */}
-    <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="mt-20 flex justify-center">
-      <Link href="/projects" className="group flex flex-col items-center gap-4">
-          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 group-hover:text-[#d11a2a] transition-colors">View all projects</span>
-          <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border border-gray-100 flex items-center justify-center group-hover:bg-[#d11a2a] group-hover:border-[#d11a2a] transition-all duration-500 shadow-xl bg-white">
-            <Plus size={22} className="text-gray-400 group-hover:text-white group-hover:rotate-90 transition-all duration-500" />
-          </div>
-      </Link>
+    <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="mt-10 mb-10 flex justify-center">
+            <Link href="/projects" className="mt-8 group flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#d11a2a] transition-all">
+              View All Projects
+              <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all">
+                <ArrowRight size={16} />
+              </div>
+            </Link>
     </motion.div>
   </div>
 </section>
@@ -825,14 +825,6 @@ const getGridConfig = () => {
               {/* ACCENT LINE */}
               <div className="h-1.5 w-16 bg-[#d11a2a] mt-6 rounded-full" />
             </motion.div>
-
-            {/* Explore All Link */}
-            <Link href="/blog" className="mt-8 group flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#d11a2a] transition-all">
-              Explore All Stories
-              <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all">
-                <ArrowRight size={16} />
-              </div>
-            </Link>
           </div>
 
           {/* The Grid: 3 Columns Desktop / 1 Column Mobile */}
@@ -891,6 +883,17 @@ const getGridConfig = () => {
             )}
           </div>
         </div>
+        {/* CENTERED HEADER SECTION */}
+          <div className="flex flex-col items-center justify-center text-center mb-16">
+        
+            {/* Explore All Link */}
+            <Link href="/blog" className="mt-5 group flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#d11a2a] transition-all">
+              Explore All Stories
+              <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all">
+                <ArrowRight size={16} />
+              </div>
+            </Link>
+          </div>
       </section>
 
       
