@@ -15,7 +15,8 @@ import Categories from "../components/products/Category";
 import Application from "../components/products/Application";
 import CatalogManager from "../components/pages/CatalogManager"
 import ProjectManager from "../components/pages/ProjectManager"
-
+import BrandsManager from "../components/pages/BrandsManager"
+import PartnersManager from "../components/pages/PartnersManager"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -56,6 +57,10 @@ export default function Page() {
         return <ProjectManager />
       case "Catalog": 
         return <CatalogManager />
+      case "Brands": 
+        return <BrandsManager />
+            case "Partners": 
+        return <PartnersManager />
       case "Customer Inquiries": 
         return <CustomerInquiries />
               case "Application": 

@@ -132,6 +132,8 @@ export function AppSidebar({ onNavigate, ...props }: any) {
           { title: "Careers", url: "#" },
           { title: "Catalog", url: "#" },
           { title: "Projects", url: "#" },
+          { title: "Brands", url: "#" },
+          { title: "Partners", url: "#" },
         ],
       },
     ],

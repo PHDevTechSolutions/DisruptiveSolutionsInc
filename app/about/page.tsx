@@ -379,7 +379,7 @@ export default function DisruptiveLandingPage() {
                             </div>
                         </motion.div>
                         <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="relative rounded-[40px] overflow-hidden aspect-video shadow-2xl shadow-black/20">
-                            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070" className="w-full h-full object-cover" alt="Architecture" />
+                            <img src="https://disruptivesolutionsinc.com/wp-content/uploads/2025/12/image-1.png" className="w-full h-full object-cover" alt="Architecture" />
                             <div className="absolute inset-0 bg-[#d11a2a]/10 mix-blend-overlay" />
                         </motion.div>
                     </div>

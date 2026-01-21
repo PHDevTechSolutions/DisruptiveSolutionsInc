@@ -10,6 +10,7 @@ import {
     Menu, Mail, Phone, MapPin, Send, ChevronUp, Sparkles, ArrowRight,
     Facebook, Instagram, Linkedin, X, LogOut, User, Zap, FileSignature, ShieldCheck
 } from "lucide-react";
+import Footer from "../components/navigation/footer";
 
 // Firebase Imports
 import { db, auth } from "@/lib/firebase"; 
@@ -565,38 +566,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     </div>
 </section>
 
-            {/* --- FOOTER --- */}
-            <footer className="bg-[#0a0a0a] text-white pt-32 pb-12">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-24">
-                        <div className="space-y-8">
-                            <img src={LOGO_WHITE} alt="Logo" className="h-10" />
-                            <p className="text-gray-500 text-sm leading-relaxed">
-                                Redefining the future of illumination through engineering excellence and disruptive innovation.
-                            </p>
-                        </div>
-                        <div className="space-y-6">
-                            <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#d11a2a]">Navigation</h4>
-                            <ul className="space-y-4">
-                                {navLinks.map((link) => (
-                                    <li key={link.name}>
-                                        <Link href={link.href} className="text-gray-400 text-sm hover:text-white transition-colors flex items-center gap-2 group">
-                                            <span className="h-px w-0 bg-[#d11a2a] group-hover:w-4 transition-all" /> {link.name}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-            <div className="md:col-span-2 bg-white/5 backdrop-blur-xl rounded-[32px] p-10 border border-white/10 shadow-xl flex flex-col justify-between">
-                <SignUpNewsletter></SignUpNewsletter>
-            </div>
-                    </div>
-                    <div className="pt-12 border-t border-white/5 flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
-                        <p>© 2026 Disruptive Solutions Inc.</p>
-                        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-2 hover:text-white transition-all">Top <ChevronUp size={14} /></button>
-                    </div>
-                </div>
-            </footer>
+           <Footer/>
         </div>
     );
 }

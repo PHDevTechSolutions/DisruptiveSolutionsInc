@@ -139,7 +139,7 @@ export default function BrandsShowcase() {
       {/* HERO SECTION */}
       <section className="relative h-[60vh] w-full flex items-center justify-center bg-[#050505]">
         <div className="absolute inset-0 opacity-40">
-          <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80" className="w-full h-full object-cover" alt="Hero" />
+          <img src="https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/image-2.png" className="w-full h-full object-cover" alt="Hero" />
         </div>
         <div className="relative z-10 text-center">
           <h1 className="text-white text-5xl md:text-[7rem] font-black uppercase tracking-tighter italic leading-none">

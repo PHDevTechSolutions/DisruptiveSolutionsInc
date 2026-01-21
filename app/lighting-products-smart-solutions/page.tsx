@@ -202,17 +202,24 @@ export default function BrandsPage() {
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a] selection:text-white overflow-x-hidden">
       <Navbar />
-            {/* HERO SECTION */}
-      <section className="relative h-[60vh] w-full flex items-center justify-center bg-[#050505]">
-        <div className="absolute inset-0 opacity-40">
-          <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80" className="w-full h-full object-cover" alt="Hero" />
-        </div>
-        <div className="relative z-10 text-center">
-          <h1 className="text-white text-3xl md:text-7xl font-black uppercase tracking-tighter opacity-20 italic leading-none">
-            ZUMTOBEL BRANDS
-          </h1>
-        </div>
-      </section>
+ {/* HERO SECTION - ORIGINAL COLOR VERSION */}
+<section className="relative h-[60vh] w-full flex items-center justify-center overflow-hidden">
+  {/* Tinanggal ang opacity-40 para full color ang image */}
+  <div className="absolute inset-0">
+    <img 
+      src="https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png" 
+      className="w-full h-full object-cover" 
+      alt="Hero" 
+    />
+  </div>
+
+  {/* Opsyonal: Kung gusto mo ng konting shadow sa ilalim para mabasa ang text pero buhay pa rin ang kulay */}
+  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20" />
+
+  <div className="relative z-10 text-center">
+    {/* Dito mo ilagay ang content mo */}
+  </div>
+</section>
 
       <section className="py-6 md:py-12 px-4 md:px-6 max-w-[1600px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10">
