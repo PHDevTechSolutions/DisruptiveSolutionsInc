@@ -99,7 +99,6 @@ export function AllProducts() {
   }, [products, brandFilter, websiteFilter, searchQuery]);
 
   // --- 3. PAGINATION LOGIC ---
-  // Reset to page 1 tuwing nag-sesearch o filter
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, brandFilter, websiteFilter]);
@@ -178,7 +177,7 @@ export function AllProducts() {
 
   return (
     <div className="w-full space-y-4 p-2 animate-in fade-in duration-500">
-      {/* HEADER SECTION */}
+      {/* HEADER */}
       <div className="flex justify-between items-end mb-6">
         <div>
           <h2 className="text-3xl font-black uppercase italic tracking-tighter text-gray-900 flex items-center gap-2">
@@ -194,7 +193,7 @@ export function AllProducts() {
         </Button>
       </div>
 
-      {/* FILTERS SECTION */}
+      {/* FILTERS */}
       <div className="flex flex-wrap gap-3 items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -225,7 +224,7 @@ export function AllProducts() {
         </select>
       </div>
 
-      {/* TABLE SECTION */}
+      {/* TABLE */}
       <div className="rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-gray-50/50">
@@ -234,14 +233,23 @@ export function AllProducts() {
               <TableHead className="text-[10px] font-black uppercase tracking-widest">Product Info</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest">SKU</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest">Brand / Web</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">Price & Actions</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6"> Actions</TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="h-60 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" size={32} /></TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={7} className="h-60 text-center">
+                  <Loader2 className="animate-spin mx-auto text-blue-500" size={32} />
+                </TableCell>
+              </TableRow>
             ) : paginatedProducts.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="h-60 text-center text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">No products found</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={7} className="h-60 text-center text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">
+                  No products found
+                </TableCell>
+              </TableRow>
             ) : (
               paginatedProducts.map((product) => (
                 <TableRow 
@@ -249,28 +257,34 @@ export function AllProducts() {
                   className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-gray-50"
                   onClick={() => handleEditClick(product)}
                 >
+                  {/* MAIN IMAGE */}
                   <TableCell className="pl-6 py-4">
                     <div className="w-14 h-14 bg-white rounded-2xl p-1 border border-gray-100 shadow-sm overflow-hidden group-hover:scale-105 transition-transform">
                       <img src={product.mainImage} alt="" className="w-full h-full object-contain" />
                     </div>
                   </TableCell>
+
+                  {/* PRODUCT INFO */}
                   <TableCell>
                     <div className="flex flex-col max-w-[250px]">
                       <span className="font-black text-sm text-gray-900 line-clamp-1">{product.name}</span>
                       <span className="text-[9px] text-blue-600 font-black uppercase tracking-tighter">{product.category || "No Category"}</span>
                     </div>
                   </TableCell>
+
+                  {/* SKU */}
                   <TableCell className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{product.sku || "---"}</TableCell>
+
+                  {/* BRAND / WEBSITE */}
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                       <span className="w-fit text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase">{product.brand || "Generic"}</span>
-                       <span className="w-fit text-[8px] font-black bg-blue-50 px-2 py-0.5 rounded text-blue-500 uppercase">{product.website || "N/A"}</span>
+                      <span className="w-fit text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase">{product.brand || "Generic"}</span>
+                      <span className="w-fit text-[8px] font-black bg-blue-50 px-2 py-0.5 rounded text-blue-500 uppercase">{product.website || "N/A"}</span>
                     </div>
                   </TableCell>
+
+                  {/* PRICE & ACTIONS */}
                   <TableCell className="text-right pr-6">
-                    <div className="flex flex-col items-end mb-2">
-                      <span className="text-sm font-black text-gray-900 tracking-tighter">₱{product.regularPrice?.toLocaleString()}</span>
-                    </div>
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-100 rounded-lg">
                         <Pencil size={14} />
@@ -313,7 +327,7 @@ export function AllProducts() {
         </Table>
       </div>
 
-      {/* NUMERICAL PAGINATION CONTROLS */}
+      {/* PAGINATION */}
       {!loading && totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 mt-8 mb-4">
           <Button 

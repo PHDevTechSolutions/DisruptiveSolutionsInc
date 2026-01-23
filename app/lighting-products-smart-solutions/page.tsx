@@ -8,7 +8,7 @@ import { collection, onSnapshot, query, orderBy, where } from "firebase/firestor
 import Navbar from "../components/navigation/navbar";
 import Footer from "../components/navigation/footer";
 import Application from "../components/application";
-import ProductFilter from "../components/ProductFilter"; 
+import ProductFilter from "../components/zumtobelfilter"; 
 import Highlights from "../components/Highlights";
 // --- COMPONENTS ---
 import QuoteCartPanel from "../components/QuoteCartPanel";
@@ -99,6 +99,7 @@ export default function BrandsPage() {
     const q = query(
       collection(db, "products"),
       where("website", "==", "Disruptive Solutions Inc"),
+      where("brand", "==", "Zumtobel"),
       orderBy("createdAt", "desc")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {

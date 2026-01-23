@@ -3,6 +3,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { auth, db } from "@/lib/firebase";
+import { collection, query, orderBy, onSnapshot, limit, where } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion"
 import { Menu, Zap, Lightbulb, Target, ArrowRight, ChevronUp, Check, Facebook, Linkedin, Twitter, X, ShieldCheck, FileSignature, User, LogOut  } from "lucide-react"
 import SignUpNewsletter from "../components/SignUpNewsletter" 
@@ -53,6 +54,8 @@ export default function DisruptiveLandingPage() {
         { icon: Linkedin, color: "hover:bg-blue-700" }
     ]
 
+
+
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 50)
         window.addEventListener("scroll", handleScroll)
@@ -69,6 +72,42 @@ export default function DisruptiveLandingPage() {
       });
       return () => unsubscribe();
     }, [])
+        
+      const [brands, setBrands] = useState<any[]>([]);
+      const [loading, setLoading] = useState(true);
+    
+      useEffect(() => {
+        const q = query(collection(db, "brand_name"), orderBy("createdAt", "desc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          setBrands(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      }, []);
+    
+      const [partners, setPartners] = useState<any[]>([]);
+    
+      useEffect(() => {
+        const q = query(collection(db, "brand_name"), orderBy("createdAt", "desc"));
+        const unsub = onSnapshot(q, (snap) => {
+          const urls = snap.docs.map(doc => doc.data().logoUrl);
+          // Dinudoble (Array.from) para sa seamless loop
+          setPartners(urls.length > 0 ? [...urls, ...urls, ...urls] : []);
+        });
+        return () => unsub();
+      }, []);
+    
+      if (partners.length === 0) return null;
+    
+      // --- DYNAMIC COLUMN CALCULATOR ---
+    const getGridConfig = () => {
+      const count = brands.length;
+      if (count === 1) return "grid-cols-1 max-w-[500px]"; // Limit width pag solo
+      if (count === 2) return "grid-cols-1 md:grid-cols-2 max-w-[1000px]"; 
+      if (count === 3) return "grid-cols-1 md:grid-cols-3 max-w-[1200px]";
+      if (count === 4) return "grid-cols-2 lg:grid-cols-4 max-w-[1400px]";
+      return "grid-cols-2 md:grid-cols-3 lg:grid-cols-5 max-w-[1550px]"; // Standard 5-col
+    };
 
         // Logout function
   const handleLogout = () => {
@@ -403,71 +442,100 @@ export default function DisruptiveLandingPage() {
                 </div>
             </section>
 
-            {/* --- 4. BRANDS SECTION (NOW WITH WRAPPED HREF) --- */}
-            <section className="relative w-full bg-white overflow-hidden py-24">
-                <div className="absolute inset-0 pointer-events-none opacity-[0.3]" style={{ backgroundImage: `linear-gradient(to right, #e5e7eb 1px, transparent 4px), linear-gradient(to bottom, #e5e7eb 1px, transparent 4px)`, backgroundSize: '40px 40px' }} />
-                
-                <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col items-center">
-                    <div className="flex flex-col items-center justify-center text-center mb-20 max-w-3xl mx-auto px-4">
-                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} className="flex flex-col items-center">
-                            <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] mb-6 bg-red-50 px-5 py-2 rounded-full border border-red-100/50">
-                                <Zap size={12} className="fill-[#d11a2a]" /> Premium Products
-                            </span>
-                            <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-[-0.04em] uppercase leading-[0.9] mb-8">
-                                Our <br className="md:hidden" /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Brands</span>
-                            </h2>
-                            <div className="h-1.5 w-16 bg-[#d11a2a] mb-8 rounded-full shadow-[0_2px_10px_rgba(209,26,42,0.3)]" />
-                            <p className="text-gray-500 font-medium text-xs md:text-sm leading-relaxed italic max-w-2xl">
-                                Empowering your space with world-class engineering and sustainable lighting solutions from our <span className="text-gray-900 font-bold">trusted global technology partners</span>.
-                            </p>
-                        </motion.div>
-                    </div>
+           <section className="relative w-full bg-white overflow-hidden py-24">
+      {/* Background Grid Layer */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.2]" 
+        style={{ 
+          backgroundImage: `linear-gradient(to right, #e5e7eb 1px, transparent 4px), linear-gradient(to bottom, #e5e7eb 1px, transparent 4px)`, 
+          backgroundSize: '40px 40px' 
+        }} 
+      />
 
-                    <motion.div 
-                        className="flex flex-wrap justify-center gap-8 w-full"
-                        initial="hidden" whileInView="show" viewport={{ once: true }}
-                        variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.2 } } }}
-                    >
-                        {brandData.map((brand, idx) => (
-                            <motion.div 
-                                key={idx} 
-                                variants={{ hidden: { opacity: 0, y: 40 }, show: { opacity: 1, y: 0, transition: { duration: 0.7 } } }}
-                                whileHover={{ y: -10 }}
-                                className="w-full md:w-[calc(50%-1rem)] lg:w-[480px]"
-                            >
-                                {/* DITO ANG ADDED HREF: WRAPPING THE ENTIRE CARD */}
-                                <Link href={brand.href} className="group relative h-[500px] block rounded-[32px] overflow-hidden bg-gray-900 shadow-2xl border border-gray-100 transition-all duration-500">
-                                    <div className="absolute inset-0 overflow-hidden">
-                                        <motion.img
-                                            src={brand.image}
-                                            alt={brand.title}
-                                            className="w-full h-full object-cover blur-[4px] brightness-[0.8] transition-transform duration-1000 group-hover:scale-110"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/80" />
-                                    </div>
+      {/* Main Container with generous side margins (px-20+) */}
+      <div className="max-w-full mx-auto px-8 md:px-16 lg:px-28 relative z-10 flex flex-col items-center">
+        
+        {/* Header Section */}
+        <div className="flex flex-col items-center justify-center text-center mb-16 max-w-3xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            whileInView={{ opacity: 1, y: 0 }} 
+            viewport={{ once: true }} 
+            className="flex flex-col items-center"
+          >
+            <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] font-black uppercase tracking-[0.4em] mb-6 bg-red-50 px-5 py-2 rounded-full border border-red-100/50">
+              <Zap size={12} className="fill-[#d11a2a]" /> Premium Products
+            </span>
+            <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-[-0.04em] uppercase leading-[0.9] mb-8">
+              Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Brands</span>
+            </h2>
+            <div className="h-1.5 w-16 bg-[#d11a2a] mb-8 rounded-full shadow-[0_2px_10px_rgba(209,26,42,0.3)]" />
+          </motion.div>
+        </div>
 
-                                    <div className="absolute inset-0 p-8 flex flex-col justify-end z-10">
-                                        <div className="mb-4">
-                                            <span className="bg-[#d11a2a] text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg">
-                                                {brand.category}
-                                            </span>
-                                        </div>
-                                        <div className="transform transition-transform duration-500 group-hover:translate-y-[-5px]">
-                                            <h3 className="text-2xl md:text-3xl font-black text-white mb-3 uppercase tracking-tighter">{brand.title}</h3>
-                                            <p className="text-white/90 text-xs md:text-sm leading-relaxed mb-6 line-clamp-2">{brand.description}</p>
-                                            <div className="flex items-center gap-3 text-white">
-                                                <div className="h-[2px] w-8 bg-[#d11a2a] group-hover:w-16 transition-all duration-500" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest opacity-80">View Details</span>
-                                                <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-                            </motion.div>
-                        ))}
-                    </motion.div>
+        {/* The Grid */}
+        <motion.div
+          className={`grid gap-5 md:gap-6 w-full justify-center mx-auto ${getGridConfig()}`}
+          initial="hidden" 
+          whileInView="show" 
+          viewport={{ once: true }}
+          variants={{ 
+            hidden: { opacity: 0 }, 
+            show: { opacity: 1, transition: { staggerChildren: 0.1 } } 
+          }}
+        >
+          {brands.map((brand) => (
+            <motion.div
+              key={brand.id}
+              variants={{ hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0 } }}
+              whileHover={{ y: -8 }}
+              className="w-full flex justify-center"
+            >
+              <Link 
+                href={brand.href || "#"} 
+                className="group relative w-full h-[400px] md:h-[460px] block rounded-[28px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 transition-all duration-500"
+              >
+                {/* Background Image Layer */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <img
+                    src={brand.image}
+                    alt={brand.title}
+                    className="w-full h-full object-cover brightness-[0.6] group-hover:scale-110 transition-transform duration-1000 group-hover:brightness-[0.4]"
+                  />
+                  {/* Fixed Dark Gradient para mabasa agad yung text */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90" />
                 </div>
-            </section>
+
+                {/* Always Visible Content Layer */}
+                <div className="absolute inset-0 p-6 md:p-7 flex flex-col justify-end z-10">
+                  <div className="mb-4">
+                    <span className="bg-[#d11a2a] text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-md">
+                      {brand.category}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tighter leading-tight">
+                      {brand.title}
+                    </h3>
+                    
+                    {/* --- DESCRIPTION IS NOW ALWAYS VISIBLE --- */}
+                    <p className="text-white/80 text-[10px] md:text-xs leading-relaxed line-clamp-3 font-medium italic">
+                      {brand.description}
+                    </p>
+
+                    <div className="flex items-center gap-3 pt-2 text-white/60 group-hover:text-[#d11a2a] transition-colors">
+                      <div className="h-[1.5px] w-6 bg-white/20 group-hover:bg-[#d11a2a] group-hover:w-10 transition-all duration-500" />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Learn More</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
 
             <Footer/>
         </div>

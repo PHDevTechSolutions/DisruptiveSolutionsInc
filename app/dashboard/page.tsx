@@ -161,7 +161,7 @@ useEffect(() => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "brands"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "brand_name"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBrands(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
@@ -172,7 +172,7 @@ useEffect(() => {
   const [partners, setPartners] = useState<any[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, "brand_partners"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "brand_name"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
       const urls = snap.docs.map(doc => doc.data().logoUrl);
       // Dinudoble (Array.from) para sa seamless loop

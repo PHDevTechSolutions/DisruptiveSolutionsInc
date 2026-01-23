@@ -1,222 +1,324 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useState, useMemo } from "react";
-import { 
-  Pencil, Trash2, Loader2, Search, 
-  ImagePlus, UploadCloud, X, AlignLeft, 
-  Plus, Globe, Tag, Factory, Settings2, ArrowLeft 
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Pencil, X, ArrowLeft, UploadCloud, ImageIcon, Plus } from "lucide-react";
 
 // Firebase
 import { db } from "@/lib/firebase";
-import { 
-  collection, onSnapshot, query, orderBy, doc, 
-  deleteDoc, updateDoc, addDoc, serverTimestamp, arrayUnion 
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  doc,
+  updateDoc,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 
-// UI Components
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+// UI
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
-  AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-// --- TYPES ---
-interface ListItem { id: string; name: string; }
-interface SpecRow { name: string; value: string; }
-interface SpecBlock { id: number; label: string; rows: SpecRow[]; }
-interface CustomSectionData { id: string; title: string; items: ListItem[]; selected: string[]; }
+// ---------------- TYPES ----------------
+interface SpecBlock {
+  id: number;
+  label: string;
+  rows: { name: string; value: string }[];
+}
 
 export function InventoryManager() {
   const [view, setView] = useState<"list" | "form">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // --- FORM STATES ---
+  // FORM STATES
   const [productName, setProductName] = useState("");
   const [shortDesc, setShortDesc] = useState("");
   const [sku, setSku] = useState("");
   const [regPrice, setRegPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
-  const [descBlocks, setDescBlocks] = useState<SpecBlock[]>([
-    { id: Date.now(), label: "Technical Specifications", rows: [{ name: "Watts", value: "" }, { name: "Voltage", value: "" }] }
-  ]);
-  const [mainImage, setMainImage] = useState<any>(null); // Pwedeng File o URL String
-  const [galleryImage, setGalleryImage] = useState<any>(null);
-
-  // Classification States
-  const [categories, setCategories] = useState<ListItem[]>([]);
-  const [brands, setBrands] = useState<ListItem[]>([]);
-  const [websites, setWebsites] = useState<ListItem[]>([]);
-  const [customSections, setCustomSections] = useState<CustomSectionData[]>([]);
+  const [descBlocks, setDescBlocks] = useState<SpecBlock[]>([]);
+  const [mainImage, setMainImage] = useState<File | string | null>(null);
   
-  const [selectedCats, setSelectedCats] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [selectedWebs, setSelectedWebs] = useState<string[]>([]);
+  // Dito natin sinisiguro na ang state ay pwedeng string array (URLs) o File array
+  const [galleryImages, setGalleryImages] = useState<(File | string)[]>([]);
+  
+  const [catalogs, setCatalogs] = useState<{ id: number; file?: File; existingUrl?: string }[]>([
+    { id: Date.now() },
+  ]);
 
-  // List States
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
 
-  // --- 1. FETCH DATA ---
   useEffect(() => {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
-    const unsubProducts = onSnapshot(q, (snap) => {
-      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const unsub = onSnapshot(q, (snap) => {
+      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setLoading(false);
     });
-
-    const unsubCats = onSnapshot(collection(db, "categories"), (snap) => setCategories(snap.docs.map(d => ({ id: d.id, name: d.data().name }))));
-    const unsubBrands = onSnapshot(collection(db, "brands"), (snap) => setBrands(snap.docs.map(d => ({ id: d.id, name: d.data().name }))));
-    const unsubWebs = onSnapshot(collection(db, "websites"), (snap) => setWebsites(snap.docs.map(d => ({ id: d.id, name: d.data().name }))));
-    const unsubCustom = onSnapshot(collection(db, "custom_sections"), (snap) => {
-      setCustomSections(snap.docs.map(d => ({ id: d.id, title: d.data().title, items: d.data().items || [], selected: [] })));
-    });
-
-    return () => { unsubProducts(); unsubCats(); unsubBrands(); unsubWebs(); unsubCustom(); };
+    return () => unsub();
   }, []);
 
-  // --- 2. EDIT HANDLER (Populate Form) ---
   const handleEdit = (product: any) => {
     setEditingId(product.id);
-    setProductName(product.name || "");
-    setShortDesc(product.shortDescription || "");
-    setSku(product.sku || "");
-    setRegPrice(product.regularPrice?.toString() || "");
-    setSalePrice(product.salePrice?.toString() || "");
-    setDescBlocks(product.technicalSpecs || []);
-    setMainImage(product.mainImage || null);
-    setGalleryImage(product.galleryImage || null);
-    setSelectedCats(product.category ? [product.category] : []);
-    setSelectedBrands(product.brand ? [product.brand] : []);
-    setSelectedWebs(product.website ? [product.website] : []);
+    setProductName(product.name ?? "");
+    setShortDesc(product.shortDescription ?? "");
+    setSku(product.sku ?? "");
+    setRegPrice(String(product.regularPrice ?? ""));
+    setSalePrice(String(product.salePrice ?? ""));
+    setDescBlocks(product.technicalSpecs ?? []);
+    setMainImage(product.mainImage ?? null);
     
-    // Logic para sa dynamic specs / custom sections
-    if (product.dynamicSpecs) {
-        // I-map pabalik ang selected items sa custom sections
-    }
-
+    // IMPORTANTE: Siguraduhin na ang galleryImages ay array
+    setGalleryImages(Array.isArray(product.galleryImages) ? product.galleryImages : []);
+    
+    setCatalogs(
+      product.catalogs?.length
+        ? product.catalogs.map((url: string, i: number) => ({ id: Date.now() + i, existingUrl: url }))
+        : [{ id: Date.now() }]
+    );
     setView("form");
   };
 
-  // --- 3. SAVE / UPDATE LOGIC ---
-  const handleSave = async () => {
-    const isEdit = !!editingId;
-    const toastId = toast.loading(isEdit ? "Updating product..." : "Publishing product...");
+  const resetForm = () => {
+    setEditingId(null);
+    setProductName("");
+    setShortDesc("");
+    setSku("");
+    setRegPrice("");
+    setSalePrice("");
+    setDescBlocks([]);
+    setMainImage(null);
+    setGalleryImages([]);
+    setCatalogs([{ id: Date.now() }]);
+  };
 
-    try {
-      let mainUrl = mainImage;
-      let galleryUrl = galleryImage;
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "YOUR_PRESET"); // PALITAN ITO
 
-      // Simpleng check kung ang image ay bagong File (upload kailangan) o string (URL na dati)
-      if (mainImage instanceof File) {
-          // logic for uploadToCloudinary(mainImage)
+    const res = await fetch(
+      "https://api.cloudinary.com/v1_1/YOUR_CLOUD/image/upload", // PALITAN ITO
+      { method: "POST", body: formData }
+    );
+    const data = await res.json();
+    return data.secure_url;
+  };
+
+  const uploadAllFiles = async (files: (File | string)[]): Promise<string[]> => {
+    const urls: string[] = [];
+    for (const f of files) {
+      if (typeof f === "string") {
+        urls.push(f); // Kung URL na, wag nang i-upload
+      } else if (f instanceof File) {
+        urls.push(await uploadFile(f)); // Kung File, i-upload muna
       }
+    }
+    return urls;
+  };
 
-      const productData = {
+  const handleSave = async () => {
+    const toastId = toast.loading(editingId ? "Updating product..." : "Publishing product...");
+    try {
+      const mainUrl = typeof mainImage === "string" ? mainImage : mainImage ? await uploadFile(mainImage) : "";
+      const galleryUrls = await uploadAllFiles(galleryImages);
+      const catalogUrls = await uploadAllFiles(catalogs.map((c) => c.file ?? c.existingUrl ?? "").filter(Boolean));
+
+      const payload = {
         name: productName,
         shortDescription: shortDesc,
         sku,
         regularPrice: Number(regPrice) || 0,
         salePrice: Number(salePrice) || 0,
         technicalSpecs: descBlocks,
-        category: selectedCats[0] || "Uncategorized",
-        brand: selectedBrands[0] || "Generic",
-        website: selectedWebs[0] || "N/A",
         mainImage: mainUrl,
-        galleryImage: galleryUrl,
+        galleryImages: galleryUrls,
+        catalogs: catalogUrls,
         updatedAt: serverTimestamp(),
       };
 
-      if (isEdit) {
-        await updateDoc(doc(db, "products", editingId), productData);
+      if (editingId) {
+        await updateDoc(doc(db, "products", editingId), payload);
         toast.success("Product updated!", { id: toastId });
       } else {
-        await addDoc(collection(db, "products"), { ...productData, createdAt: serverTimestamp() });
+        await addDoc(collection(db, "products"), { ...payload, createdAt: serverTimestamp() });
         toast.success("Product published!", { id: toastId });
       }
 
-      setView("list");
       resetForm();
-    } catch (err) {
+      setView("list");
+    } catch (e) {
+      console.error(e);
       toast.error("Error saving product", { id: toastId });
     }
   };
 
-  const resetForm = () => {
-    setEditingId(null);
-    setProductName("");
-    // ... reset all other states
-  };
-
-  // --- RENDER LIST ---
+  // ---------------- LIST VIEW (Same logic as your code) ----------------
   if (view === "list") {
     return (
-      <div className="p-4 space-y-4">
+      <div className="p-6 space-y-6 bg-white min-h-screen">
         <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-black uppercase italic italic tracking-tighter">Inventory</h2>
-            <Button onClick={() => { resetForm(); setView("form"); }} className="bg-blue-600 font-bold text-xs uppercase">+ Add New</Button>
+          <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900">Inventory</h2>
+          <Button onClick={() => { resetForm(); setView("form"); }} className="bg-slate-900 hover:bg-slate-800">
+            <Plus size={16} className="mr-2" /> Add New Product
+          </Button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+        <Card className="border-none shadow-xl bg-slate-50/50">
           <Table>
-            <TableHeader className="bg-slate-50">
+            <TableHeader className="bg-slate-100">
               <TableRow>
-                <TableHead className="text-[10px] font-black uppercase">Product</TableHead>
-                <TableHead className="text-[10px] font-black uppercase">SKU</TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-right">Actions</TableHead>
+                <TableHead>Image</TableHead>
+                <TableHead>Product Details</TableHead>
+                <TableHead>SKU</TableHead>
+                <TableHead>Gallery</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {products.map((p) => (
-                <TableRow key={p.id} className="cursor-pointer hover:bg-slate-50/50" onClick={() => handleEdit(p)}>
-                  <TableCell className="font-bold text-sm">{p.name}</TableCell>
-                  <TableCell className="text-xs text-slate-400">{p.sku}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="text-blue-500"><Pencil size={14}/></Button>
+                <TableRow key={p.id} className="cursor-pointer group" onClick={() => handleEdit(p)}>
+                  <TableCell>
+                    <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white bg-slate-200">
+                      {p.mainImage ? <img src={p.mainImage} className="w-full h-full object-cover" /> : <ImageIcon className="m-auto text-slate-400" />}
+                    </div>
                   </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-black text-slate-800 uppercase text-sm">{p.name}</span>
+                      <span className="text-xs text-slate-500 line-clamp-1">{p.shortDescription}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell><code className="text-[10px] bg-slate-200 px-2 py-1 rounded-md font-bold text-slate-600">{p.sku}</code></TableCell>
+                  <TableCell>
+                    <div className="flex -space-x-3">
+                      {p.galleryImages?.slice(0, 3).map((img: string, i: number) => (
+                        <div key={i} className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-sm">
+                          <img src={img} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right"><Button variant="ghost" size="icon"><Pencil size={14} /></Button></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
+        </Card>
       </div>
     );
   }
 
-  // --- RENDER FORM ---
+  // ---------------- FORM VIEW ----------------
   return (
-    <div className="p-4 space-y-4 bg-slate-50 min-h-screen">
-      <Button variant="ghost" onClick={() => setView("list")} className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900">
-        <ArrowLeft size={14} className="mr-2"/> Back to Inventory
-      </Button>
-      
-      {/* Dito mo ilalagay yung buong Card structure ng "AddNewProduct" component mo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
+      <div className="max-w-4xl mx-auto">
+        <Button variant="ghost" onClick={() => setView("list")} className="mb-4">
+          <ArrowLeft size={16} className="mr-2" /> Back
+        </Button>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-              <Card>
-                  <CardHeader><CardTitle className="text-xs font-black uppercase">{editingId ? "Edit Product" : "New Product"}</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                      <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Name" className="font-bold h-12"/>
-                      {/* ... lahat ng inputs galing sa AddNewProduct mo ... */}
-                  </CardContent>
-              </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-lg uppercase font-black">Product Information</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Product Name" />
+                <div className="grid grid-cols-2 gap-4">
+                  <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="SKU" />
+                  <Input type="number" value={regPrice} onChange={(e) => setRegPrice(e.target.value)} placeholder="Price" />
+                </div>
+                <Input value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} placeholder="Short Description" />
+              </CardContent>
+            </Card>
+
+            {/* GALLERY SECTION - PINAKAMAHALAGA */}
+            <Card>
+              <CardHeader><CardTitle className="text-lg uppercase font-black">Gallery Images</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4">
+                  {galleryImages.map((img, i) => {
+                    // Logic para malaman kung URL (string) o bagong file (File) ang ipapakita
+                    const imageSrc = typeof img === "string" ? img : URL.createObjectURL(img);
+                    
+                    return (
+                      <div key={i} className="relative aspect-square rounded-xl border-2 border-dashed overflow-hidden bg-white group shadow-sm">
+                        <img 
+                          src={imageSrc} 
+                          alt={`Gallery ${i}`} 
+                          className="w-full h-full object-contain" 
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setGalleryImages(prev => prev.filter((_, idx) => idx !== i))} 
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* UPLOAD BUTTON */}
+                  <label className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors">
+                    <UploadCloud className="text-slate-400 mb-2" />
+                    <span className="text-[10px] font-black uppercase text-slate-400">Add More</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setGalleryImages(prev => [...prev, file]);
+                      }} 
+                    />
+                  </label>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+
           <div className="space-y-6">
-              {/* Featured Image Card & Publish Button */}
-              <Button onClick={handleSave} className="w-full bg-red-600 h-16 font-black uppercase">
-                  {editingId ? "Update Product" : "Publish Product"}
-              </Button>
+            <Card>
+              <CardHeader><CardTitle className="text-lg uppercase font-black">Main Preview</CardTitle></CardHeader>
+              <CardContent>
+                <div className="relative aspect-square rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden bg-white">
+                  {mainImage ? (
+                    <img src={typeof mainImage === "string" ? mainImage : URL.createObjectURL(mainImage)} className="w-full h-full object-contain p-2" />
+                  ) : (
+                    <div className="text-center text-slate-400">
+                      <ImageIcon className="mx-auto mb-2" size={32} />
+                      <span className="text-[10px] font-black uppercase">Main Image</span>
+                    </div>
+                  )}
+                  <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setMainImage(e.target.files?.[0] || null)} />
+                </div>
+              </CardContent>
+            </Card>
+            
+
+            <Button onClick={handleSave} className="w-full bg-slate-900 h-12 font-black uppercase text-xs">
+              {editingId ? "Update Product" : "Save & Publish"}
+            </Button>
           </div>
+        </div>
       </div>
     </div>
   );
