@@ -122,6 +122,12 @@ export function AppSidebar({ onNavigate, ...props }: any) {
             url: "#", 
             badge: counts.job > 0 ? counts.job : null 
           },
+
+                    { 
+            title: "Messenger", 
+            url: "#", 
+          },
+          
         ],
       },
       {

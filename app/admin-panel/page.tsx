@@ -20,6 +20,8 @@ import PartnersManager from "../components/pages/PartnersManager"
 import Reviews from "../components/products/Reviews";
 import  Activity from "../components/reports/ActivityLogs"
 import HomePopup from "../components/pages/HomePage"
+import { Messenger } from "../components/inquiries/Messenger" 
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -64,6 +66,8 @@ export default function Page() {
         return <CatalogManager />
       case "Brands": 
         return <BrandsManager />
+              case "Messenger": 
+        return <Messenger/>
             case "Partners": 
         return <PartnersManager />
       case "Customer Inquiries": 

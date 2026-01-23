@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Zap, ArrowRight } from "lucide-react";
+import { X, Zap, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { db, auth } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 
 export default function HomePopup() {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,7 +27,7 @@ export default function HomePopup() {
             const timer = setTimeout(() => {
               setIsOpen(true);
               localStorage.setItem("last_popup_time", currentTime.toString());
-            }, 2000);
+            }, 3000);
             return () => clearTimeout(timer);
           }
         }
@@ -41,104 +41,92 @@ export default function HomePopup() {
 
   if (!config) return null;
 
-  // --- ALIGNMENT LOGIC ---
-  // Dito natin ididikta kung saan pwesto ang popup base sa CMS
   const getAlignmentClasses = () => {
     switch (config.alignment) {
-      case "left":
-        return "justify-start md:pl-20"; // Pwesto sa kaliwa
-      case "right":
-        return "justify-end md:pr-20";   // Pwesto sa kanan
-      case "center":
-      default:
-        return "justify-center";         // Gitna
+      case "left": return "justify-start md:pl-12";
+      case "right": return "justify-end md:pr-12";
+      default: return "justify-center";
     }
   };
 
   return (
     <AnimatePresence>
       {isOpen && config.isActive && (
-        // Dinagdagan natin ng dynamic class ang container wrapper
-        <div className={`fixed inset-0 z-[9999] flex items-center p-4 md:p-6 pointer-events-none ${getAlignmentClasses()}`}>
+        <div className={`fixed inset-0 z-[99999] flex items-center p-6 pointer-events-none ${getAlignmentClasses()}`}>
           
-          {/* Backdrop - nilagyan ng pointer-events-auto para clickable pa rin ang background */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={closePopup}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
+            className="absolute inset-0 bg-black/85 backdrop-blur-md pointer-events-auto cursor-crosshair"
           />
 
-          {/* Modal Content */}
           <motion.div
             initial={{ 
               opacity: 0, 
               scale: 0.9,
-              x: config.alignment === "left" ? -50 : config.alignment === "right" ? 50 : 0,
-              y: config.alignment === "center" ? 20 : 0 
+              y: 20
             }}
-            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="relative w-full max-w-md bg-white rounded-[40px] overflow-hidden shadow-2xl border border-gray-100 pointer-events-auto"
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 50 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="relative w-full max-w-[420px] bg-white border-[3px] border-black rounded-[48px] overflow-hidden shadow-2xl pointer-events-auto"
           >
-            {/* Header Section */}
-            <div className="h-44 bg-[#d11a2a] relative overflow-hidden flex flex-col items-center justify-center text-white">
-              
-              {/* Grid Overlay */}
-              <div className="absolute inset-0 opacity-10 pointer-events-none">
-                <svg width="100%" height="100%">
-                  <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="1"/>
-                  </pattern>
-                  <rect width="100%" height="100%" fill="url(#grid)" />
-                </svg>
-              </div>
-
+            {/* BIG IMAGE SECTION (70% ng Height) */}
+            <div className="h-[400px] bg-gray-50 relative group overflow-hidden border-b-[3px] border-black">
               {config.imageUrl ? (
-                <img src={config.imageUrl} alt="Promo" className="absolute inset-0 w-full h-full object-cover" />
+                <img 
+                  src={config.imageUrl} 
+                  alt="Product Highlight" 
+                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                />
               ) : (
-                <motion.div 
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ repeat: Infinity, duration: 3 }}
-                  className="bg-white p-4 rounded-3xl shadow-xl mb-2 z-10"
-                >
-                  <Zap size={30} className="text-[#d11a2a] fill-[#d11a2a]" />
-                </motion.div>
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                   <Zap size={80} className="text-black/10 fill-black/10" />
+                </div>
               )}
               
+
+
+              {/* CLEAN CLOSE BUTTON */}
               <button 
                 onClick={closePopup}
-                className="absolute top-6 right-6 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-all z-20 backdrop-blur-md"
+                className="absolute top-8 right-8 w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-[#d11a2a] transition-all"
               >
-                <X size={18} />
+                <X size={24} strokeWidth={2.5} />
               </button>
             </div>
 
-            {/* Content Section */}
-            <div className="p-10 text-center">
-              <h2 className="text-3xl font-black uppercase italic leading-[0.9] text-gray-900 mb-4 tracking-tighter">
-                {config.title || "Flash Solutions"}
-              </h2>
-              
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-8">
-                {config.subtitle || "Industrial Smart Lighting & Tech Integration"}
-              </p>
+            {/* MINIMAL CONTENT SECTION */}
+            <div className="p-8 bg-white text-center">
+              <div className="mb-6">
+                <h2 className="text-3xl font-black uppercase italic leading-none text-black mb-2 tracking-tighter">
+                  {config.title || "Next Gen Gear"}
+                </h2>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">
+                  {config.subtitle || "Engineered for high-performance"}
+                </p>
+              </div>
 
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 <Link 
                   href={config.link || "/lighting-products-smart-solutions"}
                   onClick={closePopup}
-                  className="w-full bg-[#d11a2a] text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-black transition-all flex items-center justify-center gap-3 group"
+                  className="w-full bg-black text-white py-5 rounded-[24px] font-black uppercase text-[12px] tracking-widest hover:bg-[#d11a2a] transition-all flex items-center justify-center gap-3 group border-2 border-black active:translate-y-1"
                 >
-                  Explore Now <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  Shop Now <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
                 
-                <button onClick={closePopup} className="w-full py-2 text-[9px] font-black uppercase tracking-[0.3em] text-gray-300 hover:text-gray-600 transition-colors">
-                  Dismiss for now
+                <button 
+                  onClick={closePopup} 
+                  className="py-2 text-[9px] font-black uppercase tracking-[0.5em] text-gray-300 hover:text-black transition-colors"
+                >
+                  Maybe Later
                 </button>
               </div>
             </div>
+
+            {/* BOTTOM DECO */}
+            <div className="h-2 w-full bg-black" />
           </motion.div>
         </div>
       )}

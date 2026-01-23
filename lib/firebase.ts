@@ -1,7 +1,7 @@
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getAuth } from "firebase/auth"; // Idagdag ito
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCNonSOohWCFdgL052XUFFZTH1orbP2dH4",
@@ -13,8 +13,11 @@ const firebaseConfig = {
   measurementId: "G-9J1LXQ8YZC",
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+// Singleton pattern para iwas sa "Firebase App already exists" error sa Next.js
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-export const auth = getAuth(app); // I-export ito para sa Auth page
+export const auth = getAuth(app);
+
+export default app;

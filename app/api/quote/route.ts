@@ -38,7 +38,7 @@ export async function POST(req: Request) {
                 </div>
             `,
         };
-
+ 
         // 2. Email para sa Customer (Auto-Reply)
         const customerMailOptions = {
             from: `"Disruptive Solutions" <${process.env.GMAIL_USER}>`,

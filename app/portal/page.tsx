@@ -17,7 +17,8 @@ import {
     Menu,
     X,
     User,
-    Home
+    Home,
+    CheckCircle2
 } from "lucide-react";
 
 // FIREBASE IMPORTS
@@ -27,6 +28,7 @@ import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebas
 
 // COMPONENT IMPORT
 import QuotationModal from "../components/portal/QuotationModal";
+import FloatingChatWidget from "../components/chat-widget";
 
 export default function PortalPage() {
     // --- UI STATES ---
@@ -233,45 +235,97 @@ export default function PortalPage() {
                         )}
 
                         {activeTab === "quotes" && (
-                            <motion.div key="qt" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                                <h2 className="text-2xl font-black uppercase tracking-tighter italic text-[#d11a2a]">Quotation History</h2>
-                                {inquiriesLoading ? (
-                                    <div className="py-20 text-center"><div className="animate-spin w-8 h-8 border-2 border-[#d11a2a] border-t-transparent rounded-full mx-auto" /></div>
-                                ) : inquiries.length === 0 ? (
-                                    <div className="py-20 text-center bg-white/5 rounded-[32px] border border-dashed border-white/10 text-gray-500 uppercase text-[10px] font-black">No Records Found</div>
-                                ) : (
-                                    <div className="grid gap-4">
-                                        {inquiries.map((inq) => (
-                                            <div 
-                                                key={inq.id} 
-                                                onClick={() => setSelectedInquiry(inq)}
-                                                className="bg-white/5 border border-white/10 p-5 lg:p-8 rounded-[32px] group cursor-pointer hover:bg-white/[0.08] hover:border-[#d11a2a]/30 transition-all"
-                                            >
-                                                <div className="flex flex-col sm:flex-row justify-between gap-4">
-                                                    <div className="space-y-3">
-                                                        <span className={`text-[8px] font-black px-3 py-1 rounded-full uppercase ${inq.status === "finished" || inq.status === "reviewed" ? "bg-green-600" : "bg-[#d11a2a]"}`}>
-                                                            {inq.status || "Pending"}
-                                                        </span>
-                                                        <h4 className="text-lg font-black uppercase italic text-white">#{inq.id.slice(-6).toUpperCase()}</h4>
-                                                        <div className="flex -space-x-2">
-                                                            {inq.items?.map((item: any, i: number) => (
-                                                                <img key={i} src={item.image} className="w-10 h-10 rounded-lg bg-white p-1 border border-black/10 object-contain shadow-xl" alt="thumb" />
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <div className="sm:text-right flex flex-row sm:flex-col justify-between items-end">
-                                                        <p className="text-[10px] font-bold text-gray-500 uppercase">{inq.createdAt?.toDate().toLocaleDateString()}</p>
-                                                        <button className="text-[10px] font-black uppercase text-[#d11a2a] flex items-center gap-1 group-hover:gap-3 transition-all">
-                                                            Open Details <ExternalLink size={14}/>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </motion.div>
-                        )}
+    <motion.div 
+        key="qt" 
+        initial={{ opacity: 0, y: 10 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        exit={{ opacity: 0, y: -10 }} 
+        className="space-y-6"
+    >
+        <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-black uppercase tracking-tighter italic text-[#d11a2a]">
+                Quotation History
+            </h2>
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                {inquiries.length} Total Records
+            </p>
+        </div>
+
+        {inquiriesLoading ? (
+            <div className="py-20 text-center">
+                <div className="animate-spin w-8 h-8 border-2 border-[#d11a2a] border-t-transparent rounded-full mx-auto" />
+                <p className="mt-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Loading History...</p>
+            </div>
+        ) : inquiries.length === 0 ? (
+            <div className="py-20 text-center bg-white/5 rounded-[32px] border border-dashed border-white/10 text-gray-500 uppercase text-[10px] font-black">
+                No Records Found
+            </div>
+        ) : (
+            <div className="grid gap-4">
+                {inquiries.map((inq) => (
+                    <div 
+                        key={inq.id} 
+                        onClick={() => setSelectedInquiry(inq)}
+                        className="bg-white/5 border border-white/10 p-5 lg:p-8 rounded-[32px] group cursor-pointer hover:bg-white/[0.08] hover:border-[#d11a2a]/30 transition-all relative overflow-hidden"
+                    >
+                        <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="space-y-4 flex-1">
+                                <div className="flex items-center gap-3">
+                                    <span className={`text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-wider ${
+                                        inq.status === "finished" || inq.status === "reviewed" 
+                                        ? "bg-green-600 text-white" 
+                                        : "bg-[#d11a2a] text-white"
+                                    }`}>
+                                        {inq.status || "Pending"}
+                                    </span>
+                                    
+                                    {/* INDICATOR IF FEEDBACK IS ALREADY SENT */}
+                                    {inq.hasFeedback && (
+                                        <span className="text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+                                            <CheckCircle2 size={10} /> Feedback Sent
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <h4 className="text-lg font-black uppercase italic text-white flex items-center gap-2">
+                                        Ref: #{inq.id.slice(-6).toUpperCase()}
+                                    </h4>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">
+                                        Items: {inq.items?.map((item: any) => item.name).join(", ")}
+                                    </p>
+                                </div>
+
+                                <div className="flex -space-x-3">
+                                    {inq.items?.map((item: any, i: number) => (
+                                        <div key={i} className="relative group/img">
+                                            <img 
+                                                src={item.image} 
+                                                className="w-12 h-12 rounded-xl bg-white p-1.5 border-2 border-[#1a1a1a] object-contain shadow-2xl transition-transform group-hover/img:scale-110" 
+                                                alt="product" 
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="md:text-right flex flex-row md:flex-col justify-between items-end gap-2 border-t md:border-t-0 border-white/5 pt-4 md:pt-0">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Date Submitted</p>
+                                    <p className="text-sm font-black text-white">{inq.createdAt?.toDate().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                                </div>
+                                
+                                <button className="text-[10px] font-black uppercase text-[#d11a2a] flex items-center gap-2 group-hover:gap-4 transition-all bg-[#d11a2a]/5 px-4 py-2 rounded-full hover:bg-[#d11a2a]/10">
+                                    View Full Details <ExternalLink size={14}/>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
+    </motion.div>
+)}
 
                         {activeTab === "settings" && (
                             <motion.div key="st" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="max-w-xl mx-auto lg:mx-0 space-y-6">
@@ -311,6 +365,7 @@ export default function PortalPage() {
                         )}
                     </AnimatePresence>
                 </div>
+                <FloatingChatWidget/>
             </main>
 
             {/* QUOTATION MODAL COMPONENT */}
