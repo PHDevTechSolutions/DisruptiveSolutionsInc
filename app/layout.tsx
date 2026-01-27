@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+// 1. IMPORT TOASTER
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +33,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Disruptive Solutions Inc.",
     description: "Innovative lighting and smart solutions for modern spaces.",
-    url: "https://disruptivesolutionsinc.com", // Palitan mo ng actual domain niyo
+    url: "https://disruptivesolutionsinc.com", 
     siteName: "Disruptive Solutions Inc.",
     images: [
       {
-        url: "/images/icon.png", // thumbnail na lalabas sa shares
+        url: "/images/icon.png", 
         width: 800,
         height: 600,
         alt: "Disruptive Solutions Logo",
@@ -64,6 +66,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* 2. ADD TOASTER COMPONENT */}
+        {/* nilagyan ko ng richColors para may kulay yung success (green) at error (red) */}
+        <Toaster position="top-center" richColors closeButton />
         {children}
       </body>
     </html>

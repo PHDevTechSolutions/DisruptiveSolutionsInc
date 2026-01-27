@@ -8,19 +8,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  CheckCheck,
   MoreVertical,
   Paperclip,
   Search,
   Send,
   Circle,
-  Inbox,
   MessageSquare,
-  Trash2
+  Trash2,
+  ImageIcon,
+  Loader2
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-// FIREBASE IMPORTS
+// FIREBASE & CLOUDINARY IMPORTS
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -34,8 +34,8 @@ import {
   writeBatch,
   doc
 } from "firebase/firestore";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
-// UI IMPORTS (Siguraduhin na may dropdown menu ka or gamitin ang simple button)
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +47,8 @@ type Message = {
   id: string;
   sender: "user" | "contact";
   author: string;
-  text: string;
+  text?: string;
+  imageUrl?: string; // New Field
   timestamp: string;
   isAdmin: boolean;
 };
@@ -60,7 +61,7 @@ type Conversation = {
   initials: string;
   messages: Message[];
   quickReplies: string[];
-  hasUnread: boolean; // Para sa notification badge
+  hasUnread: boolean;
 };
 
 export function Messenger() {
@@ -69,15 +70,17 @@ export function Messenger() {
   const [draft, setDraft] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [adminSession, setAdminSession] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const session = localStorage.getItem("disruptive_user_session");
     if (session) setAdminSession(JSON.parse(session));
   }, []);
 
-  // 1. REAL-TIME FETCH WITH UNREAD DETECTION
+  // Real-time listener (same as before)
   useEffect(() => {
     const q = query(
       collection(db, "chats"),
@@ -100,7 +103,7 @@ export function Messenger() {
             status: "online",
             initials: (data.senderName || "G").substring(0, 2).toUpperCase(),
             messages: [],
-            quickReplies: ["I'll check on this.", "Copy that.", "Can you provide more details?"],
+            quickReplies: ["I'll check on this.", "Copy that."],
             hasUnread: false
           };
         }
@@ -111,12 +114,11 @@ export function Messenger() {
           sender: msgIsAdmin ? "user" : "contact",
           author: data.senderName,
           text: data.message,
+          imageUrl: data.imageUrl, // Image Support
           timestamp: data.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || "...",
           isAdmin: msgIsAdmin
         });
 
-        // NOTIFICATION LOGIC: 
-        // Kung ang huling message sa thread ay hindi galing sa Admin, mark as Unread.
         const lastMsg = grouped[clientEmail].messages[grouped[clientEmail].messages.length - 1];
         grouped[clientEmail].hasUnread = !lastMsg.isAdmin;
       });
@@ -132,31 +134,7 @@ export function Messenger() {
     return () => unsubscribe();
   }, [selectedConversationId]);
 
-  // 2. DELETE CONVERSATION FUNCTION
-  const handleDeleteConversation = async (clientEmail: string) => {
-    if (!confirm("Sigurado ka par? Mabubura lahat ng messages sa thread na 'to.")) return;
-
-    try {
-      const q = query(
-        collection(db, "chats"),
-        where("senderEmail", "==", clientEmail),
-        where("website", "==", "disruptivesolutionsinc")
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const batch = writeBatch(db);
-
-      querySnapshot.forEach((document) => {
-        batch.delete(doc(db, "chats", document.id));
-      });
-
-      await batch.commit();
-      setSelectedConversationId(""); // Reset selection
-    } catch (err) {
-      console.error("Delete Error:", err);
-    }
-  };
-
+  // Handle Text Reply
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!draft.trim() || !selectedConversationId || !adminSession) return;
@@ -171,8 +149,28 @@ export function Messenger() {
         website: "disruptivesolutionsinc"
       });
       setDraft("");
-    } catch (err) {
-      console.error("Firebase Send Error:", err);
+    } catch (err) { console.error(err); }
+  };
+
+  // Handle Image Upload for Admin
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedConversationId || !adminSession) return;
+
+    try {
+      setIsUploading(true);
+      const secureUrl = await uploadToCloudinary(file);
+      await addDoc(collection(db, "chats"), {
+        senderEmail: selectedConversationId,
+        senderName: adminSession.displayName || "Admin",
+        imageUrl: secureUrl,
+        isAdmin: true,
+        timestamp: serverTimestamp(),
+        website: "disruptivesolutionsinc"
+      });
+    } catch (err) { console.error("Upload Error:", err); } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -187,7 +185,7 @@ export function Messenger() {
 
   return (
     <section className="w-full h-[calc(100vh-120px)] flex gap-6 p-4 lg:p-0">
-      {/* SIDEBAR */}
+      {/* SIDEBAR (Same logic) */}
       <div className="w-full lg:w-80 flex flex-col bg-card border rounded-2xl overflow-hidden shadow-sm">
         <div className="p-4 border-b space-y-4">
           <div className="flex items-center justify-between">
@@ -200,45 +198,37 @@ export function Messenger() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
               placeholder="Search clients..." 
-              className="pl-9 bg-muted/50 border-none rounded-xl"
+              className="pl-9 bg-muted/50 border-none rounded-xl focus-visible:ring-1"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
           {filteredConversations.map((conv) => (
             <button
               key={conv.id}
               onClick={() => setSelectedConversationId(conv.id)}
               className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 mb-1 text-left relative group",
+                "w-full flex items-center gap-3 p-3 rounded-xl transition-all mb-1 text-left relative",
                 selectedConversationId === conv.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-muted"
               )}
             >
-              <div className="relative">
-                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                  <AvatarFallback className={cn(selectedConversationId === conv.id ? "bg-white/20" : "bg-primary/10 text-primary")}>
-                    {conv.initials}
-                  </AvatarFallback>
-                </Avatar>
-                {/* NOTIFICATION BADGE */}
-                {conv.hasUnread && selectedConversationId !== conv.id && (
-                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white"></span>
-                  </span>
-                )}
-              </div>
+              <Avatar className="h-10 w-10 border-2 border-background">
+                <AvatarFallback className={cn(selectedConversationId === conv.id ? "bg-white/20" : "bg-primary/10 text-primary font-bold")}>
+                  {conv.initials}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm font-semibold truncate">{conv.name}</p>
-                </div>
+                <p className="text-sm font-semibold truncate">{conv.name}</p>
                 <p className={cn("text-xs truncate opacity-70", selectedConversationId === conv.id ? "text-white" : "text-muted-foreground")}>
-                  {conv.messages[conv.messages.length - 1]?.text}
+                  {conv.messages[conv.messages.length - 1]?.imageUrl ? "Sent an image" : conv.messages[conv.messages.length - 1]?.text}
                 </p>
               </div>
+              {conv.hasUnread && selectedConversationId !== conv.id && (
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+              )}
             </button>
           ))}
         </div>
@@ -258,50 +248,60 @@ export function Messenger() {
                     <p className="text-[11px] text-muted-foreground">{activeConversation.email}</p>
                   </div>
                 </div>
-                
-                {/* DELETE BUTTON IN DROPDOWN */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-4 h-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                    <DropdownMenuItem 
-                      className="text-destructive focus:text-destructive cursor-pointer"
-                      onClick={() => handleDeleteConversation(activeConversation.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Thread
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-4 h-4" /></Button>
               </div>
 
-              {/* Messages Container */}
-              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-muted/20">
+              {/* Messages Area */}
+              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-muted/20 scrollbar-hide">
                 {activeConversation.messages.map((msg) => (
                   <div key={msg.id} className={cn("flex", msg.sender === "user" ? "justify-end" : "justify-start")}>
-                    <div className={cn("flex flex-col max-w-[70%]", msg.sender === "user" ? "items-end" : "items-start")}>
+                    <div className={cn("flex flex-col max-w-[60%]", msg.sender === "user" ? "items-end" : "items-start")}>
                       <div className={cn("px-4 py-2.5 rounded-2xl text-sm shadow-sm", msg.sender === "user" ? "bg-primary text-white rounded-tr-none" : "bg-background border rounded-tl-none")}>
-                        <p>{msg.text}</p>
+                        {msg.imageUrl && (
+                          <img 
+                            src={msg.imageUrl} 
+                            alt="Chat image" 
+                            className="rounded-lg mb-2 max-w-full cursor-zoom-in hover:brightness-105 transition"
+                            onClick={() => window.open(msg.imageUrl, '_blank')}
+                          />
+                        )}
+                        {msg.text && <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
                       </div>
-                      <span className="text-[9px] text-muted-foreground mt-1 uppercase font-bold">{msg.timestamp}</span>
+                      <span className="text-[9px] text-muted-foreground mt-1 uppercase font-bold tracking-tighter">{msg.timestamp}</span>
                     </div>
                   </div>
                 ))}
+                {isUploading && (
+                  <div className="flex justify-end pr-2 text-[10px] text-muted-foreground animate-pulse italic">
+                    <Loader2 className="h-3 w-3 animate-spin inline mr-1" /> Admin is sending asset...
+                  </div>
+                )}
               </div>
 
-              {/* Input */}
+              {/* Input Area */}
               <div className="p-4 bg-background border-t">
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} className="relative">
+                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
                   <div className="bg-muted/50 rounded-2xl border p-2">
                     <Textarea 
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
                       placeholder="Type a professional reply..."
-                      className="min-h-[80px] w-full bg-transparent border-none focus-visible:ring-0 text-sm p-3"
+                      className="min-h-[80px] w-full bg-transparent border-none focus-visible:ring-0 text-sm p-3 resize-none"
                     />
-                    <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t">
-                      <Button type="submit" size="sm" disabled={!draft.trim()} className="rounded-lg h-8">
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="text-muted-foreground hover:text-primary"
+                      >
+                        <ImageIcon className="w-4 h-4 mr-2" /> 
+                        {isUploading ? "Uploading..." : "Attach Image"}
+                      </Button>
+                      <Button type="submit" size="sm" disabled={!draft.trim() && !isUploading} className="rounded-lg h-8 px-5">
                         <Send className="w-3.5 h-3.5 mr-2" /> Reply
                       </Button>
                     </div>

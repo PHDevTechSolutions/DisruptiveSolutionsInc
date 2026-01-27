@@ -15,7 +15,7 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import Navbar from "../components/navigation/navbar";
 import Footer from "../components/navigation/footer";
-
+import FloatingChatWidget  from "../components/chat-widget";
 // --- CLOUDINARY UPLOAD FUNCTION ---
 const uploadToCloudinary = async (file: File) => {
     const formData = new FormData();
@@ -118,6 +118,7 @@ export default function FreeQuote() {
     return (
         <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a] selection:text-white overflow-x-hidden">
             <Navbar />
+            <FloatingChatWidget/>
 
             {/* --- HERO SECTION (DARK) --- */}
             <section className="relative pt-52 pb-40 bg-[#0a0a0a] overflow-hidden">

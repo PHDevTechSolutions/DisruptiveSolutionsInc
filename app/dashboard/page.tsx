@@ -15,6 +15,7 @@ import {
   Instagram, Linkedin, Video, ShieldCheck, User, LogOut, Plus, Loader2
 } from "lucide-react";
 import HomePopup from "../components/modals/HomePopup";
+import FloatingChatWidget from "../components/chat-widget";
 
 // --- MOCK UI COMPONENTS (Para sa Chat Widget) ---
 const Avatar = ({ children, className }: any) => (
@@ -204,6 +205,7 @@ const getGridConfig = () => {
   return (
 
     <>
+    <FloatingChatWidget/>
     <HomePopup/>
     <div className="min-h-screen bg-[#f8f9fa] font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a] overflow-x-hidden">
       

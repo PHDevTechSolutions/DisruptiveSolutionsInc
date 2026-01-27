@@ -12,6 +12,7 @@ import Link from "next/link";
 import Navbar from "../components/navigation/navbar";
 import Footer from "../components/navigation/footer";
 import QuoteCartPanel from "../components/QuoteCartPanel";
+import FloatingChatWidget  from "../components/chat-widget";
 import { 
   Menu,
   ArrowRight, 
@@ -135,6 +136,7 @@ export default function BrandsShowcase() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans antialiased text-slate-900 overflow-x-hidden">
       <Navbar/>
+      <FloatingChatWidget/>
 
       {/* HERO SECTION */}
       <section className="relative h-[60vh] w-full flex items-center justify-center bg-[#050505]">

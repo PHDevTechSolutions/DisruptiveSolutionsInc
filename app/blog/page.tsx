@@ -10,6 +10,7 @@ import { collection, query, orderBy, onSnapshot, limit, where, addDoc, serverTim
 import SignUpNewsletter from "../components/SignUpNewsletter";    
 import Footer from "../components/navigation/footer";
 import Navbar from "../components/navigation/navbar";
+import FloatingChatWidget  from "../components/chat-widget";
 
 export default function BlogPage() {
     const [blogs, setBlogs] = useState<any[]>([]);
@@ -72,7 +73,7 @@ export default function BlogPage() {
 
     return (
         <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a] overflow-x-hidden">
-            
+        <FloatingChatWidget/>
         <Navbar/>
 
             {/* --- HERO SECTION WITH BG --- */}

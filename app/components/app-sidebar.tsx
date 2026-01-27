@@ -3,9 +3,10 @@
 import * as React from "react"
 import { useState, useEffect } from "react"
 import { db } from "@/lib/firebase"
-import { collection, onSnapshot, query, where } from "firebase/firestore"
+import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore"
 import {
-  BookOpen, Frame, GalleryVerticalEnd, SquareTerminal, Inbox, LayoutGrid
+  BookOpen, Frame, GalleryVerticalEnd, SquareTerminal, Inbox,
+  LayoutGrid, MessageSquareDot, BellRing
 } from "lucide-react"
 
 import { NavMain } from "../components/nav-main"
@@ -17,37 +18,87 @@ import {
 } from "@/components/ui/sidebar"
 
 export function AppSidebar({ onNavigate, ...props }: any) {
+  const [mounted, setMounted] = useState(false)
+  const [adminUser, setAdminUser] = useState({
+    name: "Admin User",
+    email: "admin@disruptive.com",
+    avatar: "/avatars/admin.jpg"
+  })
+
   const [counts, setCounts] = useState({
     customer: 0,
     quotation: 0,
     job: 0,
-    product: 0 
+    product: 0,
+    messenger: 0
   })
 
   useEffect(() => {
-    // Para sa Inquiries (customer, quotation, job), "unread" ang ginagamit mo
+    setMounted(true)
+
+    // --- 1. FETCH ACTUAL ADMIN DATA FROM LOCALSTORAGE ---
+    const savedUser = localStorage.getItem("disruptive_admin_user")
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser)
+        setAdminUser({
+          name: parsed.name || "Admin User",
+          email: parsed.email || "admin@disruptive.com",
+          avatar: parsed.avatar || "/avatars/admin.jpg"
+        })
+      } catch (err) {
+        console.error("Error parsing admin data:", err)
+      }
+    }
+
+    // --- 2. FIREBASE LISTENERS ---
     const listenToInquiryCount = (type: string, key: string) => {
       const q = query(
-        collection(db, "inquiries"), 
-        where("type", "==", type), 
-        where("status", "==", "unread") // Status para sa Inquiries
+        collection(db, "inquiries"),
+        where("type", "==", type),
+        where("status", "==", "unread")
       );
-      
       return onSnapshot(q, (snap) => {
         setCounts(prev => ({ ...prev, [key]: snap.size }));
       });
     };
 
-    // Para sa Orders (product), "pending" ang ginagamit ng Panel mo
     const listenToProductCount = () => {
       const q = query(
-        collection(db, "inquiries"), 
-        where("type", "==", "product"), 
-        where("status", "==", "pending") 
+        collection(db, "inquiries"),
+        where("type", "==", "product"),
+        where("status", "==", "pending")
       );
-      
       return onSnapshot(q, (snap) => {
         setCounts(prev => ({ ...prev, product: snap.size }));
+      });
+    };
+
+    const listenToMessenger = () => {
+      const q = query(
+        collection(db, "chats"),
+        where("website", "==", "disruptivesolutionsinc"),
+        orderBy("timestamp", "desc")
+      );
+
+      return onSnapshot(q, (snapshot) => {
+        const unreadThreads = new Set();
+        const latestPerClient: Record<string, any> = {};
+
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (!latestPerClient[data.senderEmail]) {
+            latestPerClient[data.senderEmail] = data;
+          }
+        });
+
+        Object.values(latestPerClient).forEach((msg: any) => {
+          if (msg.isAdmin === false) {
+            unreadThreads.add(msg.senderEmail);
+          }
+        });
+
+        setCounts(prev => ({ ...prev, messenger: unreadThreads.size }));
       });
     };
 
@@ -55,29 +106,26 @@ export function AppSidebar({ onNavigate, ...props }: any) {
     const unsubQuotation = listenToInquiryCount("quotation", "quotation");
     const unsubJob = listenToInquiryCount("job", "job");
     const unsubProduct = listenToProductCount();
+    const unsubMessenger = listenToMessenger();
 
     return () => {
       unsubCustomer();
       unsubQuotation();
       unsubJob();
       unsubProduct();
+      unsubMessenger();
     };
   }, []);
 
-  // Computation para sa main "Inquiries" menu badge
-  const totalInquiries = counts.customer + counts.quotation + counts.job;
+  const totalInquiries = counts.customer + counts.quotation + counts.job + counts.messenger;
 
-  const data = {
-    user: { 
-      name: "Admin User", 
-      email: "admin@disruptive.com", 
-      avatar: "/avatars/admin.jpg" 
-    },
+  const sidebarData = {
+    user: adminUser, // Gamit na ang dynamic state dito
     teams: [
-      { 
-        name: "Disruptive Solutions Inc", 
-        logo: GalleryVerticalEnd, 
-        plan: "Enterprise" 
+      {
+        name: "Disruptive Solutions Inc",
+        logo: GalleryVerticalEnd,
+        plan: "Enterprise"
       },
     ],
     navMain: [
@@ -87,47 +135,57 @@ export function AppSidebar({ onNavigate, ...props }: any) {
         icon: SquareTerminal,
         badge: counts.product > 0 ? counts.product : null,
         items: [
-          
           { title: "All Product", url: "#" },
           { title: "Add new product", url: "#" },
-          { 
-            title: "Orders", 
-            url: "#", 
-            badge: counts.product > 0 ? counts.product : null 
+          {
+            title: "Orders",
+            url: "#",
+            badge: counts.product > 0 ? counts.product : null
           },
-          { title: "Application", url: "#" },
           { title: "Category", url: "#" },
           { title: "Reviews", url: "#" },
         ],
       },
+
       {
         title: "Inquiries",
         url: "#",
         icon: Inbox,
-        // DITO ANG INDICATION: Pagsasama-samahin ang customer + quotation + job
-        badge: totalInquiries > 0 ? totalInquiries : null, 
+        badge: totalInquiries > 0 ? totalInquiries : null,
         items: [
-          { 
-            title: "Customer Inquiries", 
-            url: "#", 
-            badge: counts.customer > 0 ? counts.customer : null 
+          {
+            title: "Messenger",
+            url: "#",
+            icon: MessageSquareDot,
+            badge: counts.messenger > 0 ? counts.messenger : null,
+            isImportant: counts.messenger > 0
           },
-          { 
-            title: "Quotation", 
-            url: "#", 
-            badge: counts.quotation > 0 ? counts.quotation : null 
+          {
+            title: "Customer Inquiries",
+            url: "#",
+            badge: counts.customer > 0 ? counts.customer : null
           },
-          { 
-            title: "Job Application", 
-            url: "#", 
-            badge: counts.job > 0 ? counts.job : null 
+          {
+            title: "Quotation",
+            url: "#",
+            badge: counts.quotation > 0 ? counts.quotation : null
           },
+        ],
+      },
+      {
+        title: "Job Openings",
+        url: "#",
+        icon: SquareTerminal,
+        badge: counts.product > 0 ? counts.product : null,
+        items: [
+          {
+            title: "Job Application",
+            url: "#",
+            badge: counts.job > 0 ? counts.job : null
+          },
+          { title: "Application", url: "#" },
+          { title: "Notification", url: "#" },
 
-                    { 
-            title: "Messenger", 
-            url: "#", 
-          },
-          
         ],
       },
       {
@@ -144,31 +202,26 @@ export function AppSidebar({ onNavigate, ...props }: any) {
           { title: "HomePopup", url: "#" },
         ],
       },
-      {
-        title: "Reports",
-        url: "#",
-        icon: BookOpen,
-        items: [
-          { title: "Activity logs", url: "#" },
-        ],
-      },
     ],
     projects: [
       { name: "Design Engineering", url: "#", icon: Frame },
     ],
   }
 
+  // Iwas hydration error
+  if (!mounted) return null;
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={sidebarData.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} onNavigate={onNavigate} />
-        <NavProjects projects={data.projects} />
+        <NavMain items={sidebarData.navMain} onNavigate={onNavigate} />
+        <NavProjects projects={sidebarData.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={sidebarData.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

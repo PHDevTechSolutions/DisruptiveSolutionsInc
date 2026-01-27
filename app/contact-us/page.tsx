@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import SignUpNewsletter from "../components/SignUpNewsletter" 
 import Navbar from "../components/navigation/navbar";
+import FloatingChatWidget  from "../components/chat-widget";
 import {
     Menu, Mail, Phone, MapPin, Send, ChevronUp, Sparkles, ArrowRight,
     Facebook, Instagram, Linkedin, X, LogOut, User, Zap, FileSignature, ShieldCheck
@@ -131,7 +132,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a]">
             
             {/* --- NEW INDUSTRIAL MOBILE NAV (LEFT SIDE) --- */}
-     
+          <FloatingChatWidget/>
           <Navbar/>
 
             {/* --- HERO SECTION (DARK) --- */}

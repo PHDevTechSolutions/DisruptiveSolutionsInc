@@ -30,51 +30,57 @@ export default function RegisterPage() {
   const router = useRouter()
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
+  e.preventDefault()
 
-    // --- VALIDATIONS ---
-    if (!email || !password || !fullName) {
-      return toast.error("Please fill in all fields")
-    }
-    if (password.length < 6) {
-      return toast.error("Password must be at least 6 characters")
-    }
-
-    setIsLoading(true)
-    const regToast = toast.loading("Creating admin account...")
-
-    try {
-      // 1. Create User in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      const user = userCredential.user
-
-      // 2. Save Additional Info in Firestore (Optional but recommended)
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        fullName: fullName,
-        email: email,
-        role: "admin", // Default role
-        createdAt: serverTimestamp()
-      })
-
-      toast.success("Account created successfully!", { id: regToast })
-      
-      // Redirect to Dashboard
-      setTimeout(() => {
-        router.push("/login")
-      }, 1500)
-
-    } catch (error: any) {
-      console.error(error)
-      if (error.code === 'auth/email-already-in-use') {
-        toast.error("Email is already registered", { id: regToast })
-      } else {
-        toast.error("Registration failed. Try again.", { id: regToast })
-      }
-    } finally {
-      setIsLoading(false)
-    }
+  // --- VALIDATIONS ---
+  if (!email || !password || !fullName) {
+    return toast.error("Please fill in all fields")
   }
+  if (password.length < 6) {
+    return toast.error("Password must be at least 6 characters")
+  }
+
+  setIsLoading(true)
+  const regToast = toast.loading("Creating admin account...")
+
+  try {
+    // 1. Create User in Firebase Auth (Client Side)
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    const user = userCredential.user
+
+    // 2. TAWAGIN ANG API (Server Side)
+    // Dito natin ise-set ang role para hindi ito pwedeng dayain sa frontend
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid: user.uid,
+        email: email,
+        fullName: fullName,
+        role: "admin", // Ang API ang mag-e-enforce nito sa Firestore
+        website: "disruptivesolutionsinc"
+      }),
+    });
+
+    if (!response.ok) throw new Error("Failed to initialize admin profile");
+
+    toast.success("Admin account created successfully!", { id: regToast })
+    
+    setTimeout(() => {
+      router.push("/login")
+    }, 1500)
+
+  } catch (error: any) {
+    console.error(error)
+    if (error.code === 'auth/email-already-in-use') {
+      toast.error("Email is already registered", { id: regToast })
+    } else {
+      toast.error(error.message || "Registration failed. Try again.", { id: regToast })
+    }
+  } finally {
+    setIsLoading(false)
+  }
+}
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 relative overflow-hidden px-4 py-10">

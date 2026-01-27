@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { auth, db } from "@/lib/firebase"; 
+import { auth, db } from "@/lib/firebase";
 import {
   doc,
   getDoc,
@@ -64,7 +64,7 @@ export default function ProductDetails() {
   const [selectedQty, setSelectedQty] = useState(1);
   const [isInCart, setIsInCart] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
+
   // Para sa switching ng gallery images
   const [activeImage, setActiveImage] = useState<string>("");
 
@@ -204,7 +204,7 @@ export default function ProductDetails() {
           </nav>
 
           <div className="grid lg:grid-cols-12 gap-8 md:gap-12 items-start">
-            
+
             {/* LEFT: GALLERY SECTION */}
             <div className="lg:col-span-5 space-y-4 md:sticky md:top-24">
               <div
@@ -242,10 +242,10 @@ export default function ProductDetails() {
 
                 <motion.div className="zoom-image w-full h-full p-6 md:p-10 flex items-center justify-center transition-transform duration-200 ease-out" whileHover={{ scale: 2.5 }}>
                   <AnimatePresence mode="wait">
-                    <motion.img 
+                    <motion.img
                       key={activeImage}
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      src={activeImage} className="max-h-[250px] md:max-h-[400px] w-full object-contain pointer-events-none" 
+                      src={activeImage} className="max-h-[250px] md:max-h-[400px] w-full object-contain pointer-events-none"
                     />
                   </AnimatePresence>
                 </motion.div>
@@ -257,9 +257,8 @@ export default function ProductDetails() {
                   <button
                     key={idx}
                     onClick={() => setActiveImage(img as string)}
-                    className={`relative w-20 h-20 flex-shrink-0 rounded-xl border-2 transition-all overflow-hidden bg-gray-50 ${
-                      activeImage === img ? "border-[#d11a2a] scale-95 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
-                    }`}
+                    className={`relative w-20 h-20 flex-shrink-0 rounded-xl border-2 transition-all overflow-hidden bg-gray-50 ${activeImage === img ? "border-[#d11a2a] scale-95 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
+                      }`}
                   >
                     <img src={img as string} className="w-full h-full object-cover" alt={`Thumb ${idx}`} />
                   </button>
@@ -329,20 +328,45 @@ export default function ProductDetails() {
                   </button>
                 </div>
 
-                {/* --- CATALOG BUTTONS (from screenshot) --- */}
-                {product.catalogs && product.catalogs.length > 0 && (
-                  <div className="grid grid-cols-1 gap-2 pt-2">
-                    {product.catalogs.map((url, i) => (
-                      <a 
-                        key={i} href={url} target="_blank" rel="noopener noreferrer"
-                        className="w-full py-4 border-2 border-black rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-black hover:text-white transition-all shadow-sm group"
-                      >
-                        <FileText size={16} className="group-hover:scale-110 transition-transform" />
-                        {url.toLowerCase().endsWith('.pdf') ? `Technical Datasheet ${i + 1}` : `View Document ${i + 1}`}
-                      </a>
-                    ))}
-                  </div>
-                )}
+{/* --- CATALOG BUTTONS (STAY ON PAGE DOWNLOAD) --- */}
+{product.catalogs?.length ? (
+  <div className="grid grid-cols-1 gap-3 pt-4">
+    {product.catalogs.map((url, i) => {
+      
+      /**
+       * CLOUDINARY DOWNLOAD TRICK:
+       * 1. Palitan ang '/upload/' ng '/upload/fl_attachment/' para pilitin ang download.
+       * 2. Kung may '/private/' sa URL, gagawin nating '/upload/' para iwas 401 (basta Public ang file).
+       */
+      const forceDownloadUrl = url
+        .replace("/private/", "/upload/")
+        .replace("/upload/", "/upload/fl_attachment/");
+
+      // Clean filename for the download attribute
+      const fileName = `Datasheet_${product.name.replace(/\s+/g, '_')}_${i + 1}.pdf`;
+
+      return (
+        <a
+          key={i}
+          href={forceDownloadUrl}
+          download={fileName}
+          // Ginawang _self para hindi magbukas ng bagong tab
+          target="_self" 
+          rel="noopener noreferrer"
+          className="w-full py-4 bg-black text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#d11a2a] transition-all shadow-lg group border-none no-underline cursor-pointer"
+        >
+          <FileText
+            size={16}
+            className="group-hover:scale-110 transition-transform text-white"
+          />
+          <span className="text-white">Download PDF Datasheet {i + 1}</span>
+        </a>
+      );
+    })}
+  </div>
+) : null}
+
+
               </div>
             </div>
           </div>

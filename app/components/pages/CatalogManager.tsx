@@ -9,10 +9,10 @@ import {
 import { 
   Plus, Pencil, Trash2, Loader2, X, 
   Save, Folder, FileText, ImagePlus, 
-  UploadCloud, CheckCircle2, FileUp
+  UploadCloud, CheckCircle2, FileUp, AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { uploadToCloudinary } from "@/lib/cloudinary"; // Gamit ang existing helper mo
+import { uploadToCloudinary } from "@/lib/cloudinary"; 
 
 export default function CatalogManager() {
   const [catalogs, setCatalogs] = useState<any[]>([]);
@@ -25,7 +25,6 @@ export default function CatalogManager() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Architecture");
   
-  // States para sa Cloudinary Uploads
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePrev, setImagePrev] = useState<string | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -41,9 +40,10 @@ export default function CatalogManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || (!imagePrev && !imageFile) || (!existingPdfUrl && !pdfFile)) {
-      return alert("Complete Title, Image, and PDF are required.");
-    }
+    
+    // STRICT VALIDATION: Check if Title, Image, and PDF are present
+    if (!title) return alert("Title is required.");
+    if (!existingPdfUrl && !pdfFile) return alert("Technical PDF is required.");
 
     setLoading(true);
     try {
@@ -53,10 +53,9 @@ export default function CatalogManager() {
         finalImageUrl = await uploadToCloudinary(imageFile);
       }
 
-      // 2. Handle PDF Upload
+      // 2. Handle PDF Upload (Ensure cloudinary helper uses 'auto' resource type)
       let finalPdfUrl = existingPdfUrl;
       if (pdfFile) {
-        // Note: Make sure uploadToCloudinary handles PDF/Raw files
         finalPdfUrl = await uploadToCloudinary(pdfFile);
       }
 
@@ -72,14 +71,17 @@ export default function CatalogManager() {
       if (editingId) {
         await updateDoc(doc(db, "catalogs", editingId), catalogData);
       } else {
-        await addDoc(collection(db, "catalogs"), { ...catalogData, createdAt: serverTimestamp() });
+        await addDoc(collection(db, "catalogs"), { 
+          ...catalogData, 
+          createdAt: serverTimestamp() 
+        });
       }
 
       setIsModalOpen(false);
       resetForm();
     } catch (err) {
       console.error(err);
-      alert("Error saving catalog to cloud.");
+      alert("Critical Error: Failed to sync assets to cloud.");
     } finally {
       setLoading(false);
     }
@@ -139,8 +141,8 @@ export default function CatalogManager() {
                 </td>
                 <td className="px-8 py-6">
                   <div className="flex items-center gap-2 text-gray-400">
-                    <FileText size={14} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">PDF Ready</span>
+                    <FileText size={14} className="text-[#d11a2a]" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">PDF SYNCED</span>
                   </div>
                 </td>
                 <td className="px-8 py-6 text-right">
@@ -197,7 +199,7 @@ export default function CatalogManager() {
                 {/* COVER IMAGE UPLOAD */}
                 <div className="space-y-4">
                   <label className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2 tracking-widest">
-                    <ImagePlus size={14}/> Cover Art
+                    <ImagePlus size={14}/> Cover Art (JPG/PNG)
                   </label>
                   <div className="relative aspect-[16/9] bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100 flex items-center justify-center overflow-hidden hover:border-[#d11a2a] transition-all group">
                     {imagePrev ? (
@@ -215,22 +217,44 @@ export default function CatalogManager() {
                   </div>
                 </div>
 
-                {/* PDF FILE UPLOAD */}
+                {/* PDF FILE UPLOAD - STRICT ONLY PDF */}
                 <div className="space-y-4">
                   <label className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2 tracking-widest">
-                    <FileUp size={14}/> Technical Document (PDF)
+                    <FileUp size={14}/> Technical Document (PDF ONLY)
                   </label>
                   <label className="block cursor-pointer">
-                    <div className={`border-2 border-dashed p-10 rounded-[2.5rem] flex flex-col items-center gap-4 transition-all ${ (pdfFile || existingPdfUrl) ? 'border-green-500 bg-green-50/30' : 'border-gray-100 bg-gray-50/50 hover:border-[#d11a2a]'}`}>
-                      { (pdfFile || existingPdfUrl) ? <CheckCircle2 className="text-green-500" size={32} /> : <FileText className="text-gray-200" size={32} /> }
+                    <div className={`border-2 border-dashed p-10 rounded-[2.5rem] flex flex-col items-center gap-4 transition-all ${ (pdfFile || existingPdfUrl) ? 'border-[#d11a2a] bg-red-50/30' : 'border-gray-100 bg-gray-50/50 hover:border-[#d11a2a]'}`}>
+                      { (pdfFile || existingPdfUrl) ? (
+                        <div className="relative">
+                           <FileText className="text-[#d11a2a]" size={40} />
+                           <div className="absolute -right-2 -bottom-2 bg-green-500 text-white rounded-full p-1 border-2 border-white">
+                             <CheckCircle2 size={12} />
+                           </div>
+                        </div>
+                      ) : (
+                        <FileUp className="text-gray-200" size={40} />
+                      ) }
                       <div className="text-center">
                         <p className="text-[11px] font-black uppercase tracking-widest text-gray-900">
-                          { (pdfFile || existingPdfUrl) ? "PDF Document Linked" : "Click to Upload PDF" }
+                          { (pdfFile || existingPdfUrl) ? "Technical PDF Loaded" : "Click to Upload PDF" }
                         </p>
-                        {pdfFile && <p className="text-[9px] font-bold text-green-600 mt-1 uppercase italic">{pdfFile.name}</p>}
+                        {pdfFile && <p className="text-[9px] font-bold text-[#d11a2a] mt-1 uppercase italic line-clamp-1">{pdfFile.name}</p>}
+                        {!pdfFile && !existingPdfUrl && <p className="text-[8px] text-gray-400 mt-1 uppercase">Max size: 10MB</p>}
                       </div>
                     </div>
-                    <input type="file" accept=".pdf" className="hidden" onChange={(e) => setPdfFile(e.target.files?.[0] || null)} />
+                    <input 
+                      type="file" 
+                      accept="application/pdf" 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && file.type !== "application/pdf") {
+                          alert("Invalid format. Please select a PDF file.");
+                          return;
+                        }
+                        setPdfFile(file || null);
+                      }} 
+                    />
                   </label>
                 </div>
 

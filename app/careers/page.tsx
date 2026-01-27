@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Footer from "../components/navigation/footer";
 import Navbar from "../components/navigation/navbar";
+import FloatingChatWidget  from "../components/chat-widget";
 
 export default function CareersPage() {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -71,6 +72,7 @@ export default function CareersPage() {
     return (
         <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a] overflow-x-hidden">
             <Navbar />
+            <FloatingChatWidget/>
 
             {/* --- HERO SECTION WITH BG --- */}
             <section className="relative min-h-[70vh] flex items-center pt-32 pb-16 px-5 overflow-hidden bg-black">

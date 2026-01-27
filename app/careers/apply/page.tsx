@@ -7,6 +7,7 @@ import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary"; // Import ang function mo
+import FloatingChatWidget  from "../../components/chat-widget";
 import {
     ArrowLeft,
     Send,
@@ -130,6 +131,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
     return (
         <div className="min-h-screen bg-[#fafafa] font-sans selection:bg-[#d11a2a]/10">
+            <FloatingChatWidget/>
             <nav className="max-w-7xl mx-auto p-6 md:p-10">
                 <Link href="/careers" className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#d11a2a] transition-all group">
                     <div className="p-2 rounded-full bg-white shadow-sm group-hover:bg-red-50 transition-all">

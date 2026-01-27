@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Menu, Zap, Lightbulb, Target, ArrowRight, ChevronUp, Check, Facebook, Linkedin, Twitter, X, ShieldCheck, FileSignature, User, LogOut  } from "lucide-react"
 import SignUpNewsletter from "../components/SignUpNewsletter" 
 import Footer from "../components/navigation/footer";
+import FloatingChatWidget  from "../components/chat-widget";
 
 export default function DisruptiveLandingPage() {
     const [isScrolled, setIsScrolled] = useState(false)
@@ -117,7 +118,7 @@ export default function DisruptiveLandingPage() {
   };
     return (
         <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a] overflow-x-hidden">
-
+          <FloatingChatWidget/>
             {/* --- NEW INDUSTRIAL MOBILE NAV (LEFT SIDE) --- */}
                 
                       <AnimatePresence>

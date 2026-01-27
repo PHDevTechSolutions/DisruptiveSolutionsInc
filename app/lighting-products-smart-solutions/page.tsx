@@ -10,6 +10,7 @@ import Footer from "../components/navigation/footer";
 import Application from "../components/application";
 import ProductFilter from "../components/zumtobelfilter"; 
 import Highlights from "../components/Highlights";
+import FloatingChatWidget from "../components/chat-widget";
 // --- COMPONENTS ---
 import QuoteCartPanel from "../components/QuoteCartPanel";
 import {
@@ -23,6 +24,7 @@ import {
   ChevronRight,
   Star
 } from "lucide-react";
+
 
 // --- INTERFACES ---
 interface FilterState {
@@ -206,6 +208,7 @@ export default function BrandsPage() {
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a] selection:text-white overflow-x-hidden">
       <Navbar />
+      <FloatingChatWidget/>
  {/* HERO SECTION - ORIGINAL COLOR VERSION */}
 <section className="relative h-[60vh] w-full flex items-center justify-center overflow-hidden">
   {/* Tinanggal ang opacity-40 para full color ang image */}

@@ -25,7 +25,8 @@ import {
     CheckCircle,
     Clock,
     X,
-    ChevronRight
+    ChevronRight,
+    Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -257,22 +258,39 @@ export default function ApplicationInquiries() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-4">
-                                    <a
-                                        href={selectedApp.resumeUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex-1 inline-flex items-center justify-center gap-3 px-8 py-5 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-[#d11a2a] transition-all"
-                                    >
-                                        <FileText size={18} /> View CV <ExternalLink size={14} />
-                                    </a>
-                                    <button 
-                                        onClick={() => setSelectedApp(null)}
-                                        className="px-8 py-5 border-2 border-gray-100 text-gray-400 rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-gray-50 transition-all"
-                                    >
-                                        Close
-                                    </button>
-                                </div>
+<div className="flex flex-col sm:flex-row gap-4">
+    <button
+        onClick={() => {
+            if (!selectedApp.resumeUrl) return;
+
+            // STEP 1: Linisin ang URL (Tanggalin ang f_auto,q_auto na nagiging WebP)
+            const cleanResumeUrl = selectedApp.resumeUrl
+                .replace("/f_auto,q_auto/", "/")
+                .replace("/upload/", "/upload/fl_attachment/");
+
+            // STEP 2: Create a temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = cleanResumeUrl;
+            // Pilitin ang filename na maging PDF
+            link.download = `${selectedApp.fullName.replace(/\s+/g, '_')}_CV.pdf`;
+            link.target = "_self";
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }}
+        className="flex-1 inline-flex items-center justify-center gap-3 px-8 py-5 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-[#d11a2a] transition-all cursor-pointer border-none"
+    >
+        <FileText size={18} /> Download CV <Download size={14} />
+    </button>
+
+    <button 
+        onClick={() => setSelectedApp(null)}
+        className="px-8 py-5 border-2 border-gray-100 text-gray-400 rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-gray-50 transition-all cursor-pointer"
+    >
+        Close
+    </button>
+</div>
                             </div>
                         </motion.div>
                     </div>

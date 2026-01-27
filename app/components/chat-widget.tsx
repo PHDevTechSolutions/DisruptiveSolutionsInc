@@ -4,51 +4,67 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageSquare, Send, X, HelpCircle, ChevronDown, ChevronUp } from "lucide-react"; 
+import { MessageSquare, Send, X, ImageIcon, Loader2, Sparkles } from "lucide-react"; 
 import { useCallback, useEffect, useState, useRef } from "react";
 
-// FIREBASE IMPORTS
+// FIREBASE & CLOUDINARY IMPORTS
 import { db } from "@/lib/firebase"; 
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where } from "firebase/firestore";
+import { uploadToCloudinary } from "@/lib/cloudinary"; 
+
+interface ChatMessage {
+  id: string;
+  message?: string;
+  imageUrl?: string;
+  senderEmail: string;
+  senderName: string;
+  isAdmin: boolean;
+  website: string;
+  timestamp: any;
+}
 
 const FAQS = [
-  {
-    question: "What are your services?",
-    answer: "We specialize in Web Development, Mobile Apps, and UI/UX Design tailored for modern businesses."
+  { 
+    question: "What are your services?", 
+    answer: "We offer Web Development, Mobile Apps, and UI/UX Design services tailored for your business needs.",
+    icon: "🚀" 
   },
-  {
-    question: "How to start a project?",
-    answer: "You can start by sending us a message here or emailing us at projects@disruptive.inc. We'll set up a discovery call!"
+  { 
+    question: "How to start a project?", 
+    answer: "You can send us a message here or email us at hello@disruptive.inc to schedule a discovery call.",
+    icon: "📩" 
   },
-  {
-    question: "Do you offer maintenance?",
-    answer: "Yes, we provide 24/7 technical support and monthly maintenance for all our deployed projects."
+  { 
+    question: "Do you offer maintenance?", 
+    answer: "Yes! We provide 24/7 technical support and maintenance for all our projects.",
+    icon: "🛠️" 
   }
 ];
 
 export default function FloatingChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [showFaq, setShowFaq] = useState(true); // Control visibility of FAQ section
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Load User Session
   useEffect(() => {
     const sessionData = localStorage.getItem("disruptive_user_session");
-    if (sessionData) {
-      setCurrentUser(JSON.parse(sessionData));
-    } else {
-      setCurrentUser({
-        displayName: "Guest User",
-        email: "guest@example.com",
-        website: "disruptivesolutionsinc"
-      });
-    }
+    setCurrentUser(sessionData ? JSON.parse(sessionData) : {
+      displayName: "Guest User",
+      email: "guest@example.com",
+      website: "disruptivesolutionsinc"
+    });
   }, []);
 
+  // Firestore Realtime Listener
   useEffect(() => {
-    if (!isOpen || !currentUser) return;
+    if (!currentUser) return;
 
     const q = query(
       collection(db, "chats"),
@@ -61,192 +77,200 @@ export default function FloatingChatWidget() {
       const dbMessages = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
-      setMessages(dbMessages);
-      
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      })) as ChatMessage[];
+
+      if (!isOpen && dbMessages.length > messages.length) {
+        if (dbMessages[dbMessages.length - 1].isAdmin) {
+          setUnreadCount(prev => prev + 1);
         }
+      }
+
+      setMessages(dbMessages);
+      setTimeout(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       }, 100);
     });
 
     return () => unsubscribe();
-  }, [isOpen, currentUser]);
+  }, [isOpen, currentUser, messages.length]);
 
-  const handleSendMessage = async (e?: React.FormEvent, customMsg?: string) => {
+  // Handle Send Message & Auto Reply for FAQ
+  const handleSendMessage = async (e?: React.FormEvent, customMsg?: string, autoReply?: string) => {
     if (e) e.preventDefault();
     const textToSend = customMsg || message;
     if (!textToSend.trim() || !currentUser) return;
 
     try {
+      if (!customMsg) setMessage(""); 
+      
+      // 1. User Message
       await addDoc(collection(db, "chats"), {
         senderEmail: currentUser.email,
         senderName: currentUser.displayName,
         message: textToSend,
         isAdmin: false, 
         timestamp: serverTimestamp(),
-        website: currentUser.website || "disruptivesolutionsinc"
+        website: "disruptivesolutionsinc"
       });
-      if (!customMsg) setMessage(""); 
-    } catch (err) {
-      console.error("Error:", err);
+
+      // 2. Auto Reply Logic
+      if (autoReply) {
+        setTimeout(async () => {
+          await addDoc(collection(db, "chats"), {
+            senderEmail: currentUser.email,
+            senderName: "Support Bot",
+            message: autoReply,
+            isAdmin: true, 
+            timestamp: serverTimestamp(),
+            website: "disruptivesolutionsinc"
+          });
+        }, 800);
+      }
+    } catch (err) { console.error("Send Error:", err); }
+  };
+
+  // Cloudinary Image Upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+    try {
+      setIsUploading(true);
+      const secureUrl = await uploadToCloudinary(file);
+      
+      await addDoc(collection(db, "chats"), {
+        senderEmail: currentUser.email,
+        senderName: currentUser.displayName,
+        imageUrl: secureUrl,
+        isAdmin: false,
+        timestamp: serverTimestamp(),
+        website: "disruptivesolutionsinc"
+      });
+    } catch (err) { console.error("Upload Error:", err); } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = ""; 
     }
   };
 
-  const handleFAQSelection = async (faq: { question: string, answer: string }) => {
-    await handleSendMessage(undefined, faq.question);
-
-    setTimeout(async () => {
-      try {
-        await addDoc(collection(db, "chats"), {
-          senderEmail: currentUser.email,
-          senderName: "Disruptive Support",
-          message: faq.answer,
-          isAdmin: true,
-          timestamp: serverTimestamp(),
-          website: "disruptivesolutionsinc"
-        });
-      } catch (err) {
-        console.error("Bot Error:", err);
-      }
-    }, 800);
-  };
-
-  const toggleOpen = useCallback(() => setIsOpen((prev) => !prev), []);
-
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 antialiased font-sans">
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            key="chat-window"
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={{ opacity: 0, y: 15, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="w-[380px] overflow-hidden rounded-2xl border border-white/10 bg-[#050505]/95 shadow-2xl backdrop-blur-xl ring-1 ring-white/20"
+            exit={{ opacity: 0, y: 15, scale: 0.95 }}
+            className="w-[340px] md:w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a] shadow-2xl ring-1 ring-white/10"
           >
             {/* Header */}
-            <div className="relative border-b border-white/10 bg-[#d11a2a]/10 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 border-2 border-[#d11a2a]/50">
-                    <AvatarImage src="https://github.com/shadcn.png" />
-                    <AvatarFallback>DS</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">Disruptive Support</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-[10px] text-white/50 uppercase font-bold tracking-wider">Online</span>
-                    </div>
+            <div className="border-b border-white/5 bg-white/[0.03] p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Avatar className="h-8 w-8 border-none ring-0">
+                  <AvatarImage src="https://github.com/shadcn.png" className="rounded-full" />
+                  <AvatarFallback className="bg-[#222] text-white text-[10px]">DS</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-[13px] font-bold text-white tracking-tight">Support</h3>
+                  <div className="flex items-center gap-1.5 leading-none">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] text-white/40 uppercase font-medium">Online</span>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                   {/* FAQ TOGGLE BUTTON */}
-                  <button 
-                    onClick={() => setShowFaq(!showFaq)} 
-                    className={cn(
-                        "p-1.5 rounded-lg transition-colors",
-                        showFaq ? "bg-[#d11a2a]/20 text-[#d11a2a]" : "text-white/50 hover:text-white"
-                    )}
-                    title="Toggle FAQ"
-                  >
-                    <HelpCircle className="h-5 w-5" />
-                  </button>
-                  <button onClick={() => setIsOpen(false)} className="text-white/50 hover:text-white transition">
-                    <X className="h-5 w-5" />
-                  </button>
                 </div>
               </div>
+              <button onClick={() => setIsOpen(false)} className="p-1.5 text-white/40 hover:text-white transition opacity-60 hover:opacity-100">
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            {/* Main Content Area (Messages + FAQ) */}
-            <div className="relative flex h-[420px] flex-col">
-              
-              {/* PERSISTENT FAQ SECTION */}
-              <AnimatePresence>
-                {showFaq && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden bg-white/5 border-b border-white/5"
+            {/* Chat Body */}
+            <div className="relative flex h-[380px] flex-col bg-[#050505]">
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+                
+                {/* FAQ Cards - Visible only at start */}
+                {messages.length === 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    className="flex flex-col gap-2.5 py-2"
                   >
-                    <div className="p-3 space-y-2">
-                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-1">Quick Help</p>
-                      <div className="flex flex-col gap-1.5">
-                        {FAQS.map((faq, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleFAQSelection(faq)}
-                            className="text-left bg-white/5 hover:bg-[#d11a2a]/20 hover:text-white border border-white/5 text-white/70 text-[11px] py-2 px-3 rounded-lg transition-all"
-                          >
-                            {faq.question}
-                          </button>
-                        ))}
-                      </div>
-                      <button 
-                        onClick={() => setShowFaq(false)}
-                        className="w-full flex justify-center py-1 text-white/20 hover:text-white/50 transition-colors"
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </button>
+                    <div className="flex items-center gap-2 text-white/30 mb-1 px-1">
+                      <Sparkles className="h-3 w-3 text-[#d11a2a]" />
+                      <span className="text-[9px] font-bold uppercase tracking-widest">Suggested Questions</span>
                     </div>
+                    {FAQS.map((faq, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleSendMessage(undefined, faq.question, faq.answer)}
+                        className="w-full text-left p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 transition-all text-[12px] text-white/70 flex items-center gap-3 group active:scale-[0.98]"
+                      >
+                        <span className="bg-white/5 p-1.5 rounded-lg group-hover:bg-[#d11a2a]/20 group-hover:text-white transition-colors">{faq.icon}</span>
+                        <span className="flex-1">{faq.question}</span>
+                      </button>
+                    ))}
                   </motion.div>
                 )}
-              </AnimatePresence>
 
-              {/* Chat Messages */}
-              <div 
-                ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
-              >
-                {messages.length === 0 && !showFaq && (
-                  <div className="flex h-full items-center justify-center text-center px-8">
-                    <p className="text-white/20 text-xs italic">
-                      No messages yet. Click the help icon above or type a message to start.
-                    </p>
-                  </div>
-                )}
-                
+                {/* Messages List */}
                 {messages.map((msg) => (
-                  <div key={msg.id} className={cn("flex gap-3", msg.isAdmin ? "flex-row" : "flex-row-reverse")}>
-                    <div className={cn("flex max-w-[85%] flex-col gap-1", !msg.isAdmin && "items-end")}>
-                      <div className={cn(
-                        "rounded-2xl px-4 py-2 text-sm shadow-sm border",
-                        msg.isAdmin 
-                          ? "bg-white/10 border-white/10 text-white rounded-tl-none" 
-                          : "bg-[#d11a2a] border-transparent text-white rounded-tr-none"
-                      )}>
-                        <p className="leading-relaxed">{msg.message}</p>
+                  <div key={msg.id} className={cn("flex", msg.isAdmin ? "justify-start" : "justify-end")}>
+                    <div className={cn("max-w-[85%] flex flex-col gap-1", !msg.isAdmin && "items-end")}>
+                      <div className={cn("rounded-xl px-3 py-2 text-[12px] border shadow-sm", 
+                        msg.isAdmin ? "bg-white/10 border-white/5 text-white rounded-tl-none" : "bg-[#d11a2a] border-transparent text-white rounded-tr-none")}>
+                        
+                        {msg.imageUrl && (
+                          <img 
+                            src={msg.imageUrl} 
+                            alt="Attachment" 
+                            className="rounded-lg mb-1.5 max-w-full h-auto cursor-zoom-in hover:brightness-110 transition shadow-sm"
+                            onClick={() => window.open(msg.imageUrl, '_blank')}
+                          />
+                        )}
+                        
+                        {msg.message && <p className="leading-relaxed whitespace-pre-wrap">{msg.message}</p>}
                       </div>
-                      <span className="text-[9px] text-white/30 font-medium px-1">
+                      <span className="text-[8px] text-white/20 font-medium px-1 uppercase">
                          {msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || "..."}
                       </span>
                     </div>
                   </div>
                 ))}
+                
+                {isUploading && (
+                  <div className="flex justify-end pr-2">
+                    <div className="flex items-center gap-2 italic text-[10px] text-white/40 animate-pulse">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Uploading to Cloudinary...
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Input Area */}
-            <div className="border-t border-white/10 bg-black/60 p-4">
-              <form className="relative flex items-center gap-2" onSubmit={handleSendMessage}>
+            {/* Input Footer */}
+            <div className="border-t border-white/5 bg-[#0a0a0a] p-3">
+              <form className="flex items-center gap-2" onSubmit={handleSendMessage}>
+                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  disabled={isUploading}
+                  className="p-2 text-white/40 hover:text-white transition-colors disabled:opacity-30"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                </button>
                 <input
                   type="text"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none focus:border-[#d11a2a]/50 placeholder:text-white/20"
+                  placeholder="Ask a question..."
+                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#d11a2a]/50 transition-all"
                 />
                 <Button 
                   size="icon" 
-                  type="submit"
-                  disabled={!message.trim()}
-                  className="h-10 w-10 rounded-xl bg-[#d11a2a] hover:bg-[#b01622] text-white transition-all shadow-lg shadow-[#d11a2a]/20"
+                  type="submit" 
+                  disabled={!message.trim() || isUploading} 
+                  className="h-8 w-8 rounded-lg bg-[#d11a2a] hover:bg-[#b01622] transition-all active:scale-90"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3.5 w-3.5 text-white" />
                 </Button>
               </form>
             </div>
@@ -254,18 +278,30 @@ export default function FloatingChatWidget() {
         )}
       </AnimatePresence>
 
-      {/* Main Toggle Button */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={toggleOpen}
-        className={cn(
-          "flex h-16 w-16 items-center justify-center rounded-2xl shadow-2xl transition-all duration-300 ring-1 ring-white/10",
-          isOpen ? "bg-[#d11a2a] text-white" : "bg-white text-black"
+      {/* Floating Toggle Button */}
+      <div className="relative">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => { setIsOpen(!isOpen); setUnreadCount(0); }}
+          className={cn(
+            "flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-all duration-300 border",
+            isOpen ? "bg-[#0a0a0a] text-white border-white/10" : "bg-white text-black border-neutral-200"
+          )}
+        >
+          {isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
+        </motion.button>
+        
+        {!isOpen && unreadCount > 0 && (
+          <motion.span 
+            initial={{ scale: 0 }} 
+            animate={{ scale: 1 }} 
+            className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#d11a2a] text-[10px] font-bold text-white ring-4 ring-white dark:ring-[#0a0a0a] shadow-lg"
+          >
+            {unreadCount}
+          </motion.span>
         )}
-      >
-        {isOpen ? <X className="h-7 w-7" /> : <MessageSquare className="h-7 w-7" />}
-      </motion.button>
+      </div>
     </div>
   );
 }

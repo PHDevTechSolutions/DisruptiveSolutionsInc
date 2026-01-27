@@ -20,6 +20,7 @@ import PartnersManager from "../components/pages/PartnersManager"
 import Reviews from "../components/products/Reviews";
 import  Activity from "../components/reports/ActivityLogs"
 import HomePopup from "../components/pages/HomePage"
+import ApplicationNotif  from "../components/products/ApplicationNotif"
 import { Messenger } from "../components/inquiries/Messenger" 
 
 import {
@@ -66,21 +67,23 @@ export default function Page() {
         return <CatalogManager />
       case "Brands": 
         return <BrandsManager />
-              case "Messenger": 
+      case "Messenger": 
         return <Messenger/>
-            case "Partners": 
+      case "Partners": 
         return <PartnersManager />
+              case "Notification": 
+        return <ApplicationNotif />
       case "Customer Inquiries": 
         return <CustomerInquiries />
-              case "Application": 
+      case "Application": 
         return <Application />
-          case "HomePopup": 
+      case "HomePopup": 
         return <HomePopup/>
       case "Activity logs": 
         return <Activity/>
       case "All Blogs": 
         return <BlogManager />
-            case "Category": 
+      case "Category": 
         return <Categories />
       default:
         return <AllProducts />
