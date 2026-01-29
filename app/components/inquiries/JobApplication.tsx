@@ -29,6 +29,7 @@ import {
     Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import BroadcastDialog from "../BroadcastDialog";
 
 export default function ApplicationInquiries() {
     const [applications, setApplications] = useState<any[]>([]);
@@ -118,8 +119,11 @@ export default function ApplicationInquiries() {
                 <div>
                     <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Job Applications</h2>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Manage resumes and candidates</p>
+                    
                 </div>
+                
                 <div className="relative group">
+                    
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#d11a2a] transition-colors" size={18} />
                     <input
                         type="text"
@@ -129,7 +133,10 @@ export default function ApplicationInquiries() {
                         className="pl-12 pr-6 py-4 bg-white border border-gray-100 rounded-2xl w-full md:w-80 shadow-sm focus:ring-2 focus:ring-[#d11a2a]/10 outline-none font-medium text-sm transition-all"
                     />
                 </div>
+                
             </div>
+            
+            <BroadcastDialog/>
 
             {/* List Section */}
             <div className="grid grid-cols-1 gap-4">

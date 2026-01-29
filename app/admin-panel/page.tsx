@@ -22,6 +22,8 @@ import  Activity from "../components/reports/ActivityLogs"
 import HomePopup from "../components/pages/HomePage"
 import ApplicationNotif  from "../components/products/ApplicationNotif"
 import { Messenger } from "../components/inquiries/Messenger" 
+import ChangePassword from "../components/settings/changepassword"
+import AllUsers from "../components/settings/allusers"
 
 import {
   Breadcrumb,
@@ -61,7 +63,7 @@ export default function Page() {
         return <Quotation />
       case "Careers": 
         return <CareersManager />
-              case "Projects": 
+      case "Projects": 
         return <ProjectManager />
       case "Catalog": 
         return <CatalogManager />
@@ -71,7 +73,7 @@ export default function Page() {
         return <Messenger/>
       case "Partners": 
         return <PartnersManager />
-              case "Notification": 
+       case "Notification": 
         return <ApplicationNotif />
       case "Customer Inquiries": 
         return <CustomerInquiries />
@@ -85,6 +87,10 @@ export default function Page() {
         return <BlogManager />
       case "Category": 
         return <Categories />
+      case "Change Password":
+        return <ChangePassword />
+              case "All Users":
+        return <AllUsers />
       default:
         return <AllProducts />
     }

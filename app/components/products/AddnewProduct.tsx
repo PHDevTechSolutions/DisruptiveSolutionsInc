@@ -146,42 +146,48 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
     return () => { unsubCats(); unsubBrands(); unsubWebs(); unsubCustom(); };
   }, []);
 
-  // --- AUTO-FILL LOGIC (EDIT MODE) ---
-  useEffect(() => {
-    if (editData) {
-      setProductName(editData.name || "");
-      setShortDesc(editData.shortDescription || "");
-      setSku(editData.sku || "");
-      setRegPrice(editData.regularPrice?.toString() || "");
-      setSalePrice(editData.salePrice?.toString() || "");
-      setDescBlocks(editData.technicalSpecs || []);
-      setSelectedCats(editData.category ? [editData.category] : []);
-      setSelectedBrands(editData.brand ? [editData.brand] : []);
-      setSelectedWebs(editData.website ? [editData.website] : []);
-      setExistingMainImage(editData.mainImage || "");
-      setExistingGalleryImages(editData.galleryImages || []);
+ // --- AUTO-FILL LOGIC (EDIT MODE) ---
+useEffect(() => {
+  if (editData) {
+    setProductName(editData.name || "");
+    setShortDesc(editData.shortDescription || "");
+    setSku(editData.sku || "");
+    setRegPrice(editData.regularPrice?.toString() || "");
+    setSalePrice(editData.salePrice?.toString() || "");
+    setDescBlocks(editData.technicalSpecs || []);
+    
+    // 🔥 FIX: Siguraduhing arrays ang kinukuha base sa payload na sinave mo
+    setSelectedCats(Array.isArray(editData.categories) ? editData.categories : []);
+    setSelectedBrands(Array.isArray(editData.brands) ? editData.brands : []);
+    setSelectedWebs(Array.isArray(editData.websites) ? editData.websites : []);
+    
+    setExistingMainImage(editData.mainImage || "");
+    setExistingGalleryImages(editData.galleryImages || []);
 
-      // Logic para sa Catalogs: Existing files + one empty slot for new upload
-      if (editData.catalogs?.length) {
-        const loaded = editData.catalogs.map((url: string, i: number) => ({
-          id: i,
-          existingUrl: url
-        }));
-        setCatalogs([...loaded, { id: Date.now() }]);
-      } else {
-        setCatalogs([{ id: Date.now() }]);
-      }
-
-      if (editData.dynamicSpecs && customSections.length > 0) {
-        setCustomSections((prevSections) =>
-          prevSections.map((section) => {
-            const matchingSpecs = editData.dynamicSpecs.filter((spec: any) => spec.title === section.title);
-            return { ...section, selected: matchingSpecs.map((spec: any) => spec.value) };
-          })
-        );
-      }
+    if (editData.catalogs?.length) {
+      const loaded = editData.catalogs.map((url: string, i: number) => ({
+        id: i,
+        existingUrl: url
+      }));
+      setCatalogs([...loaded, { id: Date.now() }]);
+    } else {
+      setCatalogs([{ id: Date.now() }]);
     }
-  }, [editData, customSections.length > 0]);
+
+    // Dynamic Specs mapping
+    if (editData.dynamicSpecs && customSections.length > 0) {
+      setCustomSections((prevSections) =>
+        prevSections.map((section) => {
+          // Kunin lahat ng values na tumutugma sa section title
+          const matchingValues = editData.dynamicSpecs
+            .filter((spec: any) => spec.title === section.title)
+            .map((spec: any) => spec.value);
+          return { ...section, selected: matchingValues };
+        })
+      );
+    }
+  }
+}, [editData, customSections.length]); // Tinanggal natin ang customSections.length > 0 para mas clean
 
   // --- CLOUDINARY UPLOAD ---
   const uploadToCloudinary = async (file: File) => {
@@ -265,9 +271,9 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
         mainImage: mainUrl,
         galleryImages: finalGalleryUrls,
         catalogs: finalCatalogUrls.filter(Boolean), // Clean nulls
-        category: selectedCats[0] || "Uncategorized",
-        brand: selectedBrands[0] || "Generic",
-        website: selectedWebs[0] || "N/A",
+categories: selectedCats,
+brands: selectedBrands,
+websites: selectedWebs,
         updatedAt: serverTimestamp(),
       };
 
@@ -286,6 +292,17 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
     } finally {
       setIsPublishing(false);
     }
+  };
+
+  const toggleValue = (
+  value: string,
+  setter: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+  setter(prev =>
+    prev.includes(value)
+      ? prev.filter(v => v !== value)
+      : [...prev, value]
+  );
   };
 
   return (
@@ -419,9 +436,42 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
         <Card className="border-none ring-1 ring-slate-200 shadow-sm overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b py-3 text-center"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Classification</CardTitle></CardHeader>
           <CardContent className="space-y-6 pt-6">
-            <SidebarSection label="Target Website" icon={<Globe className="w-3 h-3"/>} items={websites} selected={selectedWebs} onCheck={(v: string) => setSelectedWebs(selectedWebs.includes(v) ? [] : [v])} val={newWeb} setVal={setNewWeb} onAdd={() => handleQuickAdd("websites", newWeb, setNewWeb)} onDelete={(id: string) => handleDeleteItem("websites", id)} />
-            <SidebarSection label="Category" icon={<Tag className="w-3 h-3"/>} items={categories} selected={selectedCats} onCheck={(v: string) => setSelectedCats(selectedCats.includes(v) ? [] : [v])} val={newCat} setVal={setNewCat} onAdd={() => handleQuickAdd("categories", newCat, setNewCat)} onDelete={(id: string) => handleDeleteItem("categories", id)} />
-            <SidebarSection label="Brand" icon={<Factory className="w-3 h-3"/>} items={brands} selected={selectedBrands} onCheck={(v: string) => setSelectedBrands(selectedBrands.includes(v) ? [] : [v])} val={newBrand} setVal={setNewBrand} onAdd={() => handleQuickAdd("brands", newBrand, setNewBrand)} onDelete={(id: string) => handleDeleteItem("brands", id)} />
+            <SidebarSection
+  label="Target Website"
+  icon={<Globe className="w-3 h-3" />}
+  items={websites}
+  selected={selectedWebs}
+  multiSelect
+onCheck={(v: string) => toggleValue(v, setSelectedWebs)}
+  val={newWeb}
+  setVal={setNewWeb}
+  onAdd={() => handleQuickAdd("websites", newWeb, setNewWeb)}
+  onDelete={(id: string) => handleDeleteItem("websites", id)}
+/>
+            <SidebarSection
+  label="Category"
+  icon={<Tag className="w-3 h-3" />}
+  items={categories}
+  selected={selectedCats}
+  multiSelect
+onCheck={(v: string) => toggleValue(v, setSelectedCats)}
+  val={newCat}
+  setVal={setNewCat}
+  onAdd={() => handleQuickAdd("categories", newCat, setNewCat)}
+  onDelete={(id: string) => handleDeleteItem("categories", id)}
+/>
+           <SidebarSection
+  label="Brand"
+  icon={<Factory className="w-3 h-3" />}
+  items={brands}
+  selected={selectedBrands}
+  multiSelect
+onCheck={(v: string) => toggleValue(v, setSelectedBrands)}
+  val={newBrand}
+  setVal={setNewBrand}
+  onAdd={() => handleQuickAdd("brands", newBrand, setNewBrand)}
+  onDelete={(id: string) => handleDeleteItem("brands", id)}
+/>
 
             {/* Dynamic Custom Sections */}
             <div className="pt-4 border-t border-slate-100 space-y-6">

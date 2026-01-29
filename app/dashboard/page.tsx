@@ -173,7 +173,7 @@ useEffect(() => {
   const [partners, setPartners] = useState<any[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, "brand_name"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "brand_partners"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
       const urls = snap.docs.map(doc => doc.data().logoUrl);
       // Dinudoble (Array.from) para sa seamless loop

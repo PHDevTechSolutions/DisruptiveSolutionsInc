@@ -15,16 +15,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Firestore Write Logic
-    // Dito natin ise-save ang user profile
+    // 2. Role Determination Logic
+    // Dito natin nillimitahan kung ano lang ang pwedeng roles.
+    const validRoles = ["admin", "sales"];
+    const assignedRole = validRoles.includes(role?.toLowerCase()) ? role.toLowerCase() : "customer";
+
+    // 3. Firestore Write Logic
     await setDoc(doc(db, "adminaccount", uid), {
       uid,
-      fullName: fullName || "Authorized Manager",
+      fullName: fullName || (assignedRole === "sales" ? "Guest Sales User" : "Authorized Manager"),
       email: email,
-      // Kung walang role na pinasa, 'customer' ang default. 
-      // Pero sa register page mo, 'admin' ang ipapasa natin.
-      role: role || "customer", 
+      role: assignedRole, 
       website: website || "disruptivesolutionsinc",
+      // Pwede nating lagyan ng specific flag kung "guest" level lang siya
+      accessLevel: assignedRole === "sales" ? "guest" : "full",
       status: "active",
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
@@ -32,7 +36,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      message: `Account with role [${role}] initialized successfully.` 
+      message: `Account with role [${assignedRole}] initialized successfully.` 
     }, { status: 200 });
 
   } catch (error: any) {

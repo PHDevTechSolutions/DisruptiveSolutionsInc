@@ -6,81 +6,66 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { from, replyTo, cc, subject, content, recipients } = body;
 
-    if (!recipients || !Array.isArray(recipients)) {
-      return NextResponse.json({ error: 'Recipients must be an array' }, { status: 400 });
+    // 1. Validation: Siguraduhin na may listahan ng papadalhan
+    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      return NextResponse.json({ error: 'Recipients list is empty or invalid' }, { status: 400 });
     }
 
+    // 2. Transporter Configuration (Ang jpablobscs email ang "Driver")
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: 'jpablobscs@tfvc.edu.ph',
-        pass: 'cvdl lggo btbz oill', 
+        pass: 'cvdl lggo btbz oill', // App Password
       },
     });
 
-    const emailPromises = recipients.map((email: string) => {
-      // Dito natin bubuoin ang professional HTML template
+    // Verify connection bago mag-simula ang blast
+    try {
+      await transporter.verify();
+    } catch (err) {
+      console.error("Email Engine Error:", err);
+      return NextResponse.json({ error: 'Email service authentication failed' }, { status: 500 });
+    }
+
+    // 3. Email Dispatching Logic
+    const emailPromises = recipients.map(async (recipientEmail: string) => {
+      
+      // I-personalize ang content bawat email
+      // Ginagawa nating HTML format yung newline (\n)
+      const personalizedContent = content
+        .replace(/{applicant_email}/g, recipientEmail)
+        .replace(/\n/g, '<br>');
+
       const professionalHtml = `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <style>
-            .email-container {
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              line-height: 1.6;
-              color: #334155;
-              max-width: 600px;
-              margin: 0 auto;
-              border: 1px solid #e2e8f0;
-              border-radius: 12px;
-              overflow: hidden;
-            }
-            .header {
-              background-color: #2563eb;
-              padding: 30px;
-              text-align: center;
-              color: white;
-            }
-            .content {
-              padding: 40px 30px;
-              background-color: #ffffff;
-            }
-            .footer {
-              background-color: #f8fafc;
-              padding: 20px;
-              text-align: center;
-              font-size: 12px;
-              color: #64748b;
-              border-top: 1px solid #e2e8f0;
-            }
-            .button {
-              display: inline-block;
-              padding: 12px 24px;
-              background-color: #2563eb;
-              color: #ffffff !important;
-              text-decoration: none;
-              border-radius: 6px;
-              font-weight: 600;
-              margin-top: 20px;
-            }
-            h1 { margin: 0; font-size: 20px; }
-            p { margin-bottom: 16px; }
+            body { margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; }
+            .container { max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+            .header { background-color: #b91c1c; padding: 40px 20px; text-align: center; color: white; }
+            .body { padding: 40px; color: #1e293b; line-height: 1.8; font-size: 15px; }
+            .footer { background-color: #f1f5f9; padding: 25px; text-align: center; font-size: 11px; color: #64748b; }
+            .signature { margin-top: 35px; border-top: 2px solid #f1f5f9; padding-top: 20px; font-weight: bold; }
+            h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; text-transform: uppercase; }
           </style>
         </head>
         <body>
-          <div class="email-container">
+          <div class="container">
             <div class="header">
               <h1>${from || 'TFVC Notification'}</h1>
             </div>
-            <div class="content">
-              ${content.replace(/\n/g, '<br>')}
-              <br><br>
-              <p>Best regards,<br><strong>${from}</strong></p>
+            <div class="body">
+              ${personalizedContent}
+              <div class="signature">
+                Best regards,<br>
+                <span style="color: #b91c1c;">${from || 'The TFVC Team'}</span>
+              </div>
             </div>
             <div class="footer">
-              <p>This is an automated message. Please do not reply directly to this email.</p>
-              <p>&copy; ${new Date().getFullYear()} TFVC. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} Disruptive Solutions Inc. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -88,26 +73,35 @@ export async function POST(req: Request) {
       `;
 
       return transporter.sendMail({
-        from: `"${from}" <jpablobscs@tfvc.edu.ph>`,
-        to: email,
+        // Dito yung trick: "Sender Name" <jpablobscs@tfvc.edu.ph>
+        from: `"${from || 'TFVC System'}" <jpablobscs@tfvc.edu.ph>`,
+        to: recipientEmail,
         replyTo: replyTo || 'jpablobscs@tfvc.edu.ph',
-        cc: cc || "",
-        subject: subject,
+        cc: cc || undefined,
+        subject: subject || 'Application Update',
         html: professionalHtml,
       });
     });
 
+    // 4. Result Gathering
     const results = await Promise.allSettled(emailPromises);
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
 
+    // Log failures para sa debugging
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(`Blast Error for ${recipients[index]}:`, result.reason);
+      }
+    });
+
     return NextResponse.json({ 
-      message: `Process complete.`,
+      success: true,
       summary: { successful, failed }
     });
 
-  } catch (error) {
-    console.error("Bulk Send Error:", error);
-    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
+  } catch (error: any) {
+    console.error("Critical System Error:", error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -6,7 +6,8 @@ import { db } from "@/lib/firebase"
 import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore"
 import {
   BookOpen, Frame, GalleryVerticalEnd, SquareTerminal, Inbox,
-  LayoutGrid, MessageSquareDot, BellRing
+  LayoutGrid, MessageSquareDot, BellRing, Briefcase,
+  SettingsIcon
 } from "lucide-react"
 
 import { NavMain } from "../components/nav-main"
@@ -20,9 +21,10 @@ import {
 export function AppSidebar({ onNavigate, ...props }: any) {
   const [mounted, setMounted] = useState(false)
   const [adminUser, setAdminUser] = useState({
-    name: "Admin User",
-    email: "admin@disruptive.com",
-    avatar: "/avatars/admin.jpg"
+    name: "User",
+    email: "",
+    avatar: "",
+    role: "admin" // Default muna habang loading
   })
 
   const [counts, setCounts] = useState({
@@ -36,18 +38,19 @@ export function AppSidebar({ onNavigate, ...props }: any) {
   useEffect(() => {
     setMounted(true)
 
-    // --- 1. FETCH ACTUAL ADMIN DATA FROM LOCALSTORAGE ---
+    // --- 1. GET USER DATA & ROLE ---
     const savedUser = localStorage.getItem("disruptive_admin_user")
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser)
         setAdminUser({
           name: parsed.name || "Admin User",
-          email: parsed.email || "admin@disruptive.com",
-          avatar: parsed.avatar || "/avatars/admin.jpg"
+          email: parsed.email || "",
+          avatar: parsed.avatar || "",
+          role: parsed.role || "admin"
         })
       } catch (err) {
-        console.error("Error parsing admin data:", err)
+        console.error("Error parsing user data:", err)
       }
     }
 
@@ -118,14 +121,18 @@ export function AppSidebar({ onNavigate, ...props }: any) {
   }, []);
 
   const totalInquiries = counts.customer + counts.quotation + counts.job + counts.messenger;
+  
+  // Shortcut para sa role check
+  const isSales = adminUser.role === "warehouse";
 
+  // --- 3. DYNAMIC SIDEBAR DATA ---
   const sidebarData = {
-    user: adminUser, // Gamit na ang dynamic state dito
+    user: adminUser,
     teams: [
       {
         name: "Disruptive Solutions Inc",
         logo: GalleryVerticalEnd,
-        plan: "Enterprise"
+        plan: isSales ? "Guest (Warehouse)" : "Enterprise (Admin)"
       },
     ],
     navMain: [
@@ -133,82 +140,79 @@ export function AppSidebar({ onNavigate, ...props }: any) {
         title: "Product",
         url: "#",
         icon: SquareTerminal,
-        badge: counts.product > 0 ? counts.product : null,
-        items: [
-          { title: "All Product", url: "#" },
-          { title: "Add new product", url: "#" },
-          {
-            title: "Orders",
-            url: "#",
-            badge: counts.product > 0 ? counts.product : null
-          },
-          { title: "Category", url: "#" },
-          { title: "Reviews", url: "#" },
-        ],
+        badge: (!isSales && counts.product > 0) ? counts.product : null,
+        items: isSales 
+          ? [
+              { title: "All Product", url: "#" },
+              { title: "Add new product", url: "#" },
+            ]
+          : [
+              { title: "All Product", url: "#" },
+              { title: "Add new product", url: "#" },
+              { title: "Orders", url: "#", badge: counts.product > 0 ? counts.product : null },
+              { title: "Category", url: "#" },
+              { title: "Reviews", url: "#" },
+            ],
       },
+      // Itago itong mga sections na ito kung Sales (Guest)
+      ...(!isSales ? [
+        {
+          title: "Inquiries",
+          url: "#",
+          icon: Inbox,
+          badge: totalInquiries > 0 ? totalInquiries : null,
+          items: [
+            { title: "Messenger", url: "#", icon: MessageSquareDot, badge: counts.messenger > 0 ? counts.messenger : null },
+            { title: "Customer Inquiries", url: "#", badge: counts.customer > 0 ? counts.customer : null },
+            { title: "Quotation", url: "#", badge: counts.quotation > 0 ? counts.quotation : null },
+          ],
+        },
+        {
+          title: "Job Openings",
+          url: "#",
+          icon: Briefcase,
+          items: [
+            { title: "Job Application", url: "#", badge: counts.job > 0 ? counts.job : null },
+            { title: "Application", url: "#" },
+            { title: "Notification", url: "#" },
+          ],
+        },
+        {
+          title: "Pages",
+          url: "#",
+          icon: BookOpen,
+          items: [
+            { title: "All Blogs", url: "#" },
+            { title: "Careers", url: "#" },
+            { title: "Catalog", url: "#" },
+            { title: "Projects", url: "#" },
+            { title: "Brands", url: "#" },
+            { title: "Partners", url: "#" },
+            { title: "HomePopup", url: "#" },
+          ],
+        },
+      ] : []),
 
+      // Settings Section: Visible sa lahat pero filtered ang items base sa role
       {
-        title: "Inquiries",
+        title: "Settings",
         url: "#",
-        icon: Inbox,
-        badge: totalInquiries > 0 ? totalInquiries : null,
-        items: [
-          {
-            title: "Messenger",
-            url: "#",
-            icon: MessageSquareDot,
-            badge: counts.messenger > 0 ? counts.messenger : null,
-            isImportant: counts.messenger > 0
-          },
-          {
-            title: "Customer Inquiries",
-            url: "#",
-            badge: counts.customer > 0 ? counts.customer : null
-          },
-          {
-            title: "Quotation",
-            url: "#",
-            badge: counts.quotation > 0 ? counts.quotation : null
-          },
-        ],
-      },
-      {
-        title: "Job Openings",
-        url: "#",
-        icon: SquareTerminal,
-        badge: counts.product > 0 ? counts.product : null,
-        items: [
-          {
-            title: "Job Application",
-            url: "#",
-            badge: counts.job > 0 ? counts.job : null
-          },
-          { title: "Application", url: "#" },
-          { title: "Notification", url: "#" },
-
-        ],
-      },
-      {
-        title: "Pages",
-        url: "#",
-        icon: BookOpen,
-        items: [
-          { title: "All Blogs", url: "#" },
-          { title: "Careers", url: "#" },
-          { title: "Catalog", url: "#" },
-          { title: "Projects", url: "#" },
-          { title: "Brands", url: "#" },
-          { title: "Partners", url: "#" },
-          { title: "HomePopup", url: "#" },
-        ],
+        icon: SettingsIcon,
+        items: isSales 
+          ? [
+              { title: "Change Password", url: "#" }, // Guest/Sales can only see this
+            ]
+          : [
+              { title: "All Users", url: "#" },      // Admin can see both
+              { title: "Change Password", url: "#" },
+            ],
       },
     ],
-    projects: [
+    projects: isSales ? [] : [
       { name: "Design Engineering", url: "#", icon: Frame },
     ],
   }
 
-  // Iwas hydration error
   if (!mounted) return null;
 
   return (
@@ -218,7 +222,9 @@ export function AppSidebar({ onNavigate, ...props }: any) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={sidebarData.navMain} onNavigate={onNavigate} />
-        <NavProjects projects={sidebarData.projects} />
+        {sidebarData.projects.length > 0 && (
+          <NavProjects projects={sidebarData.projects} />
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={sidebarData.user} />

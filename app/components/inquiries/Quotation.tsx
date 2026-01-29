@@ -18,6 +18,7 @@ import {
     Clock, MapPin, Building2, X 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import BroadcastDialog from "../BroadcastDialog";
 
 export default function Quotation() {
     const [quotes, setQuotes] = useState<any[]>([]);
@@ -123,6 +124,7 @@ export default function Quotation() {
                     />
                 </div>
             </div>
+            <BroadcastDialog/>
 
             {/* List */}
             <div className="grid grid-cols-1 gap-4">

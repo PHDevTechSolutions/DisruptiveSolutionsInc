@@ -13,6 +13,7 @@ import {
     Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import BroadcastDialog from "../BroadcastDialog";
 
 export default function InquiriesPanel() {
     const [inquiries, setInquiries] = useState<any[]>([]);
@@ -84,6 +85,7 @@ export default function InquiriesPanel() {
                         <span className="flex items-center gap-1"><Search size={12}/> Results: {filteredInquiries.length}</span>
                     </div>
                 </div>
+
                 
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="relative">
@@ -96,6 +98,7 @@ export default function InquiriesPanel() {
                             {[20, 50, 100, 200, 1000].map(v => <option key={v} value={v}>Limit {v}</option>)}
                         </select>
                     </div>
+                    <BroadcastDialog/>
                 </div>
             </div>
 

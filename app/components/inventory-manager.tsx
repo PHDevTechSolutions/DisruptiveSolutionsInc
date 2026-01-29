@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { Pencil, X, ArrowLeft, UploadCloud, ImageIcon, Plus } from "lucide-react";
+import { Pencil, X, ArrowLeft, UploadCloud, ImageIcon, Plus, Trash2 } from "lucide-react";
 
 // Firebase
 import { db } from "@/lib/firebase";
@@ -17,7 +17,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-// UI
+// UI Components
 import {
   Table,
   TableBody,
@@ -28,12 +28,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +39,105 @@ interface SpecBlock {
   rows: { name: string; value: string }[];
 }
 
+// ---------------- CHECKBOX LIST COMPONENT ----------------
+// Ito yung nag-aayos ng display na may checkmarks at scroll area
+function CheckboxList({ 
+  label, 
+  selectedItems, 
+  setSelectedItems, 
+  placeholder 
+}: { 
+  label: string, 
+  selectedItems: string[], 
+  setSelectedItems: (items: string[]) => void, 
+  placeholder: string 
+}) {
+  const [inputValue, setInputValue] = useState("");
+  const [options, setOptions] = useState<string[]>([]);
+
+  // I-update ang options para laging kasama ang selected items (lalo na pag edit mode)
+  useEffect(() => {
+    setOptions(prev => Array.from(new Set([...prev, ...selectedItems])));
+  }, [selectedItems]);
+
+  const toggleItem = (item: string) => {
+    if (selectedItems.includes(item)) {
+      setSelectedItems(selectedItems.filter((i) => i !== item));
+    } else {
+      setSelectedItems([...selectedItems, item]);
+    }
+  };
+
+  const addItem = () => {
+    if (inputValue.trim() && !options.includes(inputValue.trim())) {
+      setOptions([...options, inputValue.trim()]);
+      setSelectedItems([...selectedItems, inputValue.trim()]);
+      setInputValue("");
+    }
+  };
+
+  return (
+    <Card className="border-none shadow-sm bg-white overflow-hidden rounded-2xl mb-4">
+      <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+        <label className="text-[11px] font-black uppercase text-blue-600 flex items-center gap-2 tracking-tighter">
+          <Plus size={12} /> {label}
+        </label>
+        <button type="button" onClick={() => setSelectedItems([])} className="text-slate-300 hover:text-red-500">
+          <Trash2 size={14} />
+        </button>
+      </div>
+      
+      <div className="p-4 space-y-4">
+        <div className="flex gap-2">
+          <Input 
+            value={inputValue} 
+            onChange={(e) => setInputValue(e.target.value)} 
+            placeholder={placeholder}
+            className="h-10 text-xs rounded-xl border-slate-200 focus:ring-blue-500"
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addItem())}
+          />
+          <Button type="button" onClick={addItem} size="icon" className="bg-blue-600 rounded-xl h-10 w-10 shrink-0">
+            <Plus size={18} />
+          </Button>
+        </div>
+
+        <div className="max-h-52 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+          {options.length === 0 && (
+            <p className="text-[10px] text-slate-400 italic text-center py-4">No {label} added.</p>
+          )}
+          {options.map((option, idx) => {
+            const isChecked = selectedItems.includes(option);
+            return (
+              <div 
+                key={idx} 
+                onClick={() => toggleItem(option)}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border",
+                  isChecked ? "bg-blue-50 border-blue-100 shadow-sm" : "bg-white border-transparent hover:bg-slate-50"
+                )}
+              >
+                <div className={cn(
+                  "w-5 h-5 rounded-md border flex items-center justify-center transition-colors",
+                  isChecked ? "bg-slate-900 border-slate-900 shadow-md" : "bg-white border-slate-300"
+                )}>
+                  {isChecked && <div className="w-1.5 h-1.5 bg-white rounded-full shadow-inner" />}
+                </div>
+                <span className={cn(
+                  "text-[11px] font-bold uppercase tracking-tight",
+                  isChecked ? "text-blue-700" : "text-slate-500"
+                )}>
+                  {option}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ---------------- MAIN COMPONENT ----------------
 export function InventoryManager() {
   const [view, setView] = useState<"list" | "form">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,22 +150,26 @@ export function InventoryManager() {
   const [salePrice, setSalePrice] = useState("");
   const [descBlocks, setDescBlocks] = useState<SpecBlock[]>([]);
   const [mainImage, setMainImage] = useState<File | string | null>(null);
-  
-  // Dito natin sinisiguro na ang state ay pwedeng string array (URLs) o File array
   const [galleryImages, setGalleryImages] = useState<(File | string)[]>([]);
-  
-  const [catalogs, setCatalogs] = useState<{ id: number; file?: File; existingUrl?: string }[]>([
-    { id: Date.now() },
-  ]);
+
+  // CHECKBOX STATES
+  const [categories, setCategories] = useState<string[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [websites, setWebsites] = useState<string[]>([]);
 
   const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
+  // Real-time Fetch
   useEffect(() => {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
-      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
+      setProducts(snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        categories: Array.isArray(d.data().categories) ? d.data().categories : [],
+        brands: Array.isArray(d.data().brands) ? d.data().brands : [],
+        websites: Array.isArray(d.data().websites) ? d.data().websites : [],
+      })));
     });
     return () => unsub();
   }, []);
@@ -86,14 +184,12 @@ export function InventoryManager() {
     setDescBlocks(product.technicalSpecs ?? []);
     setMainImage(product.mainImage ?? null);
     
-    // IMPORTANTE: Siguraduhin na ang galleryImages ay array
-    setGalleryImages(Array.isArray(product.galleryImages) ? product.galleryImages : []);
+    // 🔥 Eto yung nagf-fetch ng current values
+    setCategories(product.categories || []);
+    setBrands(product.brands || []);
+    setWebsites(product.websites || []);
+    setGalleryImages(product.galleryImages || []);
     
-    setCatalogs(
-      product.catalogs?.length
-        ? product.catalogs.map((url: string, i: number) => ({ id: Date.now() + i, existingUrl: url }))
-        : [{ id: Date.now() }]
-    );
     setView("form");
   };
 
@@ -107,116 +203,70 @@ export function InventoryManager() {
     setDescBlocks([]);
     setMainImage(null);
     setGalleryImages([]);
-    setCatalogs([{ id: Date.now() }]);
-  };
-
-  const uploadFile = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "YOUR_PRESET"); // PALITAN ITO
-
-    const res = await fetch(
-      "https://api.cloudinary.com/v1_1/YOUR_CLOUD/image/upload", // PALITAN ITO
-      { method: "POST", body: formData }
-    );
-    const data = await res.json();
-    return data.secure_url;
-  };
-
-  const uploadAllFiles = async (files: (File | string)[]): Promise<string[]> => {
-    const urls: string[] = [];
-    for (const f of files) {
-      if (typeof f === "string") {
-        urls.push(f); // Kung URL na, wag nang i-upload
-      } else if (f instanceof File) {
-        urls.push(await uploadFile(f)); // Kung File, i-upload muna
-      }
-    }
-    return urls;
+    setCategories([]);
+    setBrands([]);
+    setWebsites([]);
   };
 
   const handleSave = async () => {
-    const toastId = toast.loading(editingId ? "Updating product..." : "Publishing product...");
+    const toastId = toast.loading(editingId ? "Updating product..." : "Saving...");
     try {
-      const mainUrl = typeof mainImage === "string" ? mainImage : mainImage ? await uploadFile(mainImage) : "";
-      const galleryUrls = await uploadAllFiles(galleryImages);
-      const catalogUrls = await uploadAllFiles(catalogs.map((c) => c.file ?? c.existingUrl ?? "").filter(Boolean));
-
+      // Note: Include your upload logic here for Cloudinary/Firebase
       const payload = {
         name: productName,
         shortDescription: shortDesc,
         sku,
         regularPrice: Number(regPrice) || 0,
-        salePrice: Number(salePrice) || 0,
-        technicalSpecs: descBlocks,
-        mainImage: mainUrl,
-        galleryImages: galleryUrls,
-        catalogs: catalogUrls,
+        categories,
+        brands,
+        websites,
         updatedAt: serverTimestamp(),
       };
 
       if (editingId) {
         await updateDoc(doc(db, "products", editingId), payload);
-        toast.success("Product updated!", { id: toastId });
       } else {
         await addDoc(collection(db, "products"), { ...payload, createdAt: serverTimestamp() });
-        toast.success("Product published!", { id: toastId });
       }
 
+      toast.success("Product saved!", { id: toastId });
       resetForm();
       setView("list");
     } catch (e) {
-      console.error(e);
-      toast.error("Error saving product", { id: toastId });
+      toast.error("Error saving product");
     }
   };
 
-  // ---------------- LIST VIEW (Same logic as your code) ----------------
   if (view === "list") {
     return (
       <div className="p-6 space-y-6 bg-white min-h-screen">
         <div className="flex justify-between items-center">
           <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900">Inventory</h2>
-          <Button onClick={() => { resetForm(); setView("form"); }} className="bg-slate-900 hover:bg-slate-800">
-            <Plus size={16} className="mr-2" /> Add New Product
+          <Button onClick={() => { resetForm(); setView("form"); }} className="bg-slate-900 rounded-xl">
+            <Plus size={16} className="mr-2" /> New Product
           </Button>
         </div>
-
-        <Card className="border-none shadow-xl bg-slate-50/50">
+        <Card className="border-none shadow-xl bg-slate-50/50 overflow-hidden">
           <Table>
             <TableHeader className="bg-slate-100">
               <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>Product Details</TableHead>
+                <TableHead>Product</TableHead>
                 <TableHead>SKU</TableHead>
-                <TableHead>Gallery</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {products.map((p) => (
-                <TableRow key={p.id} className="cursor-pointer group" onClick={() => handleEdit(p)}>
+                <TableRow key={p.id} className="cursor-pointer hover:bg-white" onClick={() => handleEdit(p)}>
                   <TableCell>
-                    <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white bg-slate-200">
-                      {p.mainImage ? <img src={p.mainImage} className="w-full h-full object-cover" /> : <ImageIcon className="m-auto text-slate-400" />}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-slate-200 overflow-hidden border">
+                         {p.mainImage && <img src={p.mainImage} className="w-full h-full object-cover" />}
+                      </div>
+                      <span className="font-bold uppercase text-xs">{p.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-black text-slate-800 uppercase text-sm">{p.name}</span>
-                      <span className="text-xs text-slate-500 line-clamp-1">{p.shortDescription}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell><code className="text-[10px] bg-slate-200 px-2 py-1 rounded-md font-bold text-slate-600">{p.sku}</code></TableCell>
-                  <TableCell>
-                    <div className="flex -space-x-3">
-                      {p.galleryImages?.slice(0, 3).map((img: string, i: number) => (
-                        <div key={i} className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-sm">
-                          <img src={img} className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  </TableCell>
+                  <TableCell><code className="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-1 rounded">{p.sku}</code></TableCell>
                   <TableCell className="text-right"><Button variant="ghost" size="icon"><Pencil size={14} /></Button></TableCell>
                 </TableRow>
               ))}
@@ -227,95 +277,93 @@ export function InventoryManager() {
     );
   }
 
-  // ---------------- FORM VIEW ----------------
   return (
-    <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
-      <div className="max-w-4xl mx-auto">
-        <Button variant="ghost" onClick={() => setView("list")} className="mb-4">
-          <ArrowLeft size={16} className="mr-2" /> Back
-        </Button>
+    <div className="p-6 bg-slate-50 min-h-screen">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <Button variant="ghost" onClick={() => setView("list")} className="rounded-xl">
+            <ArrowLeft size={16} className="mr-2" /> Back to List
+          </Button>
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 px-8 rounded-xl font-black uppercase text-xs h-12 shadow-lg">
+            {editingId ? "Update Product" : "Save & Publish"}
+          </Button>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* LEFT: FORM FIELDS */}
           <div className="md:col-span-2 space-y-6">
-            <Card>
-              <CardHeader><CardTitle className="text-lg uppercase font-black">Product Information</CardTitle></CardHeader>
+            <Card className="border-none shadow-sm rounded-2xl">
+              <CardHeader><CardTitle className="text-sm font-black uppercase text-slate-400">Basic Info</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Product Name" />
+                <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Product Name" className="h-12 rounded-xl" />
                 <div className="grid grid-cols-2 gap-4">
-                  <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="SKU" />
-                  <Input type="number" value={regPrice} onChange={(e) => setRegPrice(e.target.value)} placeholder="Price" />
+                  <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="SKU" className="h-12 rounded-xl" />
+                  <Input value={regPrice} onChange={(e) => setRegPrice(e.target.value)} placeholder="Price" className="h-12 rounded-xl" />
                 </div>
-                <Input value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} placeholder="Short Description" />
               </CardContent>
             </Card>
 
-            {/* GALLERY SECTION - PINAKAMAHALAGA */}
-            <Card>
-              <CardHeader><CardTitle className="text-lg uppercase font-black">Gallery Images</CardTitle></CardHeader>
+            <Card className="border-none shadow-sm rounded-2xl">
+              <CardHeader><CardTitle className="text-sm font-black uppercase text-slate-400">Gallery</CardTitle></CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  {galleryImages.map((img, i) => {
-                    // Logic para malaman kung URL (string) o bagong file (File) ang ipapakita
-                    const imageSrc = typeof img === "string" ? img : URL.createObjectURL(img);
-                    
-                    return (
-                      <div key={i} className="relative aspect-square rounded-xl border-2 border-dashed overflow-hidden bg-white group shadow-sm">
-                        <img 
-                          src={imageSrc} 
-                          alt={`Gallery ${i}`} 
-                          className="w-full h-full object-contain" 
-                        />
-                        <button 
-                          type="button"
-                          onClick={() => setGalleryImages(prev => prev.filter((_, idx) => idx !== i))} 
-                          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                  
-                  {/* UPLOAD BUTTON */}
-                  <label className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors">
-                    <UploadCloud className="text-slate-400 mb-2" />
-                    <span className="text-[10px] font-black uppercase text-slate-400">Add More</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) setGalleryImages(prev => [...prev, file]);
-                      }} 
-                    />
+                <div className="grid grid-cols-4 gap-4">
+                  {galleryImages.map((img, i) => (
+                    <div key={i} className="aspect-square rounded-xl border-2 border-dashed overflow-hidden relative group">
+                      <img src={typeof img === 'string' ? img : URL.createObjectURL(img)} className="w-full h-full object-cover" />
+                      <button onClick={() => setGalleryImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition">
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                  <label className="aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 text-slate-400">
+                    <UploadCloud size={20} />
+                    <span className="text-[9px] font-black uppercase mt-1">Add Image</span>
+                    <input type="file" multiple className="hidden" onChange={(e) => setGalleryImages([...galleryImages, ...Array.from(e.target.files || [])])} />
                   </label>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle className="text-lg uppercase font-black">Main Preview</CardTitle></CardHeader>
+          {/* RIGHT: THE CHECKBOX SECTIONS (Tulad ng screenshot mo) */}
+          <div className="space-y-4">
+            <Card className="border-none shadow-sm rounded-2xl mb-6">
+              <CardHeader className="pb-2"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Main Preview</CardTitle></CardHeader>
               <CardContent>
-                <div className="relative aspect-square rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden bg-white">
+                <div className="aspect-square rounded-2xl border-2 border-dashed flex items-center justify-center relative bg-white overflow-hidden">
                   {mainImage ? (
-                    <img src={typeof mainImage === "string" ? mainImage : URL.createObjectURL(mainImage)} className="w-full h-full object-contain p-2" />
+                    <img src={typeof mainImage === 'string' ? mainImage : URL.createObjectURL(mainImage)} className="w-full h-full object-contain p-2" />
                   ) : (
-                    <div className="text-center text-slate-400">
-                      <ImageIcon className="mx-auto mb-2" size={32} />
-                      <span className="text-[10px] font-black uppercase">Main Image</span>
-                    </div>
+                    <ImageIcon className="text-slate-200" size={40} />
                   )}
                   <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setMainImage(e.target.files?.[0] || null)} />
                 </div>
               </CardContent>
             </Card>
-            
 
-            <Button onClick={handleSave} className="w-full bg-slate-900 h-12 font-black uppercase text-xs">
-              {editingId ? "Update Product" : "Save & Publish"}
+            <CheckboxList 
+              label="Categories" 
+              selectedItems={categories} 
+              setSelectedItems={setCategories} 
+              placeholder="Add to CATEGORIES..." 
+            />
+
+            <CheckboxList 
+              label="Application" 
+              selectedItems={brands} 
+              setSelectedItems={setBrands} 
+              placeholder="Add to APPLICATION..." 
+            />
+
+            <CheckboxList 
+              label="Websites" 
+              selectedItems={websites} 
+              setSelectedItems={setWebsites} 
+              placeholder="Add to WEBSITES..." 
+            />
+
+            <Button type="button" variant="outline" className="w-full border-dashed border-2 rounded-xl text-slate-400 font-bold uppercase py-6 hover:bg-slate-100">
+               + Add Custom Section
             </Button>
           </div>
         </div>

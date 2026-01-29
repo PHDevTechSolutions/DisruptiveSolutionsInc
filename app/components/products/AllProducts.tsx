@@ -69,34 +69,47 @@ export function AllProducts() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  // --- 1. FETCH DATA ---
-  useEffect(() => {
-    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+// --- 1. FETCH DATA ---
+useEffect(() => {
+  setLoading(true); // Make sure loading shows while fetching
+  const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+  
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
       const productList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       setProducts(productList);
       setLoading(false);
-    }, (error) => {
+    },
+    (error) => {
       console.error("Fetch error:", error);
       toast.error("Failed to load products");
       setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    }
+  );
+
+  return () => unsubscribe(); // Clean up listener on unmount
+}, []);
+
 
   // --- 2. FILTER LOGIC ---
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesBrand = brandFilter === "All Brands" || p.brand === brandFilter;
-      const matchesWeb = websiteFilter === "All Websites" || p.website === websiteFilter;
-      const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesBrand && matchesWeb && matchesSearch;
-    });
-  }, [products, brandFilter, websiteFilter, searchQuery]);
+const filteredProducts = useMemo(() => {
+  return products.filter((p) => {
+   const matchesBrand =
+  brandFilter === "All Brands" ||
+  (Array.isArray(p.brands) ? p.brands.includes(brandFilter) : p.brand === brandFilter);
+const matchesWeb =
+  websiteFilter === "All Websites" ||
+  (Array.isArray(p.websites) ? p.websites.includes(websiteFilter) : p.website === websiteFilter);
+    const matchesSearch =
+      p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesBrand && matchesWeb && matchesSearch;
+  });
+}, [products, brandFilter, websiteFilter, searchQuery]);
 
   // --- 3. PAGINATION LOGIC ---
   useEffect(() => {
@@ -105,22 +118,28 @@ export function AllProducts() {
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   
-  const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredProducts, currentPage]);
+const paginatedProducts = useMemo(() => {
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+}, [filteredProducts, currentPage]);
 
-  const uniqueBrands = useMemo(() => {
-    const brandsSet = new Set<string>();
-    products.forEach((p: any) => { if (p.brand) brandsSet.add(p.brand); });
-    return Array.from(brandsSet).sort();
-  }, [products]);
+const uniqueBrands = useMemo(() => {
+  const brandsSet = new Set<string>();
+  products.forEach((p: any) => {
+    if (Array.isArray(p.brands)) p.brands.forEach((b: string) => brandsSet.add(b));
+    else if (p.brand) brandsSet.add(p.brand);
+  });
+  return Array.from(brandsSet).sort();
+}, [products]);
 
-  const uniqueWebsites = useMemo(() => {
-    const websSet = new Set<string>();
-    products.forEach((p: any) => { if (p.website) websSet.add(p.website); });
-    return Array.from(websSet).sort();
-  }, [products]);
+const uniqueWebsites = useMemo(() => {
+  const websSet = new Set<string>();
+  products.forEach((p: any) => {
+    if (Array.isArray(p.websites)) p.websites.forEach((w: string) => websSet.add(w));
+    else if (p.website) websSet.add(p.website);
+  });
+  return Array.from(websSet).sort();
+}, [products]);
 
   // --- 4. ACTIONS ---
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -268,7 +287,7 @@ export function AllProducts() {
                   <TableCell>
                     <div className="flex flex-col max-w-[250px]">
                       <span className="font-black text-sm text-gray-900 line-clamp-1">{product.name}</span>
-                      <span className="text-[9px] text-blue-600 font-black uppercase tracking-tighter">{product.category || "No Category"}</span>
+                      <span className="text-[9px] text-blue-600 font-black uppercase tracking-tighter">{product.categories || "No Category"}</span>
                     </div>
                   </TableCell>
 
@@ -278,17 +297,31 @@ export function AllProducts() {
                   {/* BRAND / WEBSITE */}
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span className="w-fit text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase">{product.brand || "Generic"}</span>
-                      <span className="w-fit text-[8px] font-black bg-blue-50 px-2 py-0.5 rounded text-blue-500 uppercase">{product.website || "N/A"}</span>
+                      <span className="w-fit text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase">
+  {Array.isArray(product.brands) ? product.brands.join(", ") : product.brand || "Generic"}
+</span>
+                      <span className="w-fit text-[8px] font-black bg-blue-50 px-2 py-0.5 rounded text-blue-500 uppercase">
+  {Array.isArray(product.websites) ? product.websites.join(", ") : product.website || "N/A"}
+</span>
                     </div>
                   </TableCell>
+
 
                   {/* PRICE & ACTIONS */}
                   <TableCell className="text-right pr-6">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-100 rounded-lg">
-                        <Pencil size={14} />
-                      </Button>
+                     <Button
+  variant="ghost"
+  size="icon"
+  className="h-8 w-8 text-blue-500 hover:bg-blue-100 rounded-lg"
+  onClick={(e) => {
+    e.stopPropagation();
+    handleEditClick(product);
+  }}
+>
+  <Pencil size={14} />
+</Button>
+
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button 

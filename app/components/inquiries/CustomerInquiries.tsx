@@ -11,6 +11,7 @@ import {
     Calendar, MessageSquare, Eye, X, User
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import BroadcastDialog from "../BroadcastDialog";
 
 interface Inquiry {
     id: string;
@@ -113,6 +114,7 @@ export default function CustomerInquiries() {
                     />
                 </div>
             </div>
+            <BroadcastDialog/>
 
             {/* Inquiries List */}
             <div className="grid grid-cols-1 gap-4">
