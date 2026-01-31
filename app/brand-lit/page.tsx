@@ -267,7 +267,7 @@ function ProductCard({ product, addToQuote, isInCart }: any) {
 
   return (
     <div className="bg-white rounded-[28px] border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-500 group/card flex flex-col relative">
-      <Link href={`/lighting-products-smart-solutions/${product.id}`}>
+      <Link href={`brand-lit/${product.slug}`}>
         <div className="h-64 md:h-72 bg-[#fcfcfc] p-6 flex items-center justify-center relative overflow-hidden">
           {/* Main Image */}
           <img 

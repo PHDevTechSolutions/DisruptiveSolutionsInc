@@ -25,6 +25,9 @@ import {
   Tag,
   Factory,
   Settings2,
+  MoreVertical,
+  LinkIcon,
+  ImageIcon
 } from "lucide-react";
 
 // UI Components
@@ -85,10 +88,19 @@ interface AddNewProductProps {
   onFinished?: () => void;
 }
 
+const seoData = {
+  title: "Next.js SEO Sample Page",
+  description: "Ito ay sample SEO description gamit ang Next.js App Router.",
+  keywords: ["nextjs", "seo", "react", "web development"],
+  canonical: "https://example.com/sample-page",
+  ogImage: "https://example.com/og-image.jpg",
+  robots: "index, follow",
+};
+
 export default function AddNewProduct({ editData, onFinished }: AddNewProductProps) {
   const CLOUDINARY_UPLOAD_PRESET = "taskflow_preset";
   const CLOUDINARY_CLOUD_NAME = "dvmpn8mjh";
-
+  const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
   const [isPublishing, setIsPublishing] = useState(false);
   const [productName, setProductName] = useState("");
   const [shortDesc, setShortDesc] = useState("");
@@ -120,7 +132,7 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
   const [galleryImages, setGalleryImages] = useState<File[]>([]);
   const [existingMainImage, setExistingMainImage] = useState("");
   const [existingGalleryImages, setExistingGalleryImages] = useState<string[]>([]);
-  
+
   // Catalog Items: Combined new and existing
   const [catalogs, setCatalogs] = useState<CatalogItem[]>([{ id: Date.now() }]);
 
@@ -146,49 +158,59 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
     return () => { unsubCats(); unsubBrands(); unsubWebs(); unsubCustom(); };
   }, []);
 
- // --- AUTO-FILL LOGIC (EDIT MODE) ---
-useEffect(() => {
-  if (editData) {
-    setProductName(editData.name || "");
-    setShortDesc(editData.shortDescription || "");
-    setSku(editData.sku || "");
-    setRegPrice(editData.regularPrice?.toString() || "");
-    setSalePrice(editData.salePrice?.toString() || "");
-    setDescBlocks(editData.technicalSpecs || []);
-    
-    // 🔥 FIX: Siguraduhing arrays ang kinukuha base sa payload na sinave mo
-    setSelectedCats(Array.isArray(editData.categories) ? editData.categories : []);
-    setSelectedBrands(Array.isArray(editData.brands) ? editData.brands : []);
-    setSelectedWebs(Array.isArray(editData.websites) ? editData.websites : []);
-    
-    setExistingMainImage(editData.mainImage || "");
-    setExistingGalleryImages(editData.galleryImages || []);
+  // --- AUTO-FILL LOGIC (EDIT MODE) ---
+  useEffect(() => {
+    if (editData) {
+      setProductName(editData.name || "");
+      setShortDesc(editData.shortDescription || "");
+      setSku(editData.sku || "");
+      setRegPrice(editData.regularPrice?.toString() || "");
+      setSalePrice(editData.salePrice?.toString() || "");
+      setDescBlocks(editData.technicalSpecs || []);
 
-    if (editData.catalogs?.length) {
-      const loaded = editData.catalogs.map((url: string, i: number) => ({
-        id: i,
-        existingUrl: url
-      }));
-      setCatalogs([...loaded, { id: Date.now() }]);
-    } else {
-      setCatalogs([{ id: Date.now() }]);
+      // 🔥 FIX: Siguraduhing arrays ang kinukuha base sa payload na sinave mo
+      setSelectedCats(Array.isArray(editData.categories) ? editData.categories : []);
+      setSelectedBrands(Array.isArray(editData.brands) ? editData.brands : []);
+      setSelectedWebs(Array.isArray(editData.websites) ? editData.websites : []);
+
+      setExistingMainImage(editData.mainImage || "");
+      setExistingGalleryImages(editData.galleryImages || []);
+
+      if (editData.catalogs?.length) {
+        const loaded = editData.catalogs.map((url: string, i: number) => ({
+          id: i,
+          existingUrl: url
+        }));
+        setCatalogs([...loaded, { id: Date.now() }]);
+      } else {
+        setCatalogs([{ id: Date.now() }]);
+      }
+
+      // Dynamic Specs mapping
+      if (editData.dynamicSpecs && customSections.length > 0) {
+        setCustomSections((prevSections) =>
+          prevSections.map((section) => {
+            // Kunin lahat ng values na tumutugma sa section title
+            const matchingValues = editData.dynamicSpecs
+              .filter((spec: any) => spec.title === section.title)
+              .map((spec: any) => spec.value);
+            return { ...section, selected: matchingValues };
+          })
+        );
+      }
     }
+  }, [editData, customSections.length]); // Tinanggal natin ang customSections.length > 0 para mas clean
 
-    // Dynamic Specs mapping
-    if (editData.dynamicSpecs && customSections.length > 0) {
-      setCustomSections((prevSections) =>
-        prevSections.map((section) => {
-          // Kunin lahat ng values na tumutugma sa section title
-          const matchingValues = editData.dynamicSpecs
-            .filter((spec: any) => spec.title === section.title)
-            .map((spec: any) => spec.value);
-          return { ...section, selected: matchingValues };
-        })
-      );
-    }
-  }
-}, [editData, customSections.length]); // Tinanggal natin ang customSections.length > 0 para mas clean
-
+  // Siguraduhin na may 'setSeoData' at may 'slug' sa loob ng object
+  const [seoData, setSeoData] = useState({
+    title: editData?.seo?.title || "",
+    description: editData?.seo?.description || "",
+    slug: editData?.slug || "", // Idagdag ito para mawala yung 'Property slug does not exist'
+    keywords: editData?.seo?.keywords || [],
+    canonical: editData?.seo?.canonical || "",
+    ogImage: editData?.seo?.ogImage || "",
+    robots: editData?.seo?.robots || "index, follow",
+  });
   // --- CLOUDINARY UPLOAD ---
   const uploadToCloudinary = async (file: File) => {
     const formData = new FormData();
@@ -236,19 +258,20 @@ useEffect(() => {
 
   // --- PUBLISH / UPDATE PRODUCT ---
   const handlePublish = async () => {
-    if (!productName || (!mainImage && !existingMainImage)) return toast.error("Required fields missing!");
+    // Check kung may productName at slug (crucial ang slug para sa routing)
+    if (!productName || !seoData.slug) return toast.error("Product Name and Slug are required!");
+    if (!mainImage && !existingMainImage) return toast.error("Main Image is missing!");
+
     setIsPublishing(true);
     const publishToast = toast.loading(editData ? "Updating Product..." : "Publishing Product...");
 
     try {
-      // 1. Main Image
+      // 1. Upload Images
       const mainUrl = mainImage ? await uploadToCloudinary(mainImage) : existingMainImage;
-
-      // 2. Gallery Images (Combine Existing + New Uploads)
       const newlyUploadedGallery = await Promise.all(galleryImages.map(img => uploadToCloudinary(img)));
       const finalGalleryUrls = [...existingGalleryImages, ...newlyUploadedGallery];
 
-      // 3. Catalogs (Combine Existing + New Uploads)
+      // 2. Upload Catalogs
       const finalCatalogUrls = await Promise.all(
         catalogs.map(async (c) => {
           if (c.file) return await uploadToCloudinary(c.file);
@@ -256,13 +279,16 @@ useEffect(() => {
         })
       );
 
+      // 3. Process Specs
       const dynamicSpecs = customSections.flatMap((section) =>
         section.selected.map((val) => ({ title: section.title, value: val }))
       );
 
+      // 4. Create Product Payload
       const productPayload = {
         name: productName,
         shortDescription: shortDesc,
+        slug: seoData.slug, // ISINAMA NATIN DITO PARA SA URL ROUTING
         sku,
         regularPrice: Number(regPrice) || 0,
         salePrice: Number(salePrice) || 0,
@@ -270,24 +296,37 @@ useEffect(() => {
         dynamicSpecs,
         mainImage: mainUrl,
         galleryImages: finalGalleryUrls,
-        catalogs: finalCatalogUrls.filter(Boolean), // Clean nulls
-categories: selectedCats,
-brands: selectedBrands,
-websites: selectedWebs,
+        catalogs: finalCatalogUrls.filter(Boolean),
+        categories: selectedCats,
+        brands: selectedBrands,
+        websites: selectedWebs,
+
+        // SEO FIELDS PARA SA DATABASE
+        seo: {
+          title: seoData.title || productName,
+          description: seoData.description,
+          canonical: seoData.canonical,
+          lastUpdated: new Date().toISOString()
+        },
+
         updatedAt: serverTimestamp(),
       };
 
+      // 5. Save to Firestore
       if (editData?.id) {
         await updateDoc(doc(db, "products", editData.id), productPayload);
         toast.success("Product Updated Successfully!", { id: publishToast });
       } else {
-        await addDoc(collection(db, "products"), { ...productPayload, createdAt: serverTimestamp() });
+        await addDoc(collection(db, "products"), {
+          ...productPayload,
+          createdAt: serverTimestamp()
+        });
         toast.success("Product Published Successfully!", { id: publishToast });
       }
 
       if (onFinished) onFinished();
     } catch (error) {
-      console.error(error);
+      console.error("Publish Error:", error);
       toast.error("Process failed. Please try again.", { id: publishToast });
     } finally {
       setIsPublishing(false);
@@ -295,14 +334,14 @@ websites: selectedWebs,
   };
 
   const toggleValue = (
-  value: string,
-  setter: React.Dispatch<React.SetStateAction<string[]>>
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<string[]>>
   ) => {
-  setter(prev =>
-    prev.includes(value)
-      ? prev.filter(v => v !== value)
-      : [...prev, value]
-  );
+    setter(prev =>
+      prev.includes(value)
+        ? prev.filter(v => v !== value)
+        : [...prev, value]
+    );
   };
 
   return (
@@ -352,19 +391,19 @@ websites: selectedWebs,
                   <div key={cat.id} className="border-2 border-dashed rounded-xl p-4 bg-slate-50 flex items-center justify-between group">
                     <label className="cursor-pointer flex-1">
                       {cat.file ? (
-                        <p className="text-xs font-bold text-green-600 flex items-center gap-2"><UploadCloud size={14}/> {cat.file.name}</p>
+                        <p className="text-xs font-bold text-green-600 flex items-center gap-2"><UploadCloud size={14} /> {cat.file.name}</p>
                       ) : cat.existingUrl ? (
                         <a href={cat.existingUrl} target="_blank" className="text-xs font-bold text-blue-600 underline">View Current File ({index + 1})</a>
                       ) : (
                         <div className="flex items-center gap-2 text-slate-400">
-                          <Plus size={16}/>
+                          <Plus size={16} />
                           <span className="text-[11px] font-bold uppercase">Attach New Catalog</span>
                         </div>
                       )}
                       <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => {
                         const file = e.target.files?.[0]; if (!file) return;
                         setCatalogs(prev => {
-                          const updated = [...prev]; 
+                          const updated = [...prev];
                           updated[index] = { ...updated[index], file };
                           // Pag nag-upload sa huling slot, dagdag ulit ng panibagong blank slot
                           if (index === prev.length - 1) updated.push({ id: Date.now() });
@@ -374,7 +413,7 @@ websites: selectedWebs,
                     </label>
                     {(cat.file || cat.existingUrl) && (
                       <button onClick={() => setCatalogs(prev => prev.filter(c => c.id !== cat.id))} className="text-red-400 hover:text-red-600">
-                        <X size={16}/>
+                        <X size={16} />
                       </button>
                     )}
                   </div>
@@ -390,14 +429,14 @@ websites: selectedWebs,
                 {existingGalleryImages.map((url, index) => (
                   <div key={`ex-${index}`} className="relative border-2 border-dashed rounded-xl p-1 bg-slate-50 h-28 group">
                     <img src={url} className="object-contain h-full w-full rounded-lg" />
-                    <button onClick={() => setExistingGalleryImages(prev => prev.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"><X size={12}/></button>
+                    <button onClick={() => setExistingGalleryImages(prev => prev.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"><X size={12} /></button>
                   </div>
                 ))}
                 {/* New Image Previews */}
                 {galleryImages.map((img, index) => (
                   <div key={`new-${index}`} className="relative border-2 border-dashed rounded-xl p-1 bg-blue-50 h-28">
                     <img src={URL.createObjectURL(img)} className="object-contain h-full w-full rounded-lg" />
-                    <button onClick={() => setGalleryImages(prev => prev.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"><X size={12}/></button>
+                    <button onClick={() => setGalleryImages(prev => prev.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"><X size={12} /></button>
                   </div>
                 ))}
                 <label className="border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center h-28 cursor-pointer hover:bg-blue-50 transition-all text-blue-400">
@@ -409,12 +448,141 @@ websites: selectedWebs,
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-                <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Regular Price</Label><Input className="h-10 text-xs font-bold" value={regPrice} onChange={(e) => setRegPrice(e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Sale Price</Label><Input className="h-10 text-xs font-bold text-red-500" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">SKU / Model Number</Label><Input className="h-10 text-xs font-bold" value={sku} onChange={(e) => setSku(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Regular Price</Label><Input className="h-10 text-xs font-bold" value={regPrice} onChange={(e) => setRegPrice(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Sale Price</Label><Input className="h-10 text-xs font-bold text-red-500" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">SKU / Model Number</Label><Input className="h-10 text-xs font-bold" value={sku} onChange={(e) => setSku(e.target.value)} /></div>
             </div>
           </CardContent>
         </Card>
+<Card className="shadow-sm border-none ring-1 ring-slate-200">
+  <CardHeader className="border-b border-slate-50">
+    <CardTitle className="flex items-center gap-2 text-slate-700 font-black text-xs uppercase tracking-widest">
+      <AlignLeft className="w-4 h-4 text-blue-500" /> SEO Settings
+    </CardTitle>
+  </CardHeader>
+
+  <CardContent className="p-6 space-y-5">
+    {/* --- INPUT SECTION --- */}
+    <div className="space-y-4 border-b border-slate-100 pb-6">
+      <div className="space-y-1.5">
+        <label className="text-slate-500 font-bold text-xs uppercase">SEO Title</label>
+        <input
+          type="text"
+          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-slate-700"
+          value={seoData.title}
+          onChange={(e) => setSeoData({ ...seoData, title: e.target.value })}
+          placeholder="Product name for Google"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-slate-500 font-bold text-xs uppercase">URL Slug</label>
+        <input
+          type="text"
+          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-[#d11a2a] font-mono text-sm"
+          value={seoData.slug}
+          onChange={(e) => setSeoData({ ...seoData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+          placeholder="Example: downlight"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-slate-500 font-bold text-xs uppercase">Meta Description</label>
+        <textarea
+          rows={3}
+          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 text-sm"
+          value={seoData.description}
+          onChange={(e) => setSeoData({ ...seoData, description: e.target.value })}
+          placeholder="Brief summary for search results..."
+        />
+      </div>
+    </div>
+
+    {/* --- LIVE PREVIEW SECTION --- */}
+    <div className="pt-2">
+      <div className="flex items-center gap-6 mb-4">
+        <span className="text-[10px] font-black uppercase text-slate-400">Google Preview:</span>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-600">
+            <input 
+              type="radio" 
+              name="view" 
+              checked={previewMode === 'mobile'} 
+              onChange={() => setPreviewMode('mobile')}
+              className="text-blue-500" 
+            /> Mobile
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-600">
+            <input 
+              type="radio" 
+              name="view" 
+              checked={previewMode === 'desktop'} 
+              onChange={() => setPreviewMode('desktop')}
+              className="text-blue-500" 
+            /> Desktop
+          </label>
+        </div>
+      </div>
+
+      {/* Google Card Simulation */}
+      <div className={`p-4 bg-white border border-slate-200 rounded-xl shadow-sm transition-all duration-300 ${previewMode === 'mobile' ? 'max-w-[360px]' : 'max-w-[600px]'}`}>
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center border border-slate-100">
+            <img src="/favicon.ico" className="w-3 h-3 grayscale opacity-50" alt="icon" />
+          </div>
+          <div className="overflow-hidden">
+            <p className="text-[12px] text-[#202124] leading-tight font-medium">Disruptive Solutions Inc</p>
+            <p className="text-[11px] text-[#4d5156] truncate">disruptive-solutions-inc.vercel.app › {selectedBrands || '...'} › {seoData.slug || '...'}</p>
+          </div>
+        </div>
+
+<div className={`mt-2 ${previewMode === 'mobile' ? 'flex flex-col-reverse gap-2' : 'flex gap-4'}`}>
+  <div className="flex-1">
+    {/* SEO TITLE LINK - Clickable at safe sa Array Error */}
+    <a
+      href={`http://localhost:3000/${selectedBrands[0]?.toLowerCase() || 'brand'}/${seoData.slug}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-[18px] text-[#1a0dab] hover:underline cursor-pointer leading-tight mb-1 line-clamp-2 font-medium block"
+    >
+      {seoData.title || "Enter an SEO Title..."}
+    </a>
+    <p className="text-[13px] text-[#4d5156] line-clamp-3 leading-relaxed">
+      {seoData.description || "Enter a meta description to see how it looks here. This text will help customers find your product on Google."}
+    </p>
+  </div>
+  
+  {/* THUMBNAIL PREVIEW - Ginawa nating clickable din */}
+  <a 
+    href={`http://localhost:3000//${selectedBrands[0]?.toLowerCase() || 'brand'}/${seoData.slug}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="w-[104px] h-[104px] flex-shrink-0 bg-slate-50 rounded-lg overflow-hidden border border-slate-100 relative group block"
+  >
+    {mainImage || existingMainImage ? (
+      <img 
+        src={mainImage ? URL.createObjectURL(mainImage) : existingMainImage} 
+        className="w-full h-full object-contain p-1" 
+        alt="SEO Thumb" 
+      />
+    ) : (
+      <div className="w-full h-full flex flex-col items-center justify-center opacity-20">
+        <ImageIcon size={24} />
+      </div>
+    )}
+    
+    {/* Hover Overlay */}
+    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+      <span className="text-[8px] text-white font-black uppercase">Preview Only</span>
+    </div>
+  </a>
+</div>
+      </div>
+    </div>
+  </CardContent>
+</Card>
+        
+
       </div>
 
       {/* RIGHT COLUMN */}
@@ -425,7 +593,7 @@ websites: selectedWebs,
           <CardContent className="pt-6">
             <Label htmlFor="main-file" className="cursor-pointer">
               <div className="aspect-square border-2 border-dashed rounded-2xl flex flex-col items-center justify-center hover:bg-blue-50/30 transition-all overflow-hidden bg-white border-slate-200">
-                {mainImage ? <img src={URL.createObjectURL(mainImage)} className="w-full h-full object-contain p-2" /> : existingMainImage ? <img src={existingMainImage} className="w-full h-full object-contain p-2" /> : <div className="text-center"><ImagePlus className="w-12 h-12 mb-2 text-blue-500 mx-auto opacity-30"/><span className="text-[10px] font-black uppercase text-slate-400 block">Click to Upload</span></div>}
+                {mainImage ? <img src={URL.createObjectURL(mainImage)} className="w-full h-full object-contain p-2" /> : existingMainImage ? <img src={existingMainImage} className="w-full h-full object-contain p-2" /> : <div className="text-center"><ImagePlus className="w-12 h-12 mb-2 text-blue-500 mx-auto opacity-30" /><span className="text-[10px] font-black uppercase text-slate-400 block">Click to Upload</span></div>}
               </div>
               <input type="file" id="main-file" className="hidden" onChange={(e) => setMainImage(e.target.files?.[0] || null)} />
             </Label>
@@ -437,60 +605,60 @@ websites: selectedWebs,
           <CardHeader className="bg-slate-50/50 border-b py-3 text-center"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Classification</CardTitle></CardHeader>
           <CardContent className="space-y-6 pt-6">
             <SidebarSection
-  label="Target Website"
-  icon={<Globe className="w-3 h-3" />}
-  items={websites}
-  selected={selectedWebs}
-  multiSelect
-onCheck={(v: string) => toggleValue(v, setSelectedWebs)}
-  val={newWeb}
-  setVal={setNewWeb}
-  onAdd={() => handleQuickAdd("websites", newWeb, setNewWeb)}
-  onDelete={(id: string) => handleDeleteItem("websites", id)}
-/>
+              label="Target Website"
+              icon={<Globe className="w-3 h-3" />}
+              items={websites}
+              selected={selectedWebs}
+              multiSelect
+              onCheck={(v: string) => toggleValue(v, setSelectedWebs)}
+              val={newWeb}
+              setVal={setNewWeb}
+              onAdd={() => handleQuickAdd("websites", newWeb, setNewWeb)}
+              onDelete={(id: string) => handleDeleteItem("websites", id)}
+            />
             <SidebarSection
-  label="Category"
-  icon={<Tag className="w-3 h-3" />}
-  items={categories}
-  selected={selectedCats}
-  multiSelect
-onCheck={(v: string) => toggleValue(v, setSelectedCats)}
-  val={newCat}
-  setVal={setNewCat}
-  onAdd={() => handleQuickAdd("categories", newCat, setNewCat)}
-  onDelete={(id: string) => handleDeleteItem("categories", id)}
-/>
-           <SidebarSection
-  label="Brand"
-  icon={<Factory className="w-3 h-3" />}
-  items={brands}
-  selected={selectedBrands}
-  multiSelect
-onCheck={(v: string) => toggleValue(v, setSelectedBrands)}
-  val={newBrand}
-  setVal={setNewBrand}
-  onAdd={() => handleQuickAdd("brands", newBrand, setNewBrand)}
-  onDelete={(id: string) => handleDeleteItem("brands", id)}
-/>
+              label="Category"
+              icon={<Tag className="w-3 h-3" />}
+              items={categories}
+              selected={selectedCats}
+              multiSelect
+              onCheck={(v: string) => toggleValue(v, setSelectedCats)}
+              val={newCat}
+              setVal={setNewCat}
+              onAdd={() => handleQuickAdd("categories", newCat, setNewCat)}
+              onDelete={(id: string) => handleDeleteItem("categories", id)}
+            />
+            <SidebarSection
+              label="Brand"
+              icon={<Factory className="w-3 h-3" />}
+              items={brands}
+              selected={selectedBrands}
+              multiSelect
+              onCheck={(v: string) => toggleValue(v, setSelectedBrands)}
+              val={newBrand}
+              setVal={setNewBrand}
+              onAdd={() => handleQuickAdd("brands", newBrand, setNewBrand)}
+              onDelete={(id: string) => handleDeleteItem("brands", id)}
+            />
 
             {/* Dynamic Custom Sections */}
             <div className="pt-4 border-t border-slate-100 space-y-6">
-              <Label className="text-[9px] font-black uppercase text-blue-600 flex items-center gap-1"><Settings2 size={12}/> Attribute Sections</Label>
+              <Label className="text-[9px] font-black uppercase text-blue-600 flex items-center gap-1"><Settings2 size={12} /> Attribute Sections</Label>
               {customSections.map((sec) => (
                 <div key={sec.id} className="relative p-3 rounded-2xl bg-slate-50/50 border border-slate-100">
-                  <SidebarSection 
-                    label={sec.title} icon={<Plus className="w-3 h-3 text-blue-500"/>} items={sec.items} selected={sec.selected} multiSelect={true}
+                  <SidebarSection
+                    label={sec.title} icon={<Plus className="w-3 h-3 text-blue-500" />} items={sec.items} selected={sec.selected} multiSelect={true}
                     onCheck={(v: string) => setCustomSections(prev => prev.map(s => s.id === sec.id ? { ...s, selected: s.selected.includes(v) ? s.selected.filter(item => item !== v) : [...s.selected, v] } : s))}
-                    val={""} setVal={() => {}} onAdd={() => {}}
+                    val={""} setVal={() => { }} onAdd={() => { }}
                     onDelete={async (itemId: string) => {
                       const sRef = doc(db, "custom_sections", sec.id);
                       await updateDoc(sRef, { items: sec.items.filter(i => i.id !== itemId) });
-                    }} 
+                    }}
                     customAddLogic={(val: string) => handleAddChoiceToCustom(sec.id, val)} isDynamic={true} onDeleteSection={() => handleDeleteItem("custom_sections", sec.id)}
                   />
                 </div>
               ))}
-              
+
               {!isAddingNewSection ? (
                 <Button variant="outline" className="w-full h-10 border-dashed border-2 rounded-xl text-[10px] font-black text-slate-400 hover:text-blue-500" onClick={() => setIsAddingNewSection(true)}>+ ADD CUSTOM SECTION</Button>
               ) : (
@@ -508,7 +676,7 @@ onCheck={(v: string) => toggleValue(v, setSelectedBrands)}
 
         {/* Action Button */}
         <Button disabled={isPublishing} onClick={handlePublish} className="w-full bg-[#d11a2a] hover:bg-[#b01622] h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-red-200 transition-all active:scale-95">
-          {isPublishing ? <><Loader2 className="animate-spin mr-2"/> Processing...</> : editData ? "Update Product" : "Publish Product"}
+          {isPublishing ? <><Loader2 className="animate-spin mr-2" /> Processing...</> : editData ? "Update Product" : "Publish Product"}
         </Button>
       </div>
     </div>
@@ -525,7 +693,7 @@ function SidebarSection({ label, icon, items, selected, onCheck, val, setVal, on
         <Label className="text-[9px] font-black uppercase text-blue-600 flex items-center gap-1">{icon} {label}</Label>
         {isDynamic && (
           <AlertDialog>
-            <AlertDialogTrigger asChild><button className="text-slate-300 hover:text-red-500"><Trash2 className="w-3 h-3"/></button></AlertDialogTrigger>
+            <AlertDialogTrigger asChild><button className="text-slate-300 hover:text-red-500"><Trash2 className="w-3 h-3" /></button></AlertDialogTrigger>
             <AlertDialogContent className="rounded-3xl border-none">
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-black uppercase italic">Delete Section?</AlertDialogTitle>
@@ -538,7 +706,7 @@ function SidebarSection({ label, icon, items, selected, onCheck, val, setVal, on
       </div>
       <div className="flex gap-1">
         <Input className="h-7 text-[10px] bg-white rounded-lg" placeholder={`Add to ${label}...`} value={isDynamic ? localVal : val} onChange={(e) => isDynamic ? setLocalVal(e.target.value) : setVal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleInnerAdd()} />
-        <Button size="sm" className="h-7 w-7 p-0 bg-blue-500 rounded-lg shadow-sm" onClick={handleInnerAdd}><Plus className="w-4 h-4 text-white"/></Button>
+        <Button size="sm" className="h-7 w-7 p-0 bg-blue-500 rounded-lg shadow-sm" onClick={handleInnerAdd}><Plus className="w-4 h-4 text-white" /></Button>
       </div>
       <div className="space-y-1 max-h-40 overflow-y-auto pr-2 border-l-2 border-slate-100 pl-2 custom-scrollbar">
         {items.map((item) => (
