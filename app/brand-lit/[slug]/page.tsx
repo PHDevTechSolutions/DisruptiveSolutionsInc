@@ -14,7 +14,8 @@ import {
   orderBy,
   addDoc,
   serverTimestamp,
-  where
+  where,
+  
 } from "firebase/firestore";
 import Footer from "../../components/navigation/footer";
 import {
@@ -45,6 +46,7 @@ interface Product {
   name: string;
   sku?: string;
   mainImage?: string;
+  qrProductImages?: string;
   galleryImages?: string[]; // Galing sa database screenshot
   catalogs?: string[];       // Galing sa database screenshot
   rating?: number;
@@ -433,6 +435,23 @@ useEffect(() => {
     })}
   </div>
 ) : null}
+
+
+{/* QR PRODUCTS DISPLAY ONLY */}
+<div className="flex flex-wrap gap-4 pt-4">
+  {(Array.isArray(product.qrProductImages) ? product.qrProductImages : []).map((img: string, idx: number) => (
+    <div 
+      key={idx} 
+      className="w-32 h-32 border border-slate-200 rounded-xl overflow-hidden bg-white p-2 shadow-sm hover:shadow-md transition-shadow"
+    >
+      <img 
+        src={img} 
+        className="w-full h-full object-contain" 
+        alt={`Product QR ${idx}`} 
+      />
+    </div>
+  ))}
+</div>
 
 
               </div>

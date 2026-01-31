@@ -55,11 +55,12 @@ export default function BrandsPage() {
   // --- 2. FETCH PRODUCTS (LIT ONLY) ---
   useEffect(() => {
     const q = query(
-      collection(db, "products"),
-      where("website", "==", "Disruptive Solutions Inc"),
-      where("brand", "==", "LIT"), 
-      orderBy("createdAt", "desc")
-    );
+  collection(db, "products"),
+  where("website", "==", "Disruptive Solutions Inc"),
+  // Gamitin ang array-contains kung ang 'brands' ay listahan sa DB
+  where("brands", "array-contains", "brand-lit"), 
+  orderBy("createdAt", "desc")
+);
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));

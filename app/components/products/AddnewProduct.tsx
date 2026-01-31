@@ -27,7 +27,8 @@ import {
   Settings2,
   MoreVertical,
   LinkIcon,
-  ImageIcon
+  ImageIcon,
+  QrCode
 } from "lucide-react";
 
 // UI Components
@@ -132,6 +133,11 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
   const [galleryImages, setGalleryImages] = useState<File[]>([]);
   const [existingMainImage, setExistingMainImage] = useState("");
   const [existingGalleryImages, setExistingGalleryImages] = useState<string[]>([]);
+  
+
+// QR PRODUCT STATES (Idagdag mo ito sa baba)
+const [qrProducts, setQrProducts] = useState<File[]>([]);
+const [existingQrProducts, setExistingQrProducts] = useState<string[]>([]);
 
   // Catalog Items: Combined new and existing
   const [catalogs, setCatalogs] = useState<CatalogItem[]>([{ id: Date.now() }]);
@@ -159,47 +165,51 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
   }, []);
 
   // --- AUTO-FILL LOGIC (EDIT MODE) ---
-  useEffect(() => {
-    if (editData) {
-      setProductName(editData.name || "");
-      setShortDesc(editData.shortDescription || "");
-      setSku(editData.sku || "");
-      setRegPrice(editData.regularPrice?.toString() || "");
-      setSalePrice(editData.salePrice?.toString() || "");
-      setDescBlocks(editData.technicalSpecs || []);
+useEffect(() => {
+  if (editData) {
+    setProductName(editData.name || "");
+    setShortDesc(editData.shortDescription || "");
+    setSku(editData.sku || "");
+    setRegPrice(editData.regularPrice?.toString() || "");
+    setSalePrice(editData.salePrice?.toString() || "");
+    setDescBlocks(editData.technicalSpecs || []);
 
-      // 🔥 FIX: Siguraduhing arrays ang kinukuha base sa payload na sinave mo
-      setSelectedCats(Array.isArray(editData.categories) ? editData.categories : []);
-      setSelectedBrands(Array.isArray(editData.brands) ? editData.brands : []);
-      setSelectedWebs(Array.isArray(editData.websites) ? editData.websites : []);
+    // 🔥 FIX: Siguraduhing arrays ang kinukuha base sa payload na sinave mo
+    setSelectedCats(Array.isArray(editData.categories) ? editData.categories : []);
+    setSelectedBrands(Array.isArray(editData.brands) ? editData.brands : []);
+    setSelectedWebs(Array.isArray(editData.websites) ? editData.websites : []);
 
-      setExistingMainImage(editData.mainImage || "");
-      setExistingGalleryImages(editData.galleryImages || []);
+    setExistingMainImage(editData.mainImage || "");
+    setExistingGalleryImages(editData.galleryImages || []);
 
-      if (editData.catalogs?.length) {
-        const loaded = editData.catalogs.map((url: string, i: number) => ({
-          id: i,
-          existingUrl: url
-        }));
-        setCatalogs([...loaded, { id: Date.now() }]);
-      } else {
-        setCatalogs([{ id: Date.now() }]);
-      }
+    // --- START QR AUTO-FILL ---
+    // Hinuhugot natin yung qrProductImages array mula sa database
+    setExistingQrProducts(editData.qrProductImages || []);
+    // --- END QR AUTO-FILL ---
 
-      // Dynamic Specs mapping
-      if (editData.dynamicSpecs && customSections.length > 0) {
-        setCustomSections((prevSections) =>
-          prevSections.map((section) => {
-            // Kunin lahat ng values na tumutugma sa section title
-            const matchingValues = editData.dynamicSpecs
-              .filter((spec: any) => spec.title === section.title)
-              .map((spec: any) => spec.value);
-            return { ...section, selected: matchingValues };
-          })
-        );
-      }
+    if (editData.catalogs?.length) {
+      const loaded = editData.catalogs.map((url: string, i: number) => ({
+        id: i,
+        existingUrl: url
+      }));
+      setCatalogs([...loaded, { id: Date.now() }]);
+    } else {
+      setCatalogs([{ id: Date.now() }]);
     }
-  }, [editData, customSections.length]); // Tinanggal natin ang customSections.length > 0 para mas clean
+
+    // Dynamic Specs mapping
+    if (editData.dynamicSpecs && customSections.length > 0) {
+      setCustomSections((prevSections) =>
+        prevSections.map((section) => {
+          const matchingValues = editData.dynamicSpecs
+            .filter((spec: any) => spec.title === section.title)
+            .map((spec: any) => spec.value);
+          return { ...section, selected: matchingValues };
+        })
+      );
+    }
+  }
+}, [editData, customSections.length]); // Tinanggal natin ang customSections.length > 0 para mas clean
 
   // Siguraduhin na may 'setSeoData' at may 'slug' sa loob ng object
   const [seoData, setSeoData] = useState({
@@ -256,82 +266,92 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
     } catch (err) { toast.error("Error creating section"); }
   };
 
-  // --- PUBLISH / UPDATE PRODUCT ---
-  const handlePublish = async () => {
-    // Check kung may productName at slug (crucial ang slug para sa routing)
-    if (!productName || !seoData.slug) return toast.error("Product Name and Slug are required!");
-    if (!mainImage && !existingMainImage) return toast.error("Main Image is missing!");
+ // --- PUBLISH / UPDATE PRODUCT ---
+const handlePublish = async () => {
+  // Check kung may productName at slug
+  if (!productName || !seoData.slug) return toast.error("Product Name and Slug are required!");
+  if (!mainImage && !existingMainImage) return toast.error("Main Image is missing!");
 
-    setIsPublishing(true);
-    const publishToast = toast.loading(editData ? "Updating Product..." : "Publishing Product...");
+  setIsPublishing(true);
+  const publishToast = toast.loading(editData ? "Updating Product..." : "Publishing Product...");
 
-    try {
-      // 1. Upload Images
-      const mainUrl = mainImage ? await uploadToCloudinary(mainImage) : existingMainImage;
-      const newlyUploadedGallery = await Promise.all(galleryImages.map(img => uploadToCloudinary(img)));
-      const finalGalleryUrls = [...existingGalleryImages, ...newlyUploadedGallery];
+  try {
+    // 1. Upload Images
+    const mainUrl = mainImage ? await uploadToCloudinary(mainImage) : existingMainImage;
+    const newlyUploadedGallery = await Promise.all(galleryImages.map(img => uploadToCloudinary(img)));
+    const finalGalleryUrls = [...existingGalleryImages, ...newlyUploadedGallery];
 
-      // 2. Upload Catalogs
-      const finalCatalogUrls = await Promise.all(
-        catalogs.map(async (c) => {
-          if (c.file) return await uploadToCloudinary(c.file);
-          return c.existingUrl || null;
-        })
-      );
+    // --- START QR LOGIC ---
+    // Mag-upload ng mga bagong piniling QR images sa Cloudinary
+    const newlyUploadedQr = await Promise.all(qrProducts.map(img => uploadToCloudinary(img)));
+    // Pagsamahin ang mga existing URLs at yung mga bagong upload
+    const finalQrUrls = [...existingQrProducts, ...newlyUploadedQr];
+    // --- END QR LOGIC ---
 
-      // 3. Process Specs
-      const dynamicSpecs = customSections.flatMap((section) =>
-        section.selected.map((val) => ({ title: section.title, value: val }))
-      );
+    // 2. Upload Catalogs
+    const finalCatalogUrls = await Promise.all(
+      catalogs.map(async (c) => {
+        if (c.file) return await uploadToCloudinary(c.file);
+        return c.existingUrl || null;
+      })
+    );
 
-      // 4. Create Product Payload
-      const productPayload = {
-        name: productName,
-        shortDescription: shortDesc,
-        slug: seoData.slug, // ISINAMA NATIN DITO PARA SA URL ROUTING
-        sku,
-        regularPrice: Number(regPrice) || 0,
-        salePrice: Number(salePrice) || 0,
-        technicalSpecs: descBlocks,
-        dynamicSpecs,
-        mainImage: mainUrl,
-        galleryImages: finalGalleryUrls,
-        catalogs: finalCatalogUrls.filter(Boolean),
-        categories: selectedCats,
-        brands: selectedBrands,
-        websites: selectedWebs,
+    // 3. Process Specs
+    const dynamicSpecs = customSections.flatMap((section) =>
+      section.selected.map((val) => ({ title: section.title, value: val }))
+    );
 
-        // SEO FIELDS PARA SA DATABASE
-        seo: {
-          title: seoData.title || productName,
-          description: seoData.description,
-          canonical: seoData.canonical,
-          lastUpdated: new Date().toISOString()
-        },
+    // 4. Create Product Payload
+    const productPayload = {
+      name: productName,
+      shortDescription: shortDesc,
+      slug: seoData.slug,
+      sku,
+      regularPrice: Number(regPrice) || 0,
+      salePrice: Number(salePrice) || 0,
+      technicalSpecs: descBlocks,
+      dynamicSpecs,
+      mainImage: mainUrl,
+      galleryImages: finalGalleryUrls,
+      
+      // --- SAVE QR URLS TO PAYLOAD ---
+      qrProductImages: finalQrUrls, 
+      
+      catalogs: finalCatalogUrls.filter(Boolean),
+      categories: selectedCats,
+      brands: selectedBrands,
+      websites: selectedWebs,
 
-        updatedAt: serverTimestamp(),
-      };
+      seo: {
+        title: seoData.title || productName,
+        description: seoData.description,
+        canonical: seoData.canonical,
+        lastUpdated: new Date().toISOString()
+      },
 
-      // 5. Save to Firestore
-      if (editData?.id) {
-        await updateDoc(doc(db, "products", editData.id), productPayload);
-        toast.success("Product Updated Successfully!", { id: publishToast });
-      } else {
-        await addDoc(collection(db, "products"), {
-          ...productPayload,
-          createdAt: serverTimestamp()
-        });
-        toast.success("Product Published Successfully!", { id: publishToast });
-      }
+      updatedAt: serverTimestamp(),
+    };
 
-      if (onFinished) onFinished();
-    } catch (error) {
-      console.error("Publish Error:", error);
-      toast.error("Process failed. Please try again.", { id: publishToast });
-    } finally {
-      setIsPublishing(false);
+    // 5. Save to Firestore
+    if (editData?.id) {
+      await updateDoc(doc(db, "products", editData.id), productPayload);
+      toast.success("Product Updated Successfully!", { id: publishToast });
+    } else {
+      await addDoc(collection(db, "products"), {
+        ...productPayload,
+        createdAt: serverTimestamp()
+      });
+      toast.success("Product Published Successfully!", { id: publishToast });
     }
-  };
+
+    if (onFinished) onFinished();
+  } catch (error) {
+    console.error("Publish Error:", error);
+    toast.error("Process failed. Please try again.", { id: publishToast });
+  } finally {
+    setIsPublishing(false);
+  }
+};
 
   const toggleValue = (
     value: string,
@@ -446,6 +466,55 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
                 </label>
               </div>
             </div>
+            {/* QR IMAGE SECTION */}
+<div className="space-y-4 pt-4 border-t border-slate-100">
+  <Label className="text-[11px] font-black uppercase text-slate-500">Product QR Images</Label>
+  
+  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    {/* Existing QR Images (Mula sa Database) */}
+    {existingQrProducts.map((url: string, index: number) => (
+      <div key={`ex-qr-${index}`} className="relative border-2 border-dashed rounded-xl p-1 bg-slate-50 h-28 group">
+        <img src={url} className="object-contain h-full w-full rounded-lg" alt="QR Product" />
+        <button 
+          type="button"
+          onClick={() => setExistingQrProducts((prev: string[]) => prev.filter((_, i) => i !== index))} 
+          className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"
+        >
+          <X size={12} />
+        </button>
+      </div>
+    ))}
+
+    {/* New QR Image Previews (Yung kakapili lang sa Folder) */}
+    {qrProducts.map((img: File, index: number) => (
+      <div key={`new-qr-${index}`} className="relative border-2 border-dashed rounded-xl p-1 bg-emerald-50 h-28 border-emerald-100">
+        <img src={URL.createObjectURL(img)} className="object-contain h-full w-full rounded-lg" alt="New QR Preview" />
+        <button 
+          type="button"
+          onClick={() => setQrProducts((prev: File[]) => prev.filter((_, i) => i !== index))} 
+          className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"
+        >
+          <X size={12} />
+        </button>
+      </div>
+    ))}
+
+    {/* Upload Trigger */}
+    <label className="border-2 border-dashed border-emerald-200 rounded-xl flex flex-col items-center justify-center h-28 cursor-pointer hover:bg-emerald-50 transition-all text-emerald-500">
+      <QrCode size={24} />
+      <span className="text-[9px] font-black uppercase mt-1">Upload QR Pic</span>
+      <input 
+        type="file" 
+        accept="image/*" 
+        className="hidden" 
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+          const file = e.target.files?.[0]; 
+          if (file) setQrProducts((prev: File[]) => [...prev, file]); 
+        }} 
+      />
+    </label>
+  </div>
+</div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
               <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Regular Price</Label><Input className="h-10 text-xs font-bold" value={regPrice} onChange={(e) => setRegPrice(e.target.value)} /></div>
@@ -475,17 +544,31 @@ export default function AddNewProduct({ editData, onFinished }: AddNewProductPro
         />
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-slate-500 font-bold text-xs uppercase">URL Slug</label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-[#d11a2a] font-mono text-sm"
-          value={seoData.slug}
-          onChange={(e) => setSeoData({ ...seoData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-          placeholder="Example: downlight"
-        />
-      </div>
+     <div className="space-y-1.5">
+  <label className="text-slate-500 font-bold text-xs uppercase flex justify-between">
+    URL Slug
+    <span className="text-[10px] text-amber-600 normal-case font-medium">
+      Forward slash (/) is not allowed
+    </span>
+  </label>
+  <input
+    type="text"
+    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-[#d11a2a] font-mono text-sm"
+    value={seoData.slug}
+    onChange={(e) => {
+      // 1. Convert to lowercase
+      // 2. Remove all "/" characters globally (prevents breakage in routing)
+      // 3. Replace spaces with hyphens (-)
+      const sanitizedValue = e.target.value
+        .toLowerCase()
+        .replace(/\//g, "") 
+        .replace(/\s+/g, "-");
 
+      setSeoData({ ...seoData, slug: sanitizedValue });
+    }}
+    placeholder="Example: downlight-pro-?v=1"
+  />
+</div>
       <div className="space-y-1.5">
         <label className="text-slate-500 font-bold text-xs uppercase">Meta Description</label>
         <textarea

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "@/lib/firebase"; 
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "firebase/firestore"; 
+import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, where } from "firebase/firestore"; 
 import {
   X,
   ArrowRight,
@@ -23,19 +23,25 @@ export default function Navbar() {
   const [userSession, setUserSession] = useState<any>(null);
   const [brands, setBrands] = useState<any[]>([]); 
   const [isProductsHovered, setIsProductsHovered] = useState(false);
+// --- FETCH BRANDS FROM FIRESTORE (FILTERED BY WEBSITE) ---
+useEffect(() => {
+  // Nagdagdag tayo ng where condition para i-filter ang website
+  const q = query(
+    collection(db, "brand_name"), 
+    where("website", "==", "Disruptive Solutions Inc"), // <--- Ito ang filter
+    orderBy("title", "asc")
+  );
 
-  // --- FETCH BRANDS FROM FIRESTORE ---
-  useEffect(() => {
-    const q = query(collection(db, "brand_name"), orderBy("title", "asc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const brandData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setBrands(brandData);
-    });
-    return () => unsubscribe();
-  }, []);
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const brandData = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    setBrands(brandData);
+  });
+
+  return () => unsubscribe();
+}, []);
 
   const logActivity = async (actionName: string, targetPath?: string) => {
     if (typeof window !== "undefined" && targetPath) {
