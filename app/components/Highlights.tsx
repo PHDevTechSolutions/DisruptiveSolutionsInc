@@ -37,7 +37,7 @@ export default function Highlights({ products, addToQuote, quoteCart }: Highligh
                 {topProducts.map((product, index) => {
                     const isInCart = quoteCart.some((item) => item.id === product.id);
                     const firstGroup = product.technicalSpecs?.[0];
-                    
+
                     // Ang unang product ay gagawing malaki (Feature Card)
                     const isLarge = index === 0;
 
@@ -47,9 +47,8 @@ export default function Highlights({ products, addToQuote, quoteCart }: Highligh
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
-                            className={`${
-                                isLarge ? "md:col-span-8 md:row-span-2" : "md:col-span-4"
-                            } group/card relative bg-white border border-gray-100 rounded-[32px] overflow-hidden hover:shadow-2xl transition-all duration-700 flex flex-col`}
+                            className={`${isLarge ? "md:col-span-8 md:row-span-2" : "md:col-span-4"
+                                } group/card relative bg-white border border-gray-100 rounded-[32px] overflow-hidden hover:shadow-2xl transition-all duration-700 flex flex-col`}
                         >
                             {/* Product Badge */}
                             <div className="absolute top-4 left-4 z-40">
@@ -67,18 +66,25 @@ export default function Highlights({ products, addToQuote, quoteCart }: Highligh
                                     />
 
                                     {/* Specs Overlay (Kopya sa BrandsPage mo) */}
-                                    <motion.div 
-                                        initial={{ opacity: 0 }} 
-                                        whileHover={{ opacity: 1 }} 
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        whileHover={{ opacity: 1 }}
                                         className="absolute inset-0 bg-black/80 backdrop-blur-[4px] flex flex-col justify-center items-center p-6 opacity-0 group-hover/card:opacity-100 transition-all duration-500 z-30"
                                     >
                                         <p className="text-[9px] font-black text-[#d11a2a] uppercase tracking-widest mb-4 italic">Quick Overview</p>
+                                        {/* Specs Overlay - FIXED KEY WARNING HERE */}
                                         <table className="w-full max-w-[250px]">
                                             <tbody className="divide-y divide-white/10">
                                                 {firstGroup?.rows?.slice(0, 4).map((row: any, i: number) => (
-                                                    <tr key={i}>
-                                                        <td className="py-2 text-[8px] font-bold text-gray-400 uppercase italic">{row.name}</td>
-                                                        <td className="py-2 text-[9px] font-black text-white uppercase text-right">{row.value || "—"}</td>
+                                                    // Dati: <tr>
+                                                    // Ngayon: May unique key na gamit ang index o row name
+                                                    <tr key={`spec-row-${i}`}>
+                                                        <td className="py-2 text-[8px] font-bold text-gray-400 uppercase italic">
+                                                            {row.name}
+                                                        </td>
+                                                        <td className="py-2 text-[9px] font-black text-white uppercase text-right">
+                                                            {row.value || "—"}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -100,11 +106,10 @@ export default function Highlights({ products, addToQuote, quoteCart }: Highligh
 
                                 <button
                                     onClick={() => addToQuote(product)}
-                                    className={`w-full py-4 text-[10px] font-black uppercase rounded-2xl flex items-center justify-center gap-2 transition-all ${
-                                        isInCart 
-                                        ? "bg-green-600 text-white" 
-                                        : "bg-gray-900 text-white hover:bg-[#d11a2a] shadow-lg shadow-black/5"
-                                    }`}
+                                    className={`w-full py-4 text-[10px] font-black uppercase rounded-2xl flex items-center justify-center gap-2 transition-all ${isInCart
+                                            ? "bg-green-600 text-white"
+                                            : "bg-gray-900 text-white hover:bg-[#d11a2a] shadow-lg shadow-black/5"
+                                        }`}
                                 >
                                     {isInCart ? <><Check size={14} strokeWidth={3} /> Added to Quote</> : <><Plus size={14} strokeWidth={3} /> Add to Quote List</>}
                                 </button>

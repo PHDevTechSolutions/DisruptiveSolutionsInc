@@ -23,7 +23,9 @@ import {
   LayoutGrid,
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Filter,
+  Globe
 } from "lucide-react";
 
 // UI Components
@@ -55,8 +57,23 @@ export default function CategoryMaintenance() {
   const [editId, setEditId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [website, setWebsite] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
+  const [availableWebsites, setAvailableWebsites] = useState<any[]>([]);
+
+  // Filter States
+  const [filterWebsite, setFilterWebsite] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all"); // all, visible, hidden
+
+  useEffect(() => {
+    const qWeb = query(collection(db, "websites"), orderBy("name", "asc"));
+    const unsubscribe = onSnapshot(qWeb, (snapshot) => {
+      const webs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAvailableWebsites(webs);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // --- 1. FETCH DATA (REAL-TIME) ---
   useEffect(() => {
@@ -94,15 +111,17 @@ export default function CategoryMaintenance() {
     setEditId(null);
     setTitle("");
     setDescription("");
+    setWebsite("");
     setImageFile(null);
     setPreviewUrl("");
   };
 
-  // --- 3. EDIT CLICK FUNCTION (ETO ANG NAWALA KANINA) ---
+  // --- 3. EDIT CLICK FUNCTION ---
   const handleEditClick = (cat: any) => {
     setEditId(cat.id);
     setTitle(cat.title);
     setDescription(cat.description);
+    setWebsite(cat.website)
     setPreviewUrl(cat.imageUrl);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -136,6 +155,7 @@ export default function CategoryMaintenance() {
       const categoryData: any = {
         title: title.toUpperCase(),
         description,
+        website,
         imageUrl: finalImageUrl,
         updatedAt: serverTimestamp(),
       };
@@ -170,6 +190,31 @@ export default function CategoryMaintenance() {
     }
   };
 
+  // --- 7. FILTERING LOGIC ---
+  const filteredCategories = categories.filter(cat => {
+    // Website filter
+    const websiteMatch = filterWebsite === "all" || cat.website === filterWebsite;
+    
+    // Status filter
+    const statusMatch = 
+      filterStatus === "all" ? true :
+      filterStatus === "visible" ? cat.isActive !== false :
+      cat.isActive === false;
+    
+    return websiteMatch && statusMatch;
+  });
+
+  // Count statistics
+  const stats = {
+    total: categories.length,
+    visible: categories.filter(c => c.isActive !== false).length,
+    hidden: categories.filter(c => c.isActive === false).length,
+    byWebsite: availableWebsites.map(web => ({
+      name: web.name,
+      count: categories.filter(c => c.website === web.name).length
+    }))
+  };
+
   return (
     <div className="p-4 space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500">
       {/* Header */}
@@ -177,10 +222,104 @@ export default function CategoryMaintenance() {
         <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-100">
           <LayoutGrid className="text-white" size={24} />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900">Category Maintenance</h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Visibility & Classification Control</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+            Visibility & Classification Control • {filteredCategories.length} of {stats.total} categories
+          </p>
         </div>
+      </div>
+      {/* Filters */}
+      <div className="bg-white border border-slate-100 rounded-[32px] p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter size={16} className="text-blue-600" />
+          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Filter Categories</span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Website Filter */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 ml-1 flex items-center gap-1">
+              <Globe size={10} /> By Website
+            </label>
+            <select 
+              value={filterWebsite} 
+              onChange={(e) => setFilterWebsite(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-12 px-4 text-[11px] font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
+            >
+              <option value="all">All Websites ({stats.total})</option>
+              {availableWebsites.map((web) => {
+                const count = stats.byWebsite.find(s => s.name === web.name)?.count || 0;
+                return (
+                  <option key={web.id} value={web.name}>
+                    {web.name} ({count})
+                  </option>
+                );
+              })}
+              <option value="">Unassigned ({categories.filter(c => !c.website).length})</option>
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 ml-1 flex items-center gap-1">
+              <Eye size={10} /> By Visibility Status
+            </label>
+            <div className="flex gap-2">
+              {[
+                { value: "all", label: "All", count: stats.total },
+                { value: "visible", label: "Visible", count: stats.visible },
+                { value: "hidden", label: "Hidden", count: stats.hidden }
+              ].map((status) => (
+                <button
+                  key={status.value}
+                  onClick={() => setFilterStatus(status.value)}
+                  className={`flex-1 px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${
+                    filterStatus === status.value
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {status.label} <span className="ml-1 opacity-60">({status.count})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Active Filters Display */}
+        {(filterWebsite !== "all" || filterStatus !== "all") && (
+          <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-100">
+            <span className="text-[9px] font-black uppercase text-slate-400">Active Filters:</span>
+            {filterWebsite !== "all" && (
+              <div className="flex items-center gap-1 bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-black uppercase">
+                <Globe size={10} />
+                {filterWebsite || "Unassigned"}
+                <button onClick={() => setFilterWebsite("all")} className="ml-1 hover:bg-blue-100 rounded-full p-0.5">
+                  <X size={10} />
+                </button>
+              </div>
+            )}
+            {filterStatus !== "all" && (
+              <div className="flex items-center gap-1 bg-green-50 text-green-600 px-3 py-1 rounded-full text-[9px] font-black uppercase">
+                {filterStatus === "visible" ? <Eye size={10} /> : <EyeOff size={10} />}
+                {filterStatus}
+                <button onClick={() => setFilterStatus("all")} className="ml-1 hover:bg-green-100 rounded-full p-0.5">
+                  <X size={10} />
+                </button>
+              </div>
+            )}
+            <button 
+              onClick={() => {
+                setFilterWebsite("all");
+                setFilterStatus("all");
+              }}
+              className="text-[9px] font-black uppercase text-slate-400 hover:text-red-600 ml-2"
+            >
+              Clear All
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -205,14 +344,30 @@ export default function CategoryMaintenance() {
             </div>
 
             <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Assign Website</label>
+              <select 
+                value={website} 
+                onChange={(e) => setWebsite(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-12 px-4 text-[11px] font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
+              >
+                <option value="">Select Target Website</option>
+                {availableWebsites.map((web) => (
+                  <option key={web.id} value={web.name}>
+                    {web.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Image Preview</label>
-              <div onClick={() => document.getElementById('cat-img')?.click()} className="relative w-full h-44 bg-slate-50 rounded-[24px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center overflow-hidden cursor-pointer">
+              <div onClick={() => document.getElementById('cat-img')?.click()} className="relative w-full h-44 bg-slate-50 rounded-[24px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:border-blue-400 transition-all">
                 {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover" /> : <div className="text-slate-300 flex flex-col items-center"><ImageIcon size={32}/><span className="text-[9px] font-black uppercase mt-2">Upload</span></div>}
                 <input type="file" id="cat-img" hidden onChange={handleImageChange} accept="image/*" />
               </div>
             </div>
 
-            <Button type="submit" disabled={isSubmitLoading} className="w-full bg-slate-900 hover:bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] h-14">
+            <Button type="submit" disabled={isSubmitLoading} className="w-full bg-slate-900 hover:bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] h-14 transition-all">
               {isSubmitLoading ? <Loader2 className="animate-spin" /> : editId ? "Update Category" : "Save Category"}
             </Button>
           </form>
@@ -220,10 +375,20 @@ export default function CategoryMaintenance() {
 
         {/* --- GRID LIST --- */}
         <div className="lg:col-span-8">
-          {loading ? <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin" /></div> : (
+          {loading ? (
+            <div className="h-64 flex items-center justify-center">
+              <Loader2 className="animate-spin text-blue-600" size={32} />
+            </div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-slate-400">
+              <LayoutGrid size={48} className="opacity-20 mb-4" />
+              <p className="font-black uppercase text-sm">No categories found</p>
+              <p className="text-[10px] font-bold uppercase mt-2">Try adjusting your filters</p>
+            </div>
+          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {categories.map((cat) => (
-                <div key={cat.id} className={`group bg-white border border-slate-100 rounded-[32px] overflow-hidden transition-all duration-500 ${cat.isActive === false ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+              {filteredCategories.map((cat) => (
+                <div key={cat.id} className={`group bg-white border border-slate-100 rounded-[32px] overflow-hidden transition-all duration-500 hover:shadow-xl ${cat.isActive === false ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                   <div className="h-48 bg-slate-100 overflow-hidden relative">
                     <img src={cat.imageUrl || "https://via.placeholder.com/400x300"} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     
@@ -232,11 +397,18 @@ export default function CategoryMaintenance() {
                       {cat.isActive !== false ? <><Eye size={10}/> Visible</> : <><EyeOff size={10}/> Hidden</>}
                     </div>
 
+                    {/* Website Badge */}
+                    {cat.website && (
+                      <div className="absolute top-4 right-4 px-3 py-1 bg-blue-600 text-white rounded-full text-[8px] font-black uppercase flex items-center gap-1 shadow-lg">
+                        <Globe size={10}/> {cat.website}
+                      </div>
+                    )}
+
                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                      <Button onClick={() => handleEditClick(cat)} size="icon" className="bg-white text-slate-900 rounded-xl h-11 w-11"><Pencil size={18} /></Button>
+                      <Button onClick={() => handleEditClick(cat)} size="icon" className="bg-white text-slate-900 rounded-xl h-11 w-11 hover:scale-110 transition-transform"><Pencil size={18} /></Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button size="icon" className="bg-white text-red-600 rounded-xl h-11 w-11"><Trash2 size={18} /></Button>
+                          <Button size="icon" className="bg-white text-red-600 rounded-xl h-11 w-11 hover:scale-110 transition-transform"><Trash2 size={18} /></Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="rounded-[32px]">
                           <AlertDialogHeader>
@@ -259,7 +431,7 @@ export default function CategoryMaintenance() {
                         onClick={() => toggleVisibility(cat.id, cat.isActive)}
                         className={`text-[9px] font-black uppercase px-2 py-1 rounded-md transition-all ${cat.isActive !== false ? 'text-blue-600 hover:bg-blue-50' : 'text-slate-400 hover:bg-slate-100'}`}
                       >
-                        {cat.isActive !== false ? "Hide Category" : "Show Category"}
+                        {cat.isActive !== false ? "Hide" : "Show"}
                       </button>
                     </div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase line-clamp-2 leading-relaxed opacity-70">

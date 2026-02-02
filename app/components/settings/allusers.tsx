@@ -209,47 +209,62 @@ export default function AllUsers() {
         </CardContent>
       </Card>
 
-      {/* DELETE DIALOG (Same as before) */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="rounded-[40px] max-w-sm border-none shadow-2xl p-8 bg-white">
-          <DialogHeader className="space-y-4">
-            <div className="mx-auto w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center">
-              <AlertTriangle className="text-red-600 w-8 h-8" />
-            </div>
-            <div className="text-center">
-              <DialogTitle className="text-xl font-black uppercase tracking-tighter">Confirm Termination</DialogTitle>
-              <DialogDescription className="text-[10px] font-medium text-slate-500 uppercase mt-2">
-                Permanently removing <span className="font-bold text-slate-900">{userToDelete?.name}</span>
-              </DialogDescription>
-            </div>
-          </DialogHeader>
+{/* DELETE DIALOG */}
+<Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+  <DialogContent className="rounded-[40px] max-w-sm border-none shadow-2xl p-8 bg-white overflow-hidden">
+    
+    <DialogHeader className="flex flex-col items-center justify-center space-y-4">
+      <div className="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center">
+        <AlertTriangle className="text-red-600 w-8 h-8" />
+      </div>
+      <div className="text-center space-y-1">
+        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-slate-900">
+          Confirm Termination
+        </DialogTitle>
+        <DialogDescription className="text-[10px] font-medium text-slate-500 uppercase leading-relaxed">
+          Permanently removing <br />
+          <span className="font-bold text-red-600">{userToDelete?.name || "this user"}</span>
+        </DialogDescription>
+      </div>
+    </DialogHeader>
 
-          <div className="py-6 space-y-3">
-            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Admin Security Key</Label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input 
-                type="password"
-                placeholder="Required"
-                className="pl-11 h-14 rounded-2xl border-none bg-slate-100 font-bold focus-visible:ring-red-500"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-              />
-            </div>
-          </div>
+    <div className="py-6 space-y-2">
+      <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">
+        Admin Security Key
+      </Label>
+      <div className="relative">
+        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <Input 
+          type="password"
+          placeholder="ENTER KEY"
+          className="pl-11 h-14 rounded-2xl border-none bg-slate-100 font-bold focus-visible:ring-2 focus-visible:ring-red-500 transition-all placeholder:text-slate-300"
+          value={adminPassword}
+          onChange={(e) => setAdminPassword(e.target.value)}
+        />
+      </div>
+    </div>
 
-          <DialogFooter className="flex flex-col gap-3">
-            <Button 
-              onClick={handleConfirmDelete}
-              disabled={isDeleting || !adminPassword}
-              className="w-full bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase text-xs h-14"
-            >
-              {isDeleting ? <Loader2 className="animate-spin" /> : "Authorize Deletion"}
-            </Button>
-            <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)} className="w-full rounded-2xl text-[10px] font-bold uppercase text-slate-400">Cancel</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    {/* Ginamit ang flex-col sa footer para stacked ang buttons */}
+    <div className="flex flex-col gap-2">
+      <Button 
+        onClick={handleConfirmDelete}
+        disabled={isDeleting || !adminPassword}
+        className="w-full bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase text-xs h-14 shadow-lg shadow-red-200 transition-all active:scale-95 disabled:opacity-50"
+      >
+        {isDeleting ? <Loader2 className="animate-spin w-5 h-5" /> : "Authorize Deletion"}
+      </Button>
+      
+      <Button 
+        variant="ghost" 
+        onClick={() => setIsDeleteModalOpen(false)} 
+        className="w-full h-10 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:bg-slate-50"
+      >
+        Cancel Action
+      </Button>
+    </div>
+
+  </DialogContent>
+</Dialog>
     </div>
   )
 }

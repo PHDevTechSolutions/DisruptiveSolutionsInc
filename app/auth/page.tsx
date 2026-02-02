@@ -22,7 +22,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("warehouse"); 
+  const [role, setRole] = useState("customer"); 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +35,7 @@ export default function AuthPage() {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        const userDoc = await getDoc(doc(db, "adminaccount", user.uid));
+        const userDoc = await getDoc(doc(db, "customer_account", user.uid));
         
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -45,7 +45,7 @@ export default function AuthPage() {
             role: data.role,
             email: user.email
           }));
-          router.push("/admin-panel");
+          router.push("/portal");
         } else {
           throw new Error("UNAUTHORIZED: NO INTERNAL PROFILE FOUND.");
         }
@@ -62,15 +62,15 @@ export default function AuthPage() {
           fullName: fullName,
           email: email,
           role: role, // 'warehouse' or 'admin'
-          accessLevel: role === "admin" ? "full" : "staff",
+          accessLevel: role === "customer",
           status: "active",
           website: "disruptivesolutionsinc",
           createdAt: new Date().toISOString()
         };
 
-        await setDoc(doc(db, "adminaccount", user.uid), userData);
+        await setDoc(doc(db, "customer_account", user.uid), userData);
         localStorage.setItem("disruptive_admin_user", JSON.stringify(userData));
-        router.push("/admin-panel");
+        router.push("/auth");
       }
     } catch (err: any) {
       setError(err.message.toUpperCase());
@@ -111,13 +111,16 @@ export default function AuthPage() {
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                       <input required type="text" placeholder="FULL NAME" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-[10px] font-bold uppercase outline-none focus:border-[#d11a2a]" />
                     </div>
-                    <div className="relative">
-                      <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-                      <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full bg-[#1a1a1a] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-[10px] font-bold uppercase outline-none focus:border-[#d11a2a] appearance-none cursor-pointer">
-                        <option value="warehouse">Warehouse Staff</option>
-                        <option value="admin">Administrator</option>
-                      </select>
-                    </div>
+                   <div className="relative">
+  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+  <select 
+    value={role} 
+    onChange={(e) => setRole(e.target.value)} 
+    className="w-full bg-[#1a1a1a] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-[10px] font-bold uppercase outline-none focus:border-[#d11a2a] appearance-none cursor-pointer"
+  >
+    <option value="customer">Customer / Client</option>
+  </select>
+</div>
                   </>
                 )}
                 <div className="relative">

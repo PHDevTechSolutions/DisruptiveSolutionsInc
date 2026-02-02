@@ -212,7 +212,7 @@ useEffect(() => {
 }, [editData, customSections.length]); // Tinanggal natin ang customSections.length > 0 para mas clean
 
   // Siguraduhin na may 'setSeoData' at may 'slug' sa loob ng object
-  const [seoData, setSeoData] = useState({
+  const [seoDataState, setSeoData] = useState({
     title: editData?.seo?.title || "",
     description: editData?.seo?.description || "",
     slug: editData?.slug || "", // Idagdag ito para mawala yung 'Property slug does not exist'
@@ -269,7 +269,7 @@ useEffect(() => {
  // --- PUBLISH / UPDATE PRODUCT ---
 const handlePublish = async () => {
   // Check kung may productName at slug
-  if (!productName || !seoData.slug) return toast.error("Product Name and Slug are required!");
+  if (!productName || !seoDataState.slug) return toast.error("Product Name and Slug are required!");
   if (!mainImage && !existingMainImage) return toast.error("Main Image is missing!");
 
   setIsPublishing(true);
@@ -305,7 +305,7 @@ const handlePublish = async () => {
     const productPayload = {
       name: productName,
       shortDescription: shortDesc,
-      slug: seoData.slug,
+      slug: seoDataState.slug,
       sku,
       regularPrice: Number(regPrice) || 0,
       salePrice: Number(salePrice) || 0,
@@ -323,9 +323,9 @@ const handlePublish = async () => {
       websites: selectedWebs,
 
       seo: {
-        title: seoData.title || productName,
-        description: seoData.description,
-        canonical: seoData.canonical,
+        title: seoDataState.title || productName,
+        description: seoDataState.description,
+        canonical: seoDataState.canonical,
         lastUpdated: new Date().toISOString()
       },
 
@@ -365,59 +365,66 @@ const handlePublish = async () => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-slate-50 min-h-screen">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-6 bg-gradient-to-b from-white via-slate-50 to-white min-h-screen">
       {/* LEFT COLUMN */}
-      <div className="md:col-span-2 space-y-6">
-        <Card className="shadow-sm border-none ring-1 ring-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-700 font-black text-xs uppercase tracking-widest">
-              <AlignLeft className="w-4 h-4 text-blue-500" /> General Information
+      <div className="lg:col-span-2 space-y-8">
+        {/* HEADER */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-black text-slate-900 mb-2">{editData ? "Edit Product" : "Add New Product"}</h1>
+          <p className="text-slate-500 text-sm">Fill in the product details and media to publish</p>
+        </div>
+
+        <Card className="shadow-lg border-0 rounded-2xl overflow-hidden bg-white hover:shadow-xl transition-shadow">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-100 px-8 py-6">
+            <CardTitle className="flex items-center gap-3 text-slate-900 font-black text-sm uppercase tracking-wider">
+              <div className="w-2 h-2 rounded-full bg-blue-600"></div> General Information
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Product Name</Label>
-              <Input className="h-12 text-lg font-bold border-slate-200" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Enter product name..." />
+          <CardContent className="space-y-8 p-8">
+            <div className="space-y-3">
+              <Label className="text-[11px] font-black uppercase text-slate-600 tracking-tight">Product Name*</Label>
+              <Input className="h-12 text-base font-semibold border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0 bg-white" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Enter product name..." />
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Short Description</Label>
-              <Input className="h-12 text-sm border-slate-200" value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} placeholder="Short highlight of the product..." />
+            <div className="space-y-3">
+              <Label className="text-[11px] font-black uppercase text-slate-600 tracking-tight">Short Description</Label>
+              <Input className="h-12 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0 bg-white" value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} placeholder="Brief highlight of the product..." />
             </div>
 
             {/* SPECS BLOCKS */}
-            <div className="space-y-4">
+            <div className="space-y-6 pt-4 border-t-2 border-slate-100">
               {descBlocks.map((block, bIdx) => (
-                <div key={block.id} className="p-5 border-2 border-slate-100 rounded-2xl relative bg-white shadow-sm">
-                  <Input className="mb-4 h-8 text-[11px] font-black uppercase w-1/2 bg-slate-50 border-none" value={block.label} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].label = e.target.value; setDescBlocks(nb); }} />
-                  <div className="space-y-2">
+                <div key={block.id} className="p-6 border-2 border-slate-200 rounded-xl bg-gradient-to-br from-slate-50 to-white hover:border-blue-300 transition-colors">
+                  <Input className="mb-6 h-10 text-xs font-black uppercase w-full bg-white border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={block.label} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].label = e.target.value; setDescBlocks(nb); }} />
+                  <div className="space-y-3">
                     {block.rows.map((row, rIdx) => (
-                      <div key={rIdx} className="grid grid-cols-12 gap-2">
-                        <Input className="col-span-5 h-9 text-xs font-bold" value={row.name} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].rows[rIdx].name = e.target.value; setDescBlocks(nb); }} placeholder="e.g. Watts" />
-                        <Input className="col-span-6 h-9 text-xs" value={row.value} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].rows[rIdx].value = e.target.value; setDescBlocks(nb); }} placeholder="e.g. 50W" />
-                        <button onClick={() => { const nb = [...descBlocks]; nb[bIdx].rows = nb[bIdx].rows.filter((_, i) => i !== rIdx); setDescBlocks(nb); }} className="col-span-1 flex justify-center items-center"><Trash2 className="w-4 h-4 text-slate-300 hover:text-red-500" /></button>
+                      <div key={rIdx} className="grid grid-cols-12 gap-3 items-center">
+                        <Input className="col-span-5 h-10 text-xs font-semibold border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={row.name} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].rows[rIdx].name = e.target.value; setDescBlocks(nb); }} placeholder="e.g. Watts" />
+                        <Input className="col-span-6 h-10 text-xs border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={row.value} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].rows[rIdx].value = e.target.value; setDescBlocks(nb); }} placeholder="e.g. 50W" />
+                        <button onClick={() => { const nb = [...descBlocks]; nb[bIdx].rows = nb[bIdx].rows.filter((_, i) => i !== rIdx); setDescBlocks(nb); }} className="col-span-1 flex justify-center items-center hover:scale-110 transition-transform"><Trash2 className="w-5 h-5 text-slate-400 hover:text-red-500" /></button>
                       </div>
                     ))}
-                    <Button variant="outline" size="sm" className="w-full text-[10px] font-bold border-dashed border-2" onClick={() => { const nb = [...descBlocks]; nb[bIdx].rows.push({ name: "", value: "" }); setDescBlocks(nb); }}>+ ADD NEW ROW</Button>
+                    <Button variant="outline" size="sm" className="w-full text-xs font-bold border-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 rounded-lg h-10 bg-transparent" onClick={() => { const nb = [...descBlocks]; nb[bIdx].rows.push({ name: "", value: "" }); setDescBlocks(nb); }}>+ Add Row</Button>
                   </div>
                 </div>
               ))}
+              <Button variant="outline" size="sm" className="w-full text-[10px] font-bold border-dashed border-2 bg-transparent" onClick={() => { const nb = [...descBlocks]; nb.push({ id: Date.now(), label: "", rows: [{ name: "", value: "" }] }); setDescBlocks(nb); }}>+ ADD NEW ROW</Button>
             </div>
 
             {/* CATALOGS SECTION */}
-            <div className="space-y-4 pt-4 border-t border-slate-100">
-              <Label className="text-[11px] font-black uppercase text-slate-500">Catalogs & Manuals (PDF / Images)</Label>
-              <div className="grid grid-cols-1 gap-2">
+            <div className="space-y-5 pt-6 border-t-2 border-slate-100">
+              <Label className="text-[11px] font-black uppercase text-slate-700 tracking-wider">Catalogs & Manuals (PDF / Images)</Label>
+              <div className="grid grid-cols-1 gap-3">
                 {catalogs.map((cat, index) => (
-                  <div key={cat.id} className="border-2 border-dashed rounded-xl p-4 bg-slate-50 flex items-center justify-between group">
+                  <div key={cat.id} className="border-2 border-dashed border-slate-300 rounded-lg p-4 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between group hover:border-blue-400 transition-colors">
                     <label className="cursor-pointer flex-1">
                       {cat.file ? (
-                        <p className="text-xs font-bold text-green-600 flex items-center gap-2"><UploadCloud size={14} /> {cat.file.name}</p>
+                        <p className="text-xs font-bold text-emerald-600 flex items-center gap-2"><UploadCloud size={16} className="text-emerald-500" /> {cat.file.name}</p>
                       ) : cat.existingUrl ? (
-                        <a href={cat.existingUrl} target="_blank" className="text-xs font-bold text-blue-600 underline">View Current File ({index + 1})</a>
+                        <a href={cat.existingUrl} target="_blank" className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-2"><LinkIcon size={14} /> View File ({index + 1})</a>
                       ) : (
-                        <div className="flex items-center gap-2 text-slate-400">
-                          <Plus size={16} />
-                          <span className="text-[11px] font-bold uppercase">Attach New Catalog</span>
+                        <div className="flex items-center gap-3 text-slate-500">
+                          <Plus size={18} className="text-slate-400" />
+                          <span className="text-xs font-semibold uppercase">Attach Catalog</span>
                         </div>
                       )}
                       <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => {
@@ -425,15 +432,14 @@ const handlePublish = async () => {
                         setCatalogs(prev => {
                           const updated = [...prev];
                           updated[index] = { ...updated[index], file };
-                          // Pag nag-upload sa huling slot, dagdag ulit ng panibagong blank slot
                           if (index === prev.length - 1) updated.push({ id: Date.now() });
                           return updated;
                         });
                       }} />
                     </label>
                     {(cat.file || cat.existingUrl) && (
-                      <button onClick={() => setCatalogs(prev => prev.filter(c => c.id !== cat.id))} className="text-red-400 hover:text-red-600">
-                        <X size={16} />
+                      <button onClick={() => setCatalogs(prev => prev.filter(c => c.id !== cat.id))} className="text-slate-400 hover:text-red-500 transition-colors hover:scale-110 transform">
+                        <X size={18} />
                       </button>
                     )}
                   </div>
@@ -442,26 +448,26 @@ const handlePublish = async () => {
             </div>
 
             {/* GALLERY SECTION */}
-            <div className="space-y-4 pt-4 border-t border-slate-100">
-              <Label className="text-[11px] font-black uppercase text-slate-500">Gallery Images</Label>
+            <div className="space-y-5 pt-6 border-t-2 border-slate-100">
+              <Label className="text-[11px] font-black uppercase text-slate-700 tracking-wider">Gallery Images</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {/* Existing Images */}
                 {existingGalleryImages.map((url, index) => (
-                  <div key={`ex-${index}`} className="relative border-2 border-dashed rounded-xl p-1 bg-slate-50 h-28 group">
-                    <img src={url} className="object-contain h-full w-full rounded-lg" />
-                    <button onClick={() => setExistingGalleryImages(prev => prev.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"><X size={12} /></button>
+                  <div key={`ex-${index}`} className="relative border-2 border-slate-200 rounded-lg p-1 bg-white h-32 group overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <img src={url || "/placeholder.svg"} alt={`Gallery ${index}`} className="object-contain h-full w-full rounded" />
+                    <button onClick={() => setExistingGalleryImages(prev => prev.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 rounded-full p-1.5 text-white shadow-lg hover:scale-110 transition-transform"><X size={14} /></button>
                   </div>
                 ))}
                 {/* New Image Previews */}
                 {galleryImages.map((img, index) => (
-                  <div key={`new-${index}`} className="relative border-2 border-dashed rounded-xl p-1 bg-blue-50 h-28">
-                    <img src={URL.createObjectURL(img)} className="object-contain h-full w-full rounded-lg" />
-                    <button onClick={() => setGalleryImages(prev => prev.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"><X size={12} /></button>
+                  <div key={`new-${index}`} className="relative border-2 border-blue-300 rounded-lg p-1 bg-blue-50 h-32 group overflow-hidden shadow-sm">
+                    <img src={URL.createObjectURL(img) || "/placeholder.svg"} alt={`New gallery ${index}`} className="object-contain h-full w-full rounded" />
+                    <button onClick={() => setGalleryImages(prev => prev.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 rounded-full p-1.5 text-white shadow-lg hover:scale-110 transition-transform"><X size={14} /></button>
                   </div>
                 ))}
-                <label className="border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center h-28 cursor-pointer hover:bg-blue-50 transition-all text-blue-400">
-                  <Plus size={24} />
-                  <span className="text-[9px] font-black uppercase mt-1">Add Photo</span>
+                <label className="border-2 border-dashed border-blue-300 rounded-lg flex flex-col items-center justify-center h-32 cursor-pointer bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-all text-blue-500 group">
+                  <ImagePlus size={28} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold uppercase mt-2">Add Photo</span>
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) setGalleryImages(prev => [...prev, file]); }} />
                 </label>
               </div>
@@ -473,36 +479,36 @@ const handlePublish = async () => {
   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
     {/* Existing QR Images (Mula sa Database) */}
     {existingQrProducts.map((url: string, index: number) => (
-      <div key={`ex-qr-${index}`} className="relative border-2 border-dashed rounded-xl p-1 bg-slate-50 h-28 group">
-        <img src={url} className="object-contain h-full w-full rounded-lg" alt="QR Product" />
+      <div key={`ex-qr-${index}`} className="relative border-2 border-slate-200 rounded-lg p-1 bg-white h-32 group overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+        <img src={url || "/placeholder.svg"} className="object-contain h-full w-full rounded" alt="QR Product" />
         <button 
           type="button"
           onClick={() => setExistingQrProducts((prev: string[]) => prev.filter((_, i) => i !== index))} 
-          className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"
+          className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 rounded-full p-1.5 text-white shadow-lg hover:scale-110 transition-transform"
         >
-          <X size={12} />
+          <X size={14} />
         </button>
       </div>
     ))}
 
     {/* New QR Image Previews (Yung kakapili lang sa Folder) */}
     {qrProducts.map((img: File, index: number) => (
-      <div key={`new-qr-${index}`} className="relative border-2 border-dashed rounded-xl p-1 bg-emerald-50 h-28 border-emerald-100">
-        <img src={URL.createObjectURL(img)} className="object-contain h-full w-full rounded-lg" alt="New QR Preview" />
+      <div key={`new-qr-${index}`} className="relative border-2 border-emerald-300 rounded-lg p-1 bg-emerald-50 h-32 overflow-hidden shadow-sm">
+        <img src={URL.createObjectURL(img) || "/placeholder.svg"} className="object-contain h-full w-full rounded" alt="New QR Preview" />
         <button 
           type="button"
           onClick={() => setQrProducts((prev: File[]) => prev.filter((_, i) => i !== index))} 
-          className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white shadow-lg"
+          className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 rounded-full p-1.5 text-white shadow-lg hover:scale-110 transition-transform"
         >
-          <X size={12} />
+          <X size={14} />
         </button>
       </div>
     ))}
 
     {/* Upload Trigger */}
-    <label className="border-2 border-dashed border-emerald-200 rounded-xl flex flex-col items-center justify-center h-28 cursor-pointer hover:bg-emerald-50 transition-all text-emerald-500">
-      <QrCode size={24} />
-      <span className="text-[9px] font-black uppercase mt-1">Upload QR Pic</span>
+    <label className="border-2 border-dashed border-emerald-300 rounded-lg flex flex-col items-center justify-center h-32 cursor-pointer bg-gradient-to-br from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 transition-all text-emerald-600 group">
+      <QrCode size={28} className="group-hover:scale-110 transition-transform" />
+      <span className="text-xs font-bold uppercase mt-2">Upload QR Image</span>
       <input 
         type="file" 
         accept="image/*" 
@@ -516,66 +522,76 @@ const handlePublish = async () => {
   </div>
 </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-              <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Regular Price</Label><Input className="h-10 text-xs font-bold" value={regPrice} onChange={(e) => setRegPrice(e.target.value)} /></div>
-              <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Sale Price</Label><Input className="h-10 text-xs font-bold text-red-500" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} /></div>
-              <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">SKU / Model Number</Label><Input className="h-10 text-xs font-bold" value={sku} onChange={(e) => setSku(e.target.value)} /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-6 border-t-2 border-slate-100">
+              <div className="space-y-3">
+                <Label className="text-[11px] font-black uppercase text-slate-700 tracking-tight">Regular Price</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-3 text-slate-500 font-bold">₱</span>
+                  <Input className="h-11 pl-7 text-sm font-bold border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={regPrice} onChange={(e) => setRegPrice(e.target.value)} placeholder="0.00" />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[11px] font-black uppercase text-slate-700 tracking-tight">Sale Price</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-3 text-slate-500 font-bold">₱</span>
+                  <Input className="h-11 pl-7 text-sm font-bold text-emerald-600 border-2 border-emerald-300 rounded-lg focus:border-emerald-500 focus:ring-0" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[11px] font-black uppercase text-slate-700 tracking-tight">SKU / Model</Label>
+                <Input className="h-11 text-sm font-bold border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g., SKU-001" />
+              </div>
             </div>
           </CardContent>
         </Card>
-<Card className="shadow-sm border-none ring-1 ring-slate-200">
-  <CardHeader className="border-b border-slate-50">
-    <CardTitle className="flex items-center gap-2 text-slate-700 font-black text-xs uppercase tracking-widest">
-      <AlignLeft className="w-4 h-4 text-blue-500" /> SEO Settings
+<Card className="shadow-lg border-0 rounded-2xl overflow-hidden bg-white sticky top-8">
+  <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-slate-100 px-6 py-6">
+    <CardTitle className="flex items-center gap-3 text-slate-900 font-black text-sm uppercase tracking-wider">
+      <div className="w-2 h-2 rounded-full bg-emerald-600"></div> SEO Settings
     </CardTitle>
   </CardHeader>
 
-  <CardContent className="p-6 space-y-5">
+  <CardContent className="p-6 space-y-6">
     {/* --- INPUT SECTION --- */}
-    <div className="space-y-4 border-b border-slate-100 pb-6">
-      <div className="space-y-1.5">
-        <label className="text-slate-500 font-bold text-xs uppercase">SEO Title</label>
+    <div className="space-y-5 border-b border-slate-100 pb-6">
+      <div className="space-y-2.5">
+        <label className="text-slate-700 font-bold text-xs uppercase tracking-tight">SEO Title</label>
         <input
           type="text"
-          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-slate-700"
-          value={seoData.title}
-          onChange={(e) => setSeoData({ ...seoData, title: e.target.value })}
+          className="w-full px-4 py-2.5 bg-white border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:ring-0 outline-none text-slate-700 text-sm font-medium"
+          value={seoDataState.title}
+          onChange={(e) => setSeoData({ ...seoDataState, title: e.target.value })}
           placeholder="Product name for Google"
         />
       </div>
 
-     <div className="space-y-1.5">
-  <label className="text-slate-500 font-bold text-xs uppercase flex justify-between">
+     <div className="space-y-2.5">
+  <label className="text-slate-700 font-bold text-xs uppercase tracking-tight flex items-center gap-2">
     URL Slug
-    <span className="text-[10px] text-amber-600 normal-case font-medium">
-      Forward slash (/) is not allowed
-    </span>
+    <span className="text-[9px] text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded">No slashes</span>
   </label>
   <input
     type="text"
-    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-[#d11a2a] font-mono text-sm"
-    value={seoData.slug}
+    className="w-full px-4 py-2.5 bg-white border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:ring-0 outline-none text-slate-900 font-mono text-sm"
+    value={seoDataState.slug}
     onChange={(e) => {
-      // 1. Convert to lowercase
-      // 2. Remove all "/" characters globally (prevents breakage in routing)
-      // 3. Replace spaces with hyphens (-)
       const sanitizedValue = e.target.value
         .toLowerCase()
         .replace(/\//g, "") 
         .replace(/\s+/g, "-");
 
-      setSeoData({ ...seoData, slug: sanitizedValue });
+      setSeoData({ ...seoDataState, slug: sanitizedValue });
     }}
-    placeholder="Example: downlight-pro-?v=1"
+    placeholder="e.g., downlight-pro-v1"
   />
 </div>
-      <div className="space-y-1.5">
-        <label className="text-slate-500 font-bold text-xs uppercase">Meta Description</label>
+      <div className="space-y-2.5">
+        <label className="text-slate-700 font-bold text-xs uppercase tracking-tight">Meta Description</label>
         <textarea
           rows={3}
-          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 text-sm"
-          value={seoData.description}
-          onChange={(e) => setSeoData({ ...seoData, description: e.target.value })}
+          className="w-full px-4 py-2.5 bg-white border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:ring-0 outline-none text-slate-700 text-sm font-medium resize-none"
+          value={seoDataState.description}
+          onChange={(e) => setSeoData({ ...seoDataState, description: e.target.value })}
           placeholder="Brief summary for search results..."
         />
       </div>
@@ -615,7 +631,7 @@ const handlePublish = async () => {
           </div>
           <div className="overflow-hidden">
             <p className="text-[12px] text-[#202124] leading-tight font-medium">Disruptive Solutions Inc</p>
-            <p className="text-[11px] text-[#4d5156] truncate">disruptive-solutions-inc.vercel.app › {selectedBrands || '...'} › {seoData.slug || '...'}</p>
+            <p className="text-[11px] text-[#4d5156] truncate">disruptive-solutions-inc.vercel.app › {selectedBrands || '...'} › {seoDataState.slug || '...'}</p>
           </div>
         </div>
 
@@ -623,21 +639,21 @@ const handlePublish = async () => {
   <div className="flex-1">
     {/* SEO TITLE LINK - Clickable at safe sa Array Error */}
     <a
-      href={`http://localhost:3000/${selectedBrands[0]?.toLowerCase() || 'brand'}/${seoData.slug}`}
+      href={`http://localhost:3000/${selectedBrands[0]?.toLowerCase() || 'brand'}/${seoDataState.slug}`}
       target="_blank"
       rel="noopener noreferrer"
       className="text-[18px] text-[#1a0dab] hover:underline cursor-pointer leading-tight mb-1 line-clamp-2 font-medium block"
     >
-      {seoData.title || "Enter an SEO Title..."}
+      {seoDataState.title || "Enter an SEO Title..."}
     </a>
     <p className="text-[13px] text-[#4d5156] line-clamp-3 leading-relaxed">
-      {seoData.description || "Enter a meta description to see how it looks here. This text will help customers find your product on Google."}
+      {seoDataState.description || "Enter a meta description to see how it looks here. This text will help customers find your product on Google."}
     </p>
   </div>
   
   {/* THUMBNAIL PREVIEW - Ginawa nating clickable din */}
   <a 
-    href={`http://localhost:3000//${selectedBrands[0]?.toLowerCase() || 'brand'}/${seoData.slug}`}
+    href={`http://localhost:3000/${selectedBrands[0]?.toLowerCase() || 'brand'}/${seoDataState.slug}`}
     target="_blank"
     rel="noopener noreferrer"
     className="w-[104px] h-[104px] flex-shrink-0 bg-slate-50 rounded-lg overflow-hidden border border-slate-100 relative group block"
@@ -669,14 +685,14 @@ const handlePublish = async () => {
       </div>
 
       {/* RIGHT COLUMN */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Main Featured Image */}
-        <Card className="border-none ring-1 ring-slate-200 overflow-hidden shadow-sm">
-          <CardHeader className="bg-slate-50/50 border-b py-3 text-center"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Main Product Image</CardTitle></CardHeader>
-          <CardContent className="pt-6">
-            <Label htmlFor="main-file" className="cursor-pointer">
-              <div className="aspect-square border-2 border-dashed rounded-2xl flex flex-col items-center justify-center hover:bg-blue-50/30 transition-all overflow-hidden bg-white border-slate-200">
-                {mainImage ? <img src={URL.createObjectURL(mainImage)} className="w-full h-full object-contain p-2" /> : existingMainImage ? <img src={existingMainImage} className="w-full h-full object-contain p-2" /> : <div className="text-center"><ImagePlus className="w-12 h-12 mb-2 text-blue-500 mx-auto opacity-30" /><span className="text-[10px] font-black uppercase text-slate-400 block">Click to Upload</span></div>}
+        <Card className="border-0 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow bg-white">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-100 px-6 py-4"><CardTitle className="text-[11px] font-black uppercase text-slate-900 tracking-wider">Main Product Image</CardTitle></CardHeader>
+          <CardContent className="pt-8 pb-6">
+            <Label htmlFor="main-file" className="cursor-pointer block group">
+              <div className="aspect-square border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center hover:bg-blue-50 hover:border-blue-400 transition-all overflow-hidden bg-white group-hover:ring-2 group-hover:ring-blue-200">
+                {mainImage ? <img src={URL.createObjectURL(mainImage) || "/placeholder.svg"} alt="Main" className="w-full h-full object-contain p-3" /> : existingMainImage ? <img src={existingMainImage || "/placeholder.svg"} alt="Main" className="w-full h-full object-contain p-3" /> : <div className="text-center"><ImagePlus className="w-14 h-14 mb-3 text-blue-400 mx-auto opacity-40 group-hover:scale-110 transition-transform" /><span className="text-xs font-bold uppercase text-slate-500 block">Click to Upload</span></div>}
               </div>
               <input type="file" id="main-file" className="hidden" onChange={(e) => setMainImage(e.target.files?.[0] || null)} />
             </Label>
@@ -684,8 +700,8 @@ const handlePublish = async () => {
         </Card>
 
         {/* Classification Sidebar */}
-        <Card className="border-none ring-1 ring-slate-200 shadow-sm overflow-hidden">
-          <CardHeader className="bg-slate-50/50 border-b py-3 text-center"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Classification</CardTitle></CardHeader>
+        <Card className="border-0 rounded-2xl shadow-lg bg-white overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-slate-100 px-6 py-4"><CardTitle className="text-[11px] font-black uppercase text-slate-900 tracking-wider">Classification</CardTitle></CardHeader>
           <CardContent className="space-y-6 pt-6">
             <SidebarSection
               label="Target Website"
@@ -743,7 +759,7 @@ const handlePublish = async () => {
               ))}
 
               {!isAddingNewSection ? (
-                <Button variant="outline" className="w-full h-10 border-dashed border-2 rounded-xl text-[10px] font-black text-slate-400 hover:text-blue-500" onClick={() => setIsAddingNewSection(true)}>+ ADD CUSTOM SECTION</Button>
+                <Button variant="outline" className="w-full h-10 border-dashed border-2 rounded-xl text-[10px] font-black text-slate-400 hover:text-blue-500 bg-transparent" onClick={() => setIsAddingNewSection(true)}>+ ADD CUSTOM SECTION</Button>
               ) : (
                 <div className="p-3 bg-white rounded-2xl border-2 border-blue-100 shadow-lg animate-in zoom-in duration-200">
                   <Input placeholder="SECTION TITLE..." className="h-8 text-[10px] font-black rounded-lg border-none bg-slate-50 uppercase" value={newSectionTitle} onChange={e => setNewSectionTitle(e.target.value)} />
@@ -758,8 +774,12 @@ const handlePublish = async () => {
         </Card>
 
         {/* Action Button */}
-        <Button disabled={isPublishing} onClick={handlePublish} className="w-full bg-[#d11a2a] hover:bg-[#b01622] h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-red-200 transition-all active:scale-95">
-          {isPublishing ? <><Loader2 className="animate-spin mr-2" /> Processing...</> : editData ? "Update Product" : "Publish Product"}
+        <Button 
+          disabled={isPublishing} 
+          onClick={handlePublish} 
+          className="w-full bg-gradient-to-r from-[#d11a2a] to-[#b01622] hover:from-[#b01622] hover:to-[#901220] h-14 rounded-xl font-black uppercase tracking-widest text-white shadow-lg hover:shadow-xl transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed text-base"
+        >
+          {isPublishing ? <React.Fragment><Loader2 className="animate-spin mr-3 w-5 h-5" /> Processing...</React.Fragment> : editData ? "✓ Update Product" : "✓ Publish Product"}
         </Button>
       </div>
     </div>

@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import BroadcastDialog from "../BroadcastDialog";
 
+
 interface Inquiry {
     id: string;
     fullName: string;
@@ -21,6 +22,7 @@ interface Inquiry {
     message: string;
     submittedAt: any;
     status?: string; // Idinagdag natin ito para sa Read/Unread
+    website?: string; // Added website field
 }
 
 export default function CustomerInquiries() {
@@ -28,6 +30,11 @@ export default function CustomerInquiries() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [selectedWebsite, setSelectedWebsite] = useState<string>("all");
+    const [selectedStatus, setSelectedStatus] = useState<string>("all");
+    const [availableWebsites, setAvailableWebsites] = useState<any[]>([]);
+    const itemsPerPage = 10;
 
     const COLLECTION_NAME = "inquiries"; // Siguraduhing tugma sa Firebase mo
 
@@ -41,6 +48,16 @@ export default function CustomerInquiries() {
             })) as Inquiry[];
             setInquiries(data);
             setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    // --- FETCH WEBSITES ---
+    useEffect(() => {
+        const qWeb = query(collection(db, "websites"), orderBy("name", "asc"));
+        const unsubscribe = onSnapshot(qWeb, (snapshot) => {
+            const webs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAvailableWebsites(webs);
         });
         return () => unsubscribe();
     }, []);
@@ -73,20 +90,44 @@ export default function CustomerInquiries() {
             }
         }
     };
+const formatFullDate = (timestamp: any) => {
+    if (!timestamp) return "---";
+    try {
+        // Gagamit tayo ng toLocaleString para kasama ang time
+        return timestamp.toDate().toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true // Para sa AM/PM format
+        });
+    } catch (e) { 
+        return "Invalid Date"; 
+    }
+};
 
-    const formatFullDate = (timestamp: any) => {
-        if (!timestamp) return "---";
-        try {
-            return timestamp.toDate().toLocaleDateString('en-US', { 
-                month: 'short', day: 'numeric', year: 'numeric' 
-            });
-        } catch (e) { return "Invalid Date"; }
-    };
+    const filteredInquiries = inquiries.filter(item => {
+        const matchesSearch = item.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.email?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesWebsite = selectedWebsite === "all" || item.website === selectedWebsite;
+        const matchesStatus = selectedStatus === "all" || item.status === selectedStatus;
+        
+        return matchesSearch && matchesWebsite && matchesStatus;
+    });
 
-    const filteredInquiries = inquiries.filter(item => 
-        item.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    // Pagination
+    const totalPages = Math.ceil(filteredInquiries.length / itemsPerPage);
+    const paginatedInquiries = filteredInquiries.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
     );
+
+    // Reset to page 1 when filters change
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedWebsite, selectedStatus]);
 
     if (loading) return (
         <div className="flex items-center justify-center h-64 text-gray-400 font-bold uppercase tracking-widest text-xs">
@@ -114,12 +155,45 @@ export default function CustomerInquiries() {
                     />
                 </div>
             </div>
-            <BroadcastDialog/>
+
+            {/* Filter Section */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                <BroadcastDialog/>
+                {/* Status Filter */}
+                <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="px-4 py-3 bg-white border border-gray-100 rounded-xl font-medium text-sm outline-none focus:ring-2 focus:ring-[#d11a2a]/10 cursor-pointer"
+                >
+                    <option value="all">All Status</option>
+                    <option value="unread">Unread</option>
+                    <option value="read">Read</option>
+                </select>
+
+                {/* Website Filter */}
+                <select
+                    value={selectedWebsite}
+                    onChange={(e) => setSelectedWebsite(e.target.value)}
+                    className="px-4 py-3 bg-white border border-gray-100 rounded-xl font-medium text-sm outline-none focus:ring-2 focus:ring-[#d11a2a]/10 cursor-pointer"
+                >
+                    <option value="all">All Websites</option>
+                    {availableWebsites.map((website) => (
+                        <option key={website.id} value={website.name || website.id}>
+                            {website.name || website.id}
+                        </option>
+                    ))}
+                </select>
+
+                {/* Results Count */}
+                <div className="flex items-center justify-center px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-gray-600">
+                    {filteredInquiries.length} result{filteredInquiries.length !== 1 ? 's' : ''}
+                </div>
+            </div>
 
             {/* Inquiries List */}
             <div className="grid grid-cols-1 gap-4">
                 <AnimatePresence mode="popLayout">
-                    {filteredInquiries.map((item) => (
+                    {paginatedInquiries.map((item) => (
                         <motion.div
                             key={item.id}
                             layout
@@ -135,47 +209,64 @@ export default function CustomerInquiries() {
                             {item.status !== "read" && (
                                 <span className="absolute top-6 right-6 w-2 h-2 bg-[#d11a2a] rounded-full animate-pulse" />
                             )}
-
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                                <div className="flex items-start gap-5">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-                                        item.status !== "read" ? "bg-red-50 text-[#d11a2a]" : "bg-gray-50 text-gray-400"
-                                    }`}>
-                                        <User size={24} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <h3 className="text-lg font-black text-gray-900 leading-none">{item.fullName}</h3>
-                                        <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase">
-                                            <Calendar size={12} /> {formatFullDate(item.submittedAt)}
-                                        </span>
-                                    </div>
+                            {/* Inquiry Details */}
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-lg font-semibold">{item.fullName}</h3>
+                                    <p className="text-sm text-gray-600">Submitted: {formatFullDate(item.submittedAt)}</p>
                                 </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-                                    <div className="space-y-1">
-                                        <p className="text-xs font-bold text-gray-600 flex items-center gap-2">
-                                            <Mail size={12} className="text-gray-400"/> {item.email}
-                                        </p>
-                                        <p className="text-xs font-bold text-gray-600 flex items-center gap-2">
-                                            <Phone size={12} className="text-gray-400"/> {item.phone}
-                                        </p>
-                                    </div>
-                                    <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 hidden md:block">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Preview:</p>
-                                        <p className="text-xs text-gray-500 line-clamp-1 italic">"{item.message}"</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <button onClick={(e) => deleteInquiry(item.id, e)} className="p-3 bg-gray-50 text-gray-400 hover:text-red-500 rounded-xl transition-colors">
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
+                                <button onClick={(e) => deleteInquiry(item.id, e)}>
+                                    <Trash2 className="text-gray-400 hover:text-[#d11a2a]" size={20} />
+                                </button>
                             </div>
                         </motion.div>
                     ))}
                 </AnimatePresence>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between gap-4 mt-6 flex-wrap">
+                    <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="px-6 py-3 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-700 disabled:text-gray-300 disabled:cursor-not-allowed hover:bg-gray-50 disabled:hover:bg-white transition-all"
+                    >
+                        Previous
+                    </button>
+
+                    <div className="flex items-center gap-2 flex-wrap justify-center">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
+                                    currentPage === page
+                                        ? "bg-[#d11a2a] text-white"
+                                        : "bg-white border border-gray-100 text-gray-700 hover:border-[#d11a2a]/30"
+                                }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-6 py-3 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-700 disabled:text-gray-300 disabled:cursor-not-allowed hover:bg-gray-50 disabled:hover:bg-white transition-all"
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
+
+            {/* Info Text */}
+            {filteredInquiries.length > 0 && (
+                <div className="text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredInquiries.length)} of {filteredInquiries.length} inquiries
+                </div>
+            )}
 
             {/* --- MODAL DIALOG --- */}
             <AnimatePresence>

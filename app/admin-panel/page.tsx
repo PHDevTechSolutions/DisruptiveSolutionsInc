@@ -7,10 +7,10 @@ import { AllProducts } from "../components/products/AllProducts"
 import AddNewProduct from "../components/products/AddnewProduct";
 import InquiriesPanel from "../components/inquiries/QuoteInquiries"
 import CareersManager from "../components/pages/CareersManager"
-import BlogManager from "../components/pages/BlogManager" 
+import BlogManager from "../components/pages/BlogManager"
 import ApplicationInquiries from "../components/inquiries/JobApplication"
-import CustomerInquiries from "../components/inquiries/CustomerInquiries" 
-import Quotation from "../components/inquiries/Quotation" 
+import CustomerInquiries from "../components/inquiries/CustomerInquiries"
+import Quotation from "../components/inquiries/Quotation"
 import Categories from "../components/products/Category";
 import Application from "../components/products/Application";
 import CatalogManager from "../components/pages/CatalogManager"
@@ -18,12 +18,13 @@ import ProjectManager from "../components/pages/ProjectManager"
 import BrandsManager from "../components/pages/BrandsManager"
 import PartnersManager from "../components/pages/PartnersManager"
 import Reviews from "../components/products/Reviews";
-import  Activity from "../components/reports/ActivityLogs"
+import Activity from "../components/reports/ActivityLogs"
 import HomePopup from "../components/pages/HomePage"
-import ApplicationNotif  from "../components/products/ApplicationNotif"
-import { Messenger } from "../components/inquiries/Messenger" 
+import ApplicationNotif from "../components/products/ApplicationNotif"
+import { Messenger } from "../components/inquiries/Messenger"
 import ChangePassword from "../components/settings/changepassword"
 import AllUsers from "../components/settings/allusers"
+import FAQEditor from "../components/pages/FaqSettings"
 
 import {
   Breadcrumb,
@@ -43,7 +44,7 @@ export default function Page() {
   const [activeView, setActiveView] = useState("All Product")
 
   // Tama na ang type definition dito para mawala ang Error 7006
-  const handleNavigate = (view: string) => { 
+  const handleNavigate = (view: string) => {
     setActiveView(view)
   }
 
@@ -58,39 +59,41 @@ export default function Page() {
       case "Add new product":
         return <AddNewProduct />
       case "Reviews":
-        return <Reviews/> 
+        return <Reviews />
       case "Quotation":
         return <Quotation />
-      case "Careers": 
+      case "Careers":
         return <CareersManager />
-      case "Projects": 
+      case "Projects":
         return <ProjectManager />
-      case "Catalog": 
+      case "Catalog":
         return <CatalogManager />
-      case "Brands": 
+      case "Brands":
         return <BrandsManager />
-      case "Messenger": 
-        return <Messenger/>
-      case "Partners": 
+      case "Messenger":
+        return <Messenger />
+      case "Partners":
         return <PartnersManager />
-       case "Notification": 
+      case "Notification":
         return <ApplicationNotif />
-      case "Customer Inquiries": 
+      case "Customer Inquiries":
         return <CustomerInquiries />
-      case "Application": 
+      case "Application":
         return <Application />
-      case "HomePopup": 
-        return <HomePopup/>
-      case "Activity logs": 
-        return <Activity/>
-      case "All Blogs": 
+      case "HomePopup":
+        return <HomePopup />
+      case "Activity logs":
+        return <Activity />
+      case "All Blogs":
         return <BlogManager />
-      case "Category": 
+      case "Category":
         return <Categories />
       case "Change Password":
         return <ChangePassword />
-              case "All Users":
+      case "All Users":
         return <AllUsers />
+      case "Faq Settings":
+        return <FAQEditor />
       default:
         return <AllProducts />
     }
@@ -100,7 +103,7 @@ export default function Page() {
     <SidebarProvider>
       {/* I-pass ang handleNavigate function */}
       <AppSidebar onNavigate={handleNavigate} />
-      
+
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

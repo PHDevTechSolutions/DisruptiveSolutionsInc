@@ -36,6 +36,10 @@ export default function ApplicationInquiries() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedApp, setSelectedApp] = useState<any | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [selectedWebsite, setSelectedWebsite] = useState<string>("all");
+    const [selectedStatus, setSelectedStatus] = useState<string>("all");
+    const itemsPerPage = 10;
 
     useEffect(() => {
         const q = query(
@@ -101,10 +105,30 @@ export default function ApplicationInquiries() {
         }
     };
 
-    const filteredApps = applications.filter(app =>
-        app.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredApps = applications.filter(app => {
+        const matchesSearch = app.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesWebsite = selectedWebsite === "all" || app.website === selectedWebsite;
+        const matchesStatus = selectedStatus === "all" || app.status === selectedStatus;
+        
+        return matchesSearch && matchesWebsite && matchesStatus;
+    });
+
+    // Get unique websites from applications
+    const websites = ["all", ...Array.from(new Set(applications.map(app => app.website).filter(Boolean)))];
+
+    // Pagination
+    const totalPages = Math.ceil(filteredApps.length / itemsPerPage);
+    const paginatedApps = filteredApps.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
     );
+
+    // Reset to page 1 when filters change
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedWebsite, selectedStatus]);
 
     if (loading) return (
         <div className="flex items-center justify-center h-64 text-gray-400 font-bold uppercase tracking-widest text-xs">
@@ -138,10 +162,43 @@ export default function ApplicationInquiries() {
             
             <BroadcastDialog/>
 
+            {/* Filter Section */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                {/* Status Filter */}
+                <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="px-4 py-3 bg-white border border-gray-100 rounded-xl font-medium text-sm outline-none focus:ring-2 focus:ring-[#d11a2a]/10 cursor-pointer"
+                >
+                    <option value="all">All Status</option>
+                    <option value="unread">Unread</option>
+                    <option value="read">Read</option>
+                </select>
+
+                {/* Website Filter */}
+                <select
+                    value={selectedWebsite}
+                    onChange={(e) => setSelectedWebsite(e.target.value)}
+                    className="px-4 py-3 bg-white border border-gray-100 rounded-xl font-medium text-sm outline-none focus:ring-2 focus:ring-[#d11a2a]/10 cursor-pointer"
+                >
+                    <option value="all">All Websites</option>
+                    {websites.slice(1).map((website) => (
+                        <option key={website} value={website}>
+                            {website}
+                        </option>
+                    ))}
+                </select>
+
+                {/* Results Count */}
+                <div className="flex items-center justify-center px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-gray-600">
+                    {filteredApps.length} result{filteredApps.length !== 1 ? 's' : ''}
+                </div>
+            </div>
+
             {/* List Section */}
             <div className="grid grid-cols-1 gap-4">
                 <AnimatePresence mode="popLayout">
-                    {filteredApps.map((app) => (
+                    {paginatedApps.map((app) => (
                         <motion.div
                             key={app.id}
                             layout
@@ -198,12 +255,56 @@ export default function ApplicationInquiries() {
                         </motion.div>
                     ))}
                 </AnimatePresence>
-                {filteredApps.length === 0 && (
+                {paginatedApps.length === 0 && (
                     <div className="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-200">
                         <p className="text-xs font-black text-gray-300 uppercase tracking-[0.3em]">No applications found</p>
                     </div>
                 )}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between gap-4 mt-6 flex-wrap">
+                    <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="px-6 py-3 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-700 disabled:text-gray-300 disabled:cursor-not-allowed hover:bg-gray-50 disabled:hover:bg-white transition-all"
+                    >
+                        ← Previous
+                    </button>
+
+                    <div className="flex items-center gap-2 flex-wrap justify-center">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
+                                    currentPage === page
+                                        ? "bg-[#d11a2a] text-white"
+                                        : "bg-white border border-gray-100 text-gray-700 hover:border-[#d11a2a]/30"
+                                }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-6 py-3 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-700 disabled:text-gray-300 disabled:cursor-not-allowed hover:bg-gray-50 disabled:hover:bg-white transition-all"
+                    >
+                        Next →
+                    </button>
+                </div>
+            )}
+
+            {/* Info Text */}
+            {filteredApps.length > 0 && (
+                <div className="text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredApps.length)} of {filteredApps.length} applications
+                </div>
+            )}
 
             {/* Modal/Dialog Section */}
             <AnimatePresence>

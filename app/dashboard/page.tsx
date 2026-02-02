@@ -87,11 +87,6 @@ export default function DisruptiveLandingPage() {
     return () => unsubscribe();
   }, []);
 
-  
-
-
-
-
 
   const LOGO_RED = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-red-scaled.png";
   const LOGO_WHITE = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
@@ -166,12 +161,22 @@ export default function DisruptiveLandingPage() {
   const [brands, setBrands] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const q = query(collection(db, "brand_name"), orderBy("createdAt", "desc"));
+useEffect(() => {
+    // 1. Gumawa ng query na may 'where' filter
+    const q = query(
+      collection(db, "brand_name"), 
+      where("website", "==", "Disruptive Solutions Inc"), // <--- Ito ang magic filter
+      orderBy("createdAt", "desc")
+    );
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBrands(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (error) => {
+      console.error("Error fetching brands:", error);
+      setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
@@ -486,67 +491,65 @@ export default function DisruptiveLandingPage() {
               </motion.div>
             </div>
 
-            {/* GRID: Ngayon ay may sapat na gap at padding sa gilid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 justify-center">
-              {projectsLoading ? (
-                <div className="col-span-full py-20 flex justify-center w-full">
-                  <Loader2 className="animate-spin text-[#d11a2a]" size={40} />
-                </div>
-              ) : (
-                fetchedProjects.map((project) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 15 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    whileHover={{ y: -8 }}
-                    className="w-full"
-                  >
-                    <Link
-                      href={`/projects/${project.id}`}
-                      className="group relative h-[220px] md:h-[400px] block rounded-[32px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100"
-                    >
-                      {/* Main Project Image */}
-                      <img
-                        src={project.imageUrl}
-                        alt={project.title}
-                        className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-1000 ease-in-out group-hover:opacity-40"
-                      />
+{/* GRID: Ngayon ay may sapat na gap at padding sa gilid */}
+<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 justify-center">
+  {projectsLoading ? (
+    <div className="col-span-full py-20 flex justify-center w-full">
+      <Loader2 className="animate-spin text-[#d11a2a]" size={40} />
+    </div>
+  ) : (
+    fetchedProjects.map((project) => (
+      <motion.div
+        key={project.id}
+        initial={{ opacity: 0, y: 15 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        whileHover={{ y: -8 }}
+        className="w-full"
+      >
+        {/* Pinalitan ang Link ng div, pero nandoon pa rin ang lahat ng styles */}
+        <div className="group relative h-[220px] md:h-[400px] block rounded-[32px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 cursor-default">
+          
+          {/* Main Project Image */}
+          <img
+            src={project.imageUrl}
+            alt={project.title}
+            className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-1000 ease-in-out group-hover:opacity-40"
+          />
 
-                      {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 group-hover:opacity-0 transition-opacity duration-500" />
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 group-hover:opacity-0 transition-opacity duration-500" />
 
-                      {/* HOVER OVERLAY */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center p-6 text-center">
-                        {project.logoUrl && (
-                          <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            whileHover={{ scale: 1.05 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="relative"
-                          >
-                            <div className="absolute inset-0 bg-white/10 blur-2xl rounded-full" />
-                            <img
-                              src={project.logoUrl}
-                              alt="Client Logo"
-                              className="relative w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]"
-                            />
-                          </motion.div>
-                        )}
+          {/* HOVER OVERLAY */}
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center p-6 text-center">
+            {project.logoUrl && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                whileHover={{ scale: 1.05 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative"
+              >
+                <div className="absolute inset-0 bg-white/10 blur-2xl rounded-full" />
+                <img
+                  src={project.logoUrl}
+                  alt="Client Logo"
+                  className="relative w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+                />
+              </motion.div>
+            )}
+          </div>
 
-                      </div>
-
-                      {/* Static Content (Visible pag hindi naka-hover) */}
-                      <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end group-hover:opacity-0 transition-opacity duration-300">
-                        <h3 className="text-xs md:text-sm font-black text-white uppercase tracking-tight leading-tight line-clamp-2">
-                          {project.title}
-                        </h3>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))
-              )}
-            </div>
+          {/* Static Content (Visible pag hindi naka-hover) */}
+          <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end group-hover:opacity-0 transition-opacity duration-300">
+            <h3 className="text-xs md:text-sm font-black text-white uppercase tracking-tight leading-tight line-clamp-2">
+              {project.title}
+            </h3>
+          </div>
+        </div>
+      </motion.div>
+    ))
+  )}
+</div>
 
             {/* SEE MORE BUTTON */}
             <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="mt-10 mb-10 flex justify-center">

@@ -120,8 +120,8 @@ export function AppSidebar({ onNavigate, ...props }: any) {
     };
   }, []);
 
-  const totalInquiries = counts.customer + counts.quotation + counts.job + counts.messenger;
-  
+  const totalInquiries = counts.customer + counts.quotation  + counts.messenger;
+  const total = counts.job ;
   // Shortcut para sa role check
   const isSales = adminUser.role === "warehouse";
 
@@ -151,6 +151,7 @@ export function AppSidebar({ onNavigate, ...props }: any) {
               { title: "Add new product", url: "#" },
               { title: "Orders", url: "#", badge: counts.product > 0 ? counts.product : null },
               { title: "Category", url: "#" },
+              { title: "Application", url: "#" },
               { title: "Reviews", url: "#" },
             ],
       },
@@ -171,9 +172,9 @@ export function AppSidebar({ onNavigate, ...props }: any) {
           title: "Job Openings",
           url: "#",
           icon: Briefcase,
+           badge: total > 0 ? total : null,
           items: [
             { title: "Job Application", url: "#", badge: counts.job > 0 ? counts.job : null },
-            { title: "Application", url: "#" },
             { title: "Notification", url: "#" },
           ],
         },
@@ -189,6 +190,7 @@ export function AppSidebar({ onNavigate, ...props }: any) {
             { title: "Brands", url: "#" },
             { title: "Partners", url: "#" },
             { title: "HomePopup", url: "#" },
+            { title: "Faq Settings", url: "#" },
           ],
         },
       ] : []),

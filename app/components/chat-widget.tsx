@@ -1,16 +1,18 @@
 "use client";
 
+import React from "react"
+
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageSquare, Send, X, ImageIcon, Loader2, Sparkles } from "lucide-react"; 
+import { MessageSquare, Send, X, ImageIcon, Loader2, Sparkles, Edit2, Trash2, Check, X as XIcon } from "lucide-react";
 import { useCallback, useEffect, useState, useRef } from "react";
 
 // FIREBASE & CLOUDINARY IMPORTS
-import { db } from "@/lib/firebase"; 
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where } from "firebase/firestore";
-import { uploadToCloudinary } from "@/lib/cloudinary"; 
+import { db } from "@/lib/firebase";
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 interface ChatMessage {
   id: string;
@@ -23,23 +25,7 @@ interface ChatMessage {
   timestamp: any;
 }
 
-const FAQS = [
-  { 
-    question: "What are your services?", 
-    answer: "We offer Web Development, Mobile Apps, and UI/UX Design services tailored for your business needs.",
-    icon: "🚀" 
-  },
-  { 
-    question: "How to start a project?", 
-    answer: "You can send us a message here or email us at hello@disruptive.inc to schedule a discovery call.",
-    icon: "📩" 
-  },
-  { 
-    question: "Do you offer maintenance?", 
-    answer: "Yes! We provide 24/7 technical support and maintenance for all our projects.",
-    icon: "🛠️" 
-  }
-];
+
 
 export default function FloatingChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,19 +34,71 @@ export default function FloatingChatWidget() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<string>("");
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [showFaqMenu, setShowFaqMenu] = useState(true);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load User Session
+    const [dynamicFaqs, setDynamicFaqs] = useState<any[]>([]);
+  // Load User Session (Persistent Gmail Login)
+// Load User Session (Priority: Admin > User > Guest)
   useEffect(() => {
+    const adminData = localStorage.getItem("disruptive_admin_user");
     const sessionData = localStorage.getItem("disruptive_user_session");
-    setCurrentUser(sessionData ? JSON.parse(sessionData) : {
-      displayName: "Guest User",
-      email: "guest@example.com",
-      website: "disruptivesolutionsinc"
-    });
+
+    if (adminData) {
+      try {
+        // Kung ang admin mismo ang nag-view ng site, gamitin ang admin info
+        const admin = JSON.parse(adminData);
+        setCurrentUser({
+          displayName: admin.name || "Admin Support",
+          email: admin.email,
+          website: "disruptivesolutionsinc",
+          isAdmin: true // Flag para malaman na admin ang nag-cha-chat
+        });
+      } catch (err) {
+        console.error("Admin session error:", err);
+      }
+    } else if (sessionData) {
+      try {
+        const userData = JSON.parse(sessionData);
+        setCurrentUser(userData);
+      } catch (err) {
+        console.error("Session parse error:", err);
+        createUniqueGuest();
+      }
+    } else {
+      createUniqueGuest();
+    }
   }, []);
+
+  // Function to generate a unique ID for guests
+  const createUniqueGuest = () => {
+    // Generate unique ID para hindi mag-overlap ang chat ng magkaibang device
+    const uniqueId = Math.random().toString(36).substring(2, 9);
+    const guestEmail = `guest_${uniqueId}@disruptive.inc`;
+    
+    const guestUser = {
+      displayName: `Guest #${uniqueId.toUpperCase()}`,
+      email: guestEmail,
+      website: "disruptivesolutionsinc",
+      isGuest: true
+    };
+
+    localStorage.setItem("disruptive_user_session", JSON.stringify(guestUser));
+    setCurrentUser(guestUser);
+  };
+
+  useEffect(() => {
+  const q = query(collection(db, "faq_settings"), orderBy("createdAt", "asc"));
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    setDynamicFaqs(snapshot.docs.map(doc => doc.data()));
+  });
+  return () => unsubscribe();
+}, []);
 
   // Firestore Realtime Listener
   useEffect(() => {
@@ -94,6 +132,31 @@ export default function FloatingChatWidget() {
     return () => unsubscribe();
   }, [isOpen, currentUser, messages.length]);
 
+  // Handle Delete Message
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await deleteDoc(doc(db, "chats", messageId));
+    } catch (err) {
+      console.error("Delete Error:", err);
+    }
+  };
+
+  // Handle Edit Message
+  const handleEditMessage = async (messageId: string) => {
+    if (!editingText.trim()) return;
+    try {
+      await updateDoc(doc(db, "chats", messageId), {
+        message: editingText.trim(),
+        edited: true,
+        editedAt: serverTimestamp()
+      });
+      setEditingMessageId(null);
+      setEditingText("");
+    } catch (err) {
+      console.error("Edit Error:", err);
+    }
+  };
+
   // Handle Send Message & Auto Reply for FAQ
   const handleSendMessage = async (e?: React.FormEvent, customMsg?: string, autoReply?: string) => {
     if (e) e.preventDefault();
@@ -101,14 +164,14 @@ export default function FloatingChatWidget() {
     if (!textToSend.trim() || !currentUser) return;
 
     try {
-      if (!customMsg) setMessage(""); 
-      
+      if (!customMsg) setMessage("");
+
       // 1. User Message
       await addDoc(collection(db, "chats"), {
         senderEmail: currentUser.email,
         senderName: currentUser.displayName,
         message: textToSend,
-        isAdmin: false, 
+        isAdmin: false,
         timestamp: serverTimestamp(),
         website: "disruptivesolutionsinc"
       });
@@ -120,7 +183,7 @@ export default function FloatingChatWidget() {
             senderEmail: currentUser.email,
             senderName: "Support Bot",
             message: autoReply,
-            isAdmin: true, 
+            isAdmin: true,
             timestamp: serverTimestamp(),
             website: "disruptivesolutionsinc"
           });
@@ -136,7 +199,7 @@ export default function FloatingChatWidget() {
     try {
       setIsUploading(true);
       const secureUrl = await uploadToCloudinary(file);
-      
+
       await addDoc(collection(db, "chats"), {
         senderEmail: currentUser.email,
         senderName: currentUser.displayName,
@@ -147,7 +210,7 @@ export default function FloatingChatWidget() {
       });
     } catch (err) { console.error("Upload Error:", err); } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = ""; 
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -164,18 +227,49 @@ export default function FloatingChatWidget() {
             {/* Header */}
             <div className="border-b border-white/5 bg-white/[0.03] p-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <Avatar className="h-8 w-8 border-none ring-0">
-                  <AvatarImage src="https://github.com/shadcn.png" className="rounded-full" />
-                  <AvatarFallback className="bg-[#222] text-white text-[10px]">DS</AvatarFallback>
-                </Avatar>
+<Avatar className="h-9 w-9 border-none ring-0 overflow-hidden">
+  {/* Palitan ang "your-image-path.png" ng filename ng image mo sa public folder */}
+  <AvatarImage 
+    src="/images/icon.png" 
+    className="object-cover w-full h-full" 
+    alt="Support Avatar"
+  />
+  {/* Fallback kung sakaling hindi mag-load ang image */}
+  <AvatarFallback className="bg-[#222] text-white text-[10px]">
+    DS
+  </AvatarFallback>
+</Avatar>
                 <div>
-                  <h3 className="text-[13px] font-bold text-white tracking-tight">Support</h3>
+                  <h3 className="text-[13px] font-bold text-white tracking-tight">DSI-CS</h3>
                   <div className="flex items-center gap-1.5 leading-none">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     <span className="text-[9px] text-white/40 uppercase font-medium">Online</span>
                   </div>
                 </div>
               </div>
+
+              {/* FAQ Toggle Button */}
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setShowFaqMenu(prev => !prev)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider
+               rounded-full border border-white/10 bg-white/5 text-white/50
+               hover:bg-white/10 hover:text-white transition"
+                >
+                  {showFaqMenu ? (
+                    <>
+                      <X className="h-3 w-3" />
+                      Hide FAQs
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3 text-[#d11a2a]" />
+                      Show FAQs
+                    </>
+                  )}
+                </button>
+              </div>
+
               <button onClick={() => setIsOpen(false)} className="p-1.5 text-white/40 hover:text-white transition opacity-60 hover:opacity-100">
                 <X className="h-4 w-4" />
               </button>
@@ -183,63 +277,83 @@ export default function FloatingChatWidget() {
 
             {/* Chat Body */}
             <div className="relative flex h-[380px] flex-col bg-[#050505]">
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
-                
-                {/* FAQ Cards - Visible only at start */}
-                {messages.length === 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    className="flex flex-col gap-2.5 py-2"
+
+              {/* FAQ Section - Solid Background & Sticky */}
+              <AnimatePresence>
+                {showFaqMenu && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="absolute top-0 left-0 w-full z-20 bg-[#0a0a0a] border-b border-white/5 p-4 space-y-2 shadow-xl"
                   >
-                    <div className="flex items-center gap-2 text-white/30 mb-1 px-1">
-                      <Sparkles className="h-3 w-3 text-[#d11a2a]" />
-                      <span className="text-[9px] font-bold uppercase tracking-widest">Suggested Questions</span>
-                    </div>
-                    {FAQS.map((faq, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleSendMessage(undefined, faq.question, faq.answer)}
-                        className="w-full text-left p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 transition-all text-[12px] text-white/70 flex items-center gap-3 group active:scale-[0.98]"
-                      >
-                        <span className="bg-white/5 p-1.5 rounded-lg group-hover:bg-[#d11a2a]/20 group-hover:text-white transition-colors">{faq.icon}</span>
-                        <span className="flex-1">{faq.question}</span>
-                      </button>
-                    ))}
+                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider mb-2">Quick Answers</p>
+                    {dynamicFaqs.map((faq, i) => (
+  <button
+    key={i}
+    onClick={() => {
+      handleSendMessage(undefined, faq.question, faq.answer);
+      setShowFaqMenu(false);
+    }}
+    className="w-full text-left p-2 rounded-lg border border-white/5 bg-white/[0.03] hover:bg-white/[0.08] transition-all flex items-center gap-2 group active:scale-[0.98]"
+  >
+    {/* Icon Container - Ginawang mas maliit */}
+    <span className="flex-shrink-0 bg-white/5 w-6 h-6 flex items-center justify-center rounded-md text-[12px] group-hover:bg-[#d11a2a]/20 transition-colors">
+      {faq.icon}
+    </span>
+    
+    {/* Question Text - White, Small, and Truncated para malinis */}
+    <span className="flex-1 text-[11px] text-white font-medium leading-tight truncate">
+      {faq.question}
+    </span>
+  </button>
+))}
                   </motion.div>
                 )}
+              </AnimatePresence>
 
-                {/* Messages List */}
+              {/* Messages List */}
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide pt-4">
+                {messages.length === 0 && !showFaqMenu && (
+                  <div className="text-center py-10 opacity-20">
+                    <MessageSquare className="h-8 w-8 mx-auto mb-2" />
+                    <p className="text-xs">No messages yet. Ask a question!</p>
+                  </div>
+                )}
+
                 {messages.map((msg) => (
-                  <div key={msg.id} className={cn("flex", msg.isAdmin ? "justify-start" : "justify-end")}>
-                    <div className={cn("max-w-[85%] flex flex-col gap-1", !msg.isAdmin && "items-end")}>
-                      <div className={cn("rounded-xl px-3 py-2 text-[12px] border shadow-sm", 
+                  <div
+                    key={msg.id}
+                    className={cn("flex", msg.isAdmin ? "justify-start" : "justify-end")}
+                    onMouseEnter={() => !msg.isAdmin && setHoveredMessageId(msg.id)}
+                    onMouseLeave={() => setHoveredMessageId(null)}
+                  >
+                    <div className={cn("max-w-[85%] flex flex-col gap-1 group", !msg.isAdmin && "items-end")}>
+                      {/* ... existing edit logic ... */}
+                      <div className={cn("rounded-xl px-3 py-2 text-[12px] border shadow-sm relative",
                         msg.isAdmin ? "bg-white/10 border-white/5 text-white rounded-tl-none" : "bg-[#d11a2a] border-transparent text-white rounded-tr-none")}>
-                        
+
                         {msg.imageUrl && (
-                          <img 
-                            src={msg.imageUrl} 
-                            alt="Attachment" 
-                            className="rounded-lg mb-1.5 max-w-full h-auto cursor-zoom-in hover:brightness-110 transition shadow-sm"
+                          <img
+                            src={msg.imageUrl}
+                            alt="Attachment"
+                            className="rounded-lg mb-1.5 max-w-full h-auto cursor-pointer"
                             onClick={() => window.open(msg.imageUrl, '_blank')}
                           />
                         )}
-                        
+
                         {msg.message && <p className="leading-relaxed whitespace-pre-wrap">{msg.message}</p>}
                       </div>
                       <span className="text-[8px] text-white/20 font-medium px-1 uppercase">
-                         {msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || "..."}
+                        {msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || "Just now"}
                       </span>
                     </div>
                   </div>
                 ))}
-                
+
                 {isUploading && (
-                  <div className="flex justify-end pr-2">
-                    <div className="flex items-center gap-2 italic text-[10px] text-white/40 animate-pulse">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Uploading to Cloudinary...
-                    </div>
+                  <div className="flex justify-end pr-2 italic text-[10px] text-white/40 animate-pulse items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Uploading...
                   </div>
                 )}
               </div>
@@ -249,9 +363,9 @@ export default function FloatingChatWidget() {
             <div className="border-t border-white/5 bg-[#0a0a0a] p-3">
               <form className="flex items-center gap-2" onSubmit={handleSendMessage}>
                 <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
-                <button 
-                  type="button" 
-                  onClick={() => fileInputRef.current?.click()} 
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
                   className="p-2 text-white/40 hover:text-white transition-colors disabled:opacity-30"
                 >
@@ -264,10 +378,10 @@ export default function FloatingChatWidget() {
                   placeholder="Ask a question..."
                   className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#d11a2a]/50 transition-all"
                 />
-                <Button 
-                  size="icon" 
-                  type="submit" 
-                  disabled={!message.trim() || isUploading} 
+                <Button
+                  size="icon"
+                  type="submit"
+                  disabled={!message.trim() || isUploading}
                   className="h-8 w-8 rounded-lg bg-[#d11a2a] hover:bg-[#b01622] transition-all active:scale-90"
                 >
                   <Send className="h-3.5 w-3.5 text-white" />
@@ -291,11 +405,11 @@ export default function FloatingChatWidget() {
         >
           {isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
         </motion.button>
-        
+
         {!isOpen && unreadCount > 0 && (
-          <motion.span 
-            initial={{ scale: 0 }} 
-            animate={{ scale: 1 }} 
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
             className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#d11a2a] text-[10px] font-bold text-white ring-4 ring-white dark:ring-[#0a0a0a] shadow-lg"
           >
             {unreadCount}
