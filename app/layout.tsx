@@ -22,6 +22,11 @@ export const metadata: Metadata = {
   },
   description: "Innovative lighting and smart solutions for modern spaces.",
   
+  // --- ADDED GOOGLE VERIFICATION ---
+  verification: {
+    google: "YwPOzsVV68RGo2ZSrNyvFSKJZF9cNkAmmluFv-jHkHw",
+  },
+
   // Icon Configuration
   icons: {
     icon: "/images/icon.png",
@@ -67,7 +72,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {/* 2. ADD TOASTER COMPONENT */}
-        {/* nilagyan ko ng richColors para may kulay yung success (green) at error (red) */}
         <Toaster position="top-center" richColors closeButton />
         {children}
       </body>
