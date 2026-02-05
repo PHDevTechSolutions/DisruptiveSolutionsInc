@@ -26,7 +26,7 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password || !fullName || !role) return toast.error("Please fill in all fields")
-    if (password.length < 6) return toast.error("Password must be at least 6 characters")
+    if (password.length < 5) return toast.error("Password must be at least 5 characters")
 
     setIsLoading(true)
     const regToast = toast.loading(`Provisioning ${role.toUpperCase()} account...`)
