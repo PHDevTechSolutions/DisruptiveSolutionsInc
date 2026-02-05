@@ -24,22 +24,42 @@ export default function BlogDetailPage() {
     { name: "Careers", href: "/careers" },
     { name: "Contact Us", href: "/contact-us" },
   ];
-    useEffect(() => {
-        const fetchBlog = async () => {
-            try {
-                const q = query(collection(db, "blogs"), where("slug", "==", slug), limit(1));
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    setBlog(querySnapshot.docs[0].data());
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
+
+useEffect(() => {
+    const fetchBlog = async () => {
+        if (!slug) return;
+
+        try {
+            console.log("Fetching slug for Disruptive:", slug);
+            
+            // Nagdagdag tayo ng second 'where' clause para sigurado na 
+            // disruptive blogs lang ang lalabas sa site na ito.
+            const q = query(
+                collection(db, "blogs"), 
+                where("slug", "==", slug),
+                where("website", "==", "disruptivesolutionsinc"), 
+                limit(1)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                const data = querySnapshot.docs[0].data();
+                console.log("Blog data found:", data);
+                setBlog(data);
+            } else {
+                console.log("No matching document found for slug in Disruptive website.");
+                setBlog(null);
             }
-        };
-        fetchBlog();
-    }, [slug]);
+        } catch (err) {
+            console.error("Firestore Error:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchBlog();
+}, [slug]);
 
     if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#d11a2a]" /></div>;
     if (!blog) return <div className="h-screen flex items-center justify-center font-bold uppercase tracking-widest">Story Not Found</div>;
@@ -58,15 +78,64 @@ export default function BlogDetailPage() {
             <article className="max-w-5xl mx-auto px-6 py-16">
                 {/* --- BLOG HEADER --- */}
                 <header className="mb-12">
+
                     <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
-                        {blog.title}
                     </h1>
                     
-                    {/* First section as intro text if it exists */}
+
                     {blog.sections?.[0]?.type === "paragraph" && (
-                        <p className="text-xs text-gray-600 leading-relaxed mb-10">
-                            {blog.sections[0].description}
-                        </p>
+                        <div className="text-base text-gray-700 leading-relaxed mb-10">
+                            <style jsx global>{`
+                              .blog-intro h1 {
+                                font-size: 2em;
+                                font-weight: 800;
+                                margin-top: 0.67em;
+                                margin-bottom: 0.67em;
+                                line-height: 1.2;
+                              }
+                              .blog-intro h2 {
+                                font-size: 1.5em;
+                                font-weight: 700;
+                                margin-top: 0.83em;
+                                margin-bottom: 0.83em;
+                                line-height: 1.3;
+                              }
+                              .blog-intro p {
+                                margin: 1em 0;
+                              }
+                              .blog-intro strong {
+                                font-weight: 700;
+                              }
+                              .blog-intro em {
+                                font-style: italic;
+                              }
+                              .blog-intro ul {
+                                list-style-type: disc;
+                                padding-left: 1.5em;
+                                margin: 1em 0;
+                              }
+                              .blog-intro ol {
+                                list-style-type: decimal;
+                                padding-left: 1.5em;
+                                margin: 1em 0;
+                              }
+                              .blog-intro li {
+                                margin: 0.25em 0;
+                              }
+                              .blog-intro a {
+                                color: #d11a2a;
+                                text-decoration: underline;
+                                cursor: pointer;
+                              }
+                              .blog-intro a:hover {
+                                color: #000;
+                              }
+                            `}</style>
+                            <div 
+                                className="blog-intro"
+                                dangerouslySetInnerHTML={{ __html: blog.sections[0].description }}
+                            />
+                        </div>
                     )}
                 </header>
 
@@ -80,16 +149,17 @@ export default function BlogDetailPage() {
                             <div key={index} className="flex flex-col gap-6">
                                 {/* Section Title */}
                                 {section.title && (
-                                    <h2 className="text-xs md:text-xs font-bold text-gray-900 tracking-tight">
+                                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
                                         {section.title}
                                     </h2>
                                 )}
 
                                 {/* Section Image - If it exists, show it first (Box Style) */}
                                 {section.imageUrl && (
-                                    <div className="w-full bg-gray-50 border border-gray-100 overflow-hidden">
+                                    <div className="w-full bg-gray-50 border border-gray-100 overflow-hidden rounded-2xl">
                                         <img 
-                                            src={section.imageUrl} 
+                                            src={section.imageUrl}
+                                             
                                             alt={section.title || "Blog section"} 
                                             className="w-full h-auto object-contain"
                                         />
@@ -98,11 +168,56 @@ export default function BlogDetailPage() {
 
                                 {/* Section Description */}
                                 {section.description && (
-                                    <div className="text-xs text-gray-600 leading-relaxed space-y-4">
-                                        {/* Ginagamit natin ang dangerouslySetInnerHTML para sa mga links at colors na galing admin */}
+                                    <div className="text-base text-gray-700 leading-relaxed">
+                                        <style jsx global>{`
+                                          .blog-content h1 {
+                                            font-size: 2em;
+                                            font-weight: 800;
+                                            margin-top: 0.67em;
+                                            margin-bottom: 0.67em;
+                                            line-height: 1.2;
+                                          }
+                                          .blog-content h2 {
+                                            font-size: 1.5em;
+                                            font-weight: 700;
+                                            margin-top: 0.83em;
+                                            margin-bottom: 0.83em;
+                                            line-height: 1.3;
+                                          }
+                                          .blog-content p {
+                                            margin: 1em 0;
+                                          }
+                                          .blog-content strong {
+                                            font-weight: 700;
+                                          }
+                                          .blog-content em {
+                                            font-style: italic;
+                                          }
+                                          .blog-content ul {
+                                            list-style-type: disc;
+                                            padding-left: 1.5em;
+                                            margin: 1em 0;
+                                          }
+                                          .blog-content ol {
+                                            list-style-type: decimal;
+                                            padding-left: 1.5em;
+                                            margin: 1em 0;
+                                          }
+                                          .blog-content li {
+                                            margin: 0.25em 0;
+                                          }
+                                          .blog-content a {
+                                            color: #d11a2a;
+                                            text-decoration: underline;
+                                            cursor: pointer;
+                                          }
+                                          .blog-content a:hover {
+                                            color: #000;
+                                          }
+                                        `}</style>
                                         <div 
-                                            className="prose prose-red max-w-none prose-p:leading-relaxed prose-a:text-[#d11a2a] prose-a:font-bold prose-a:no-underline hover:prose-a:underline"
-                                            dangerouslySetInnerHTML={{ __html: section.description.replace(/\n/g, '<br/>') }}
+                                            className="blog-content"
+                                            dangerouslySetInnerHTML={{ __html: section.description }}
                                         />
                                     </div>
                                 )}

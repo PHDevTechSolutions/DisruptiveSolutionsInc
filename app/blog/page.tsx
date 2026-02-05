@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link"; 
 import { motion, AnimatePresence } from "framer-motion"; 
-import { ArrowRight, Loader2, ChevronUp, Facebook, Instagram, Linkedin, Bookmark } from "lucide-react"; 
+import { ArrowRight, Loader2, ChevronUp, Facebook, Instagram, Linkedin, Bookmark, Calendar } from "lucide-react"; 
 import { auth, db } from "@/lib/firebase"; 
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot, limit, where, addDoc, serverTimestamp } from "firebase/firestore";
@@ -16,6 +16,14 @@ export default function BlogPage() {
     const [blogs, setBlogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [userSession, setUserSession] = useState<any>(null);
+
+    // Helper function to strip HTML tags and get plain text
+    const stripHtml = (html: string) => {
+        if (!html) return "";
+        const tmp = document.createElement("DIV");
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || "";
+    };
 
     // --- ACTIVITY LOGGER ENGINE ---
     const logActivity = async (actionName: string) => {
@@ -36,11 +44,13 @@ export default function BlogPage() {
         return () => unsubscribeAuth();
     }, []);
 
-    // FETCH REAL BLOGS FROM FIREBASE
+// FETCH REAL BLOGS FROM FIREBASE (Published Only)
     useEffect(() => {
         const q = query(
             collection(db, "blogs"), 
             where("website", "==", "disruptivesolutionsinc"),
+            // Idagdag ang linyang ito para ma-filter ang drafts
+            where("status", "==", "Published"), 
             orderBy("createdAt", "desc"), 
             limit(6)
         );
@@ -53,6 +63,7 @@ export default function BlogPage() {
             setBlogs(fetchedBlogs);
             setLoading(false);
         }, (error) => {
+            // Babala: Kung lumabas ang "Index" error sa console, i-click ang link na ibibigay ng Firebase.
             console.error("Error fetching blogs:", error);
             setLoading(false);
         });
@@ -104,69 +115,97 @@ export default function BlogPage() {
                         </motion.div>
                     </div>
 
-                    {/* DYNAMIC BLOG GRID */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-                        {blogs.map((blog) => (
-                            <motion.div
-                                key={blog.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                            >
-                                <Link 
-                                    href={`/blog/${blog.slug || blog.id}`} 
-                                    onClick={() => logActivity(`Blog: Read ${blog.title}`)}
-                                    className="group"
-                                >
-                                    <div className="bg-white rounded-none overflow-hidden shadow-2xl border border-gray-100 flex flex-col h-full transition-all duration-500 hover:-translate-y-2">
-                                        
-                                        {/* IMAGE CONTAINER */}
-                                        <div className="relative h-64 bg-gray-50 overflow-hidden flex items-center justify-center p-4">
-                                            {blog.coverImage ? (
-                                                <img 
-                                                    src={blog.coverImage} 
-                                                    alt={blog.title} 
-                                                    className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110" 
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs font-bold uppercase italic">
-                                                    No Image
-                                                </div>
-                                            )}
-                                            <div className="absolute top-4 right-4 w-8 h-8 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Bookmark size={14} className="text-[#d11a2a]" />
-                                            </div>
-                                        </div>
+                   {/* DYNAMIC BLOG GRID */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+    {blogs.map((blog) => {
+        // Get plain text excerpt from rich text HTML
+        const excerpt = blog.sections?.[0]?.description 
+            ? stripHtml(blog.sections[0].description).substring(0, 150) + '...'
+            : "Breaking the boundaries of modern technology and architecture.";
 
-                                        {/* CONTENT */}
-                                        <div className="p-8 flex flex-col flex-grow bg-white border-t border-gray-50">
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-[#d11a2a]" />
-                                                <span className="text-[#d11a2a] text-[10px] font-black uppercase tracking-[0.2em]">
-                                                    {blog.category || "INDUSTRY NEWS"}
-                                                </span>
-                                            </div>
+        // Format date
+        const formatDate = (timestamp: any) => {
+            if (!timestamp) return "Recently";
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return new Intl.DateTimeFormat('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            }).format(date);
+        };
 
-                                            <h3 className="text-2xl font-black text-[#d11a2a] mb-4 uppercase italic tracking-tighter leading-tight group-hover:text-black transition-colors">
-                                                {blog.title}
-                                            </h3>
+        return (
+            <motion.div
+                key={blog.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+            >
+                <Link 
+                    href={`/blog/${blog.slug || blog.id}`} 
+                    onClick={() => logActivity(`Blog: Read ${blog.title}`)}
+                    className="group"
+                >
+                    <div className="bg-white rounded-none overflow-hidden shadow-2xl border border-gray-100 flex flex-col h-full transition-all duration-500 hover:-translate-y-2">
+                        
+                        {/* IMAGE CONTAINER */}
+                        <div className="relative h-64 bg-gray-50 overflow-hidden flex items-center justify-center p-4">
+                            {blog.coverImage ? (
+                                <img 
+                                    src={blog.coverImage} 
+                                    alt={blog.title} 
+                                    className="w-full h-full object-contain" 
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs font-bold uppercase italic">
+                                    No Image
+                                </div>
+                            )}
+                            <div className="absolute top-4 right-4 w-8 h-8 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Bookmark size={14} className="text-[#d11a2a]" />
+                            </div>
+                        </div>
 
-                                            <p className="text-gray-400 text-sm leading-relaxed mb-8 line-clamp-2 font-medium italic">
-                                                {blog.sections?.[0]?.description || "Breaking the boundaries of modern technology and architecture."}
-                                            </p>
+                        {/* CONTENT */}
+                        <div className="p-8 flex flex-col flex-grow bg-white border-t border-gray-50">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#d11a2a]" />
+                                <span className="text-[#d11a2a] text-[10px] font-black uppercase tracking-[0.2em]">
+                                    {blog.category || "INDUSTRY NEWS"}
+                                </span>
+                            </div>
 
-                                            <div className="mt-auto pt-6 border-t border-gray-50 flex items-center justify-between">
-                                                <span className="text-black font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-2">
-                                                    Read Full Story 
-                                                    <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform text-[#d11a2a]" />
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-                            </motion.div>
-                        ))}
+                            <h3 className="text-2xl font-black text-[#d11a2a] mb-4 uppercase italic tracking-tighter leading-tight group-hover:text-black transition-colors">
+                                {blog.title}
+                            </h3>
+
+                            <p className="text-gray-400 text-sm leading-relaxed mb-8 line-clamp-2 font-medium italic">
+                                {excerpt}
+                            </p>
+
+                            {/* DATE CREATED */}
+                            <div className="flex items-center gap-2 mb-6">
+                                <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
+                                    <Calendar size={10} className="text-gray-400" />
+                                </div>
+                                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                                    {formatDate(blog.createdAt)}
+                                </span>
+                            </div>
+
+                            <div className="mt-auto pt-6 border-t border-gray-50 flex items-center justify-between">
+                                <span className="text-black font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-2">
+                                    Read Full Story 
+                                    <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform text-[#d11a2a]" />
+                                </span>
+                            </div>
+                        </div>
                     </div>
+                </Link>
+            </motion.div>
+        );
+    })}
+</div>
                 </div>
             </section>
             <Footer/>

@@ -8,10 +8,15 @@ import {
 } from "firebase/firestore";
 import { 
   Plus, Pencil, Trash2, Loader2, ImagePlus, X, 
-  AlignLeft, Layout, Save, FileText, Eye, Zap
+  AlignLeft, Layout, Save, FileText, Bold, Italic, 
+  List, ListOrdered, Heading1, Heading2, Link2, Undo, Redo
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
 
 type Section = {
   id: string;
@@ -20,6 +25,204 @@ type Section = {
   description?: string;
   imageUrl?: string;
   imageFile?: File | null;
+};
+
+// Rich Text Editor Component
+const RichTextEditor = ({ content, onChange, placeholder }: { content: string, onChange: (html: string) => void, placeholder?: string }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [
+      StarterKit,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-[#d11a2a] underline hover:text-black transition-colors',
+        },
+      }),
+      Placeholder.configure({
+        placeholder: placeholder || 'Start writing...',
+      }),
+    ],
+    content: content,
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: 'focus:outline-none min-h-[150px] text-gray-700 leading-relaxed',
+      },
+    },
+  });
+
+  const setLink = () => {
+    const url = window.prompt('Enter URL:');
+    if (url && editor) {
+      editor.chain().focus().setLink({ href: url }).run();
+    }
+  };
+
+  if (!mounted || !editor) {
+    return (
+      <div className="border border-gray-200 rounded-xl overflow-hidden bg-white p-4">
+        <div className="min-h-[150px] flex items-center justify-center text-gray-400">
+          <Loader2 className="animate-spin" size={24} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+      {/* Toolbar */}
+      <div className="flex flex-wrap gap-1 p-2 border-b border-gray-100 bg-gray-50">
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={`p-2 rounded hover:bg-white transition-colors ${editor.isActive('bold') ? 'bg-white text-[#d11a2a]' : 'text-gray-600'}`}
+        >
+          <Bold size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={`p-2 rounded hover:bg-white transition-colors ${editor.isActive('italic') ? 'bg-white text-[#d11a2a]' : 'text-gray-600'}`}
+        >
+          <Italic size={16} />
+        </button>
+        <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={`p-2 rounded hover:bg-white transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-white text-[#d11a2a]' : 'text-gray-600'}`}
+        >
+          <Heading1 size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={`p-2 rounded hover:bg-white transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-white text-[#d11a2a]' : 'text-gray-600'}`}
+        >
+          <Heading2 size={16} />
+        </button>
+        <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={`p-2 rounded hover:bg-white transition-colors ${editor.isActive('bulletList') ? 'bg-white text-[#d11a2a]' : 'text-gray-600'}`}
+        >
+          <List size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={`p-2 rounded hover:bg-white transition-colors ${editor.isActive('orderedList') ? 'bg-white text-[#d11a2a]' : 'text-gray-600'}`}
+        >
+          <ListOrdered size={16} />
+        </button>
+        <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
+        <button
+          type="button"
+          onClick={setLink}
+          className={`p-2 rounded hover:bg-white transition-colors ${editor.isActive('link') ? 'bg-white text-[#d11a2a]' : 'text-gray-600'}`}
+        >
+          <Link2 size={16} />
+        </button>
+        {editor.isActive('link') && (
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().unsetLink().run()}
+            className="p-2 rounded hover:bg-white transition-colors text-gray-600 text-xs font-bold"
+          >
+            Remove Link
+          </button>
+        )}
+        <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          className="p-2 rounded hover:bg-white transition-colors text-gray-600 disabled:opacity-30"
+        >
+          <Undo size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          className="p-2 rounded hover:bg-white transition-colors text-gray-600 disabled:opacity-30"
+        >
+          <Redo size={16} />
+        </button>
+      </div>
+      
+      {/* Editor Content */}
+      <div className="p-4">
+        <style jsx global>{`
+          .ProseMirror {
+            outline: none;
+          }
+          .ProseMirror h1 {
+            font-size: 2em;
+            font-weight: 800;
+            margin-top: 0.67em;
+            margin-bottom: 0.67em;
+            line-height: 1.2;
+          }
+          .ProseMirror h2 {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-top: 0.83em;
+            margin-bottom: 0.83em;
+            line-height: 1.3;
+          }
+          .ProseMirror p {
+            margin: 1em 0;
+          }
+          .ProseMirror strong {
+            font-weight: 700;
+          }
+          .ProseMirror em {
+            font-style: italic;
+          }
+          .ProseMirror ul {
+            list-style-type: disc;
+            padding-left: 1.5em;
+            margin: 1em 0;
+          }
+          .ProseMirror ol {
+            list-style-type: decimal;
+            padding-left: 1.5em;
+            margin: 1em 0;
+          }
+          .ProseMirror li {
+            margin: 0.25em 0;
+          }
+          .ProseMirror a {
+            color: #d11a2a;
+            text-decoration: underline;
+            cursor: pointer;
+          }
+          .ProseMirror a:hover {
+            color: #000;
+          }
+          .ProseMirror p.is-editor-empty:first-child::before {
+            color: #d1d5db;
+            content: attr(data-placeholder);
+            float: left;
+            height: 0;
+            pointer-events: none;
+          }
+        `}</style>
+        <EditorContent editor={editor} />
+      </div>
+    </div>
+  );
 };
 
 export default function BlogManager() {
@@ -31,7 +234,7 @@ export default function BlogManager() {
   const [mainTitle, setMainTitle] = useState("");
   const [category, setCategory] = useState("Industry News");
   const [status, setStatus] = useState("Published");
-  const [website, setWebsite] = useState("Disruptive Solutions Inc"); // NEW STATE
+  const [website, setWebsite] = useState("Disruptive Solutions Inc");
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainImagePrev, setMainImagePrev] = useState<string | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
@@ -79,7 +282,6 @@ export default function BlogManager() {
         return sec;
       }));
 
-      // WEBSITE VALUE MAPPING
       let websiteValue = "disruptivesolutionsinc";
       if (website === "Ecoshift Corporation") websiteValue = "ecoshiftcorporation";
       if (website === "VAH") websiteValue = "VAH";
@@ -88,7 +290,7 @@ export default function BlogManager() {
         title: mainTitle,
         category,
         status,
-        website: websiteValue, // SAVING THE MAPPED VALUE
+        website: websiteValue,
         coverImage: finalMainImage,
         sections: updatedSections,
         updatedAt: serverTimestamp(),
@@ -118,7 +320,7 @@ export default function BlogManager() {
     setMainImage(null);
     setSections([]);
     setStatus("Published");
-    setWebsite("Disruptive Solutions Inc"); // RESET WEBSITE
+    setWebsite("Disruptive Solutions Inc");
   };
 
   return (
@@ -176,7 +378,6 @@ export default function BlogManager() {
                         setEditingId(blog.id); setMainTitle(blog.title); setCategory(blog.category);
                         setStatus(blog.status || "Published"); setMainImagePrev(blog.coverImage);
                         setSections(blog.sections || []); 
-                        // Reverse mapping for Edit mode
                         if(blog.website === 'ecoshiftcorporation') setWebsite("Ecoshift Corporation");
                         else if(blog.website === 'VAH') setWebsite("VAH");
                         else setWebsite("Disruptive Solutions Inc");
@@ -241,7 +442,6 @@ export default function BlogManager() {
                       </select>
                     </div>
                     
-                    {/* UPDATED WEBSITE SELECT */}
                     <div className="space-y-2">
                       <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block">Target Website</span>
                       <select 
@@ -285,23 +485,26 @@ export default function BlogManager() {
                       </button>
                       
                       {section.type === "paragraph" ? (
-                        <textarea 
+                        <RichTextEditor
+                          content={section.description || ""}
+                          onChange={(html) => updateSection(section.id, { description: html })}
                           placeholder="Continue the story..."
-                          className="w-full text-2xl text-gray-700 outline-none border-none resize-none min-h-[150px] leading-[1.6] placeholder:text-gray-200 font-medium"
-                          value={section.description}
-                          onChange={(e) => updateSection(section.id, { description: e.target.value })}
                         />
                       ) : (
                         <div className="space-y-8 bg-gray-50/50 p-8 rounded-[2rem] border border-gray-50">
                           <input placeholder="SECTION SUB-HEADER" className="w-full font-black uppercase italic text-lg outline-none border-none tracking-tight bg-transparent" value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} />
-                          <div className="grid md:grid-cols-2 gap-10 items-center">
+                          <div className="grid md:grid-cols-2 gap-10 items-start">
                             <div className="relative aspect-square bg-white rounded-3xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden hover:border-[#d11a2a] transition-all group/img">
                               {section.imageUrl || section.imageFile ? (
                                 <img src={section.imageFile ? URL.createObjectURL(section.imageFile) : section.imageUrl} className="w-full h-full object-cover" alt="" />
                               ) : <div className="text-center space-y-2 text-gray-300 group-hover/img:text-[#d11a2a]"><ImagePlus className="mx-auto" size={40}/><span className="text-[9px] font-black uppercase tracking-widest block">Insert Image</span></div>}
                               <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => updateSection(section.id, { imageFile: e.target.files?.[0] })} />
                             </div>
-                            <textarea placeholder="Write a detailed caption or side-story for this image..." className="w-full h-full min-h-[150px] outline-none border-none text-gray-600 text-lg leading-relaxed italic resize-none bg-transparent" value={section.description} onChange={(e) => updateSection(section.id, { description: e.target.value })} />
+                            <RichTextEditor
+                              content={section.description || ""}
+                              onChange={(html) => updateSection(section.id, { description: html })}
+                              placeholder="Write a detailed caption or side-story for this image..."
+                            />
                           </div>
                         </div>
                       )}

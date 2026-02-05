@@ -14,6 +14,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import Link from "next/link"
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Create an Account | Disruptive Solutions Inc',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+  },
+}
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("")
