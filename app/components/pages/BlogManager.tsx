@@ -9,14 +9,18 @@ import {
 import { 
   Plus, Pencil, Trash2, Loader2, ImagePlus, X, 
   AlignLeft, Layout, Save, FileText, Bold, Italic, 
-  List, ListOrdered, Heading1, Heading2, Link2, Undo, Redo
+  List, ListOrdered, Heading1, Heading2, Heading3, Link2, Undo, Redo,
+  Palette, Type
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
-import Placeholder from '@tiptap/extension-placeholder';
+import { Link } from '@tiptap/extension-link';
+import { Placeholder } from '@tiptap/extension-placeholder';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import { FontFamily } from '@tiptap/extension-font-family';
 
 type Section = {
   id: string;
@@ -27,9 +31,11 @@ type Section = {
   imageFile?: File | null;
 };
 
-// Rich Text Editor Component
+// Rich Text Editor Component with Color & Font
 const RichTextEditor = ({ content, onChange, placeholder }: { content: string, onChange: (html: string) => void, placeholder?: string }) => {
   const [mounted, setMounted] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showFontPicker, setShowFontPicker] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -39,6 +45,11 @@ const RichTextEditor = ({ content, onChange, placeholder }: { content: string, o
     immediatelyRender: false,
     extensions: [
       StarterKit,
+      TextStyle,
+      Color,
+      FontFamily.configure({
+        types: ['textStyle'],
+      }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
@@ -67,6 +78,22 @@ const RichTextEditor = ({ content, onChange, placeholder }: { content: string, o
     }
   };
 
+  const colors = [
+    '#000000', '#d11a2a', '#1877F2', '#10B981', 'rgba(210, 140, 42, 1)', 
+    '#8B5CF6', '#EC4899', '#6B7280', '#FFFFFF'
+  ];
+
+  const fonts = [
+    { name: 'Default', value: '' },
+    { name: 'Arial', value: 'Arial, sans-serif' },
+    { name: 'Georgia', value: 'Georgia, serif' },
+    { name: 'Times New Roman', value: 'Times New Roman, serif' },
+    { name: 'Courier New', value: 'Courier New, monospace' },
+    { name: 'Verdana', value: 'Verdana, sans-serif' },
+    { name: 'Comic Sans', value: 'Comic Sans MS, cursive' },
+    { name: 'Impact', value: 'Impact, fantasy' },
+  ];
+
   if (!mounted || !editor) {
     return (
       <div className="border border-gray-200 rounded-xl overflow-hidden bg-white p-4">
@@ -81,6 +108,7 @@ const RichTextEditor = ({ content, onChange, placeholder }: { content: string, o
     <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
       {/* Toolbar */}
       <div className="flex flex-wrap gap-1 p-2 border-b border-gray-100 bg-gray-50">
+        {/* Text Formatting */}
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -95,7 +123,10 @@ const RichTextEditor = ({ content, onChange, placeholder }: { content: string, o
         >
           <Italic size={16} />
         </button>
+        
         <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
+        
+        {/* Headings */}
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -110,7 +141,24 @@ const RichTextEditor = ({ content, onChange, placeholder }: { content: string, o
         >
           <Heading2 size={16} />
         </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          className={`p-2 rounded hover:bg-white transition-colors ${editor.isActive('heading', { level: 3 }) ? 'bg-white text-[#d11a2a]' : 'text-gray-600'}`}
+        >
+          <Heading3 size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setParagraph().run()}
+          className={`px-2 py-1 rounded hover:bg-white transition-colors text-[10px] font-bold ${editor.isActive('paragraph') ? 'bg-white text-[#d11a2a]' : 'text-gray-600'}`}
+        >
+          P
+        </button>
+        
         <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
+        
+        {/* Lists */}
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -125,7 +173,93 @@ const RichTextEditor = ({ content, onChange, placeholder }: { content: string, o
         >
           <ListOrdered size={16} />
         </button>
+        
         <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
+        
+        {/* Font Family Picker */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowFontPicker(!showFontPicker);
+              setShowColorPicker(false);
+            }}
+            className="p-2 rounded hover:bg-white transition-colors text-gray-600 flex items-center gap-1"
+          >
+            <Type size={16} />
+          </button>
+          
+          {showFontPicker && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-48 max-h-64 overflow-y-auto">
+              {fonts.map((font) => (
+                <button
+                  key={font.value}
+                  type="button"
+                  onClick={() => {
+                    if (font.value) {
+                      editor.chain().focus().setFontFamily(font.value).run();
+                    } else {
+                      editor.chain().focus().unsetFontFamily().run();
+                    }
+                    setShowFontPicker(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors"
+                  style={{ fontFamily: font.value || 'inherit' }}
+                >
+                  {font.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Color Picker */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShowColorPicker(!showColorPicker);
+              setShowFontPicker(false);
+            }}
+            className="p-2 rounded hover:bg-white transition-colors text-gray-600"
+          >
+            <Palette size={16} />
+          </button>
+          
+          {showColorPicker && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl p-2 z-50">
+              <div className="grid grid-cols-3 gap-2">
+                {colors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => {
+                      editor.chain().focus().setColor(color).run();
+                      setShowColorPicker(false);
+                    }}
+                    className="w-8 h-8 rounded-lg border-2 border-gray-200 hover:border-[#d11a2a] transition-all hover:scale-110"
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  editor.chain().focus().unsetColor().run();
+                  setShowColorPicker(false);
+                }}
+                className="w-full mt-2 px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-gray-500 hover:text-black transition-colors border-t border-gray-100 pt-2"
+              >
+                Reset Color
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
+        
+        {/* Link */}
         <button
           type="button"
           onClick={setLink}
@@ -142,7 +276,10 @@ const RichTextEditor = ({ content, onChange, placeholder }: { content: string, o
             Remove Link
           </button>
         )}
+        
         <div className="w-px h-6 bg-gray-200 mx-1 self-center" />
+        
+        {/* Undo/Redo */}
         <button
           type="button"
           onClick={() => editor.chain().focus().undo().run()}
@@ -180,6 +317,13 @@ const RichTextEditor = ({ content, onChange, placeholder }: { content: string, o
             margin-top: 0.83em;
             margin-bottom: 0.83em;
             line-height: 1.3;
+          }
+          .ProseMirror h3 {
+            font-size: 1.25em;
+            font-weight: 700;
+            margin-top: 1em;
+            margin-bottom: 1em;
+            line-height: 1.4;
           }
           .ProseMirror p {
             margin: 1em 0;
@@ -355,7 +499,7 @@ export default function BlogManager() {
               <tr key={blog.id} className="hover:bg-gray-50/30 transition-colors group">
                 <td className="px-8 py-6">
                   <div className="w-20 h-14 rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-                    <img src={blog.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                    <img src={blog.coverImage} className="w-full h-full object-cover" alt="" />
                   </div>
                 </td>
                 <td className="px-8 py-6">
