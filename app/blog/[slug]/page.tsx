@@ -82,7 +82,7 @@ useEffect(() => {
                     <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
                     </h1>
                     
-
+                    
                     {blog.sections?.[0]?.type === "paragraph" && (
                         <div className="text-base text-gray-700 leading-relaxed mb-10">
                             <style jsx global>{`
