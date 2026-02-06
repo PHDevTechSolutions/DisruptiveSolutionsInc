@@ -25,6 +25,7 @@ import { Messenger } from "../components/inquiries/Messenger"
 import ChangePassword from "../components/settings/changepassword"
 import AllUsers from "../components/settings/allusers"
 import FAQEditor from "../components/pages/FaqSettings"
+import BulkProduct from "../components/products/bulk-product"
 
 import {
   Breadcrumb,
@@ -58,6 +59,8 @@ export default function Page() {
         return <ApplicationInquiries />
       case "Add new product":
         return <AddNewProduct />
+      case "Bulk Product":
+        return <BulkProduct />
       case "Reviews":
         return <Reviews />
       case "Quotation":

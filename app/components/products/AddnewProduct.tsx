@@ -538,8 +538,8 @@ const handlePublish = async () => {
                 </div>
               </div>
               <div className="space-y-3">
-                <Label className="text-[11px] font-black uppercase text-slate-700 tracking-tight">SKU / Model</Label>
-                <Input className="h-11 text-sm font-bold border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g., SKU-001" />
+                <Label className="text-[11px] font-black uppercase text-slate-700 tracking-tight">Item Code / Model</Label>
+                <Input className="h-11 text-sm font-bold border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g., TB101" />
               </div>
             </div>
           </CardContent>

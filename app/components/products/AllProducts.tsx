@@ -51,6 +51,7 @@ import { toast } from "sonner";
 
 // SIGURADUHIN NA CAPITAL 'N' ANG FILENAME SA SIDEBAR MO
 import AddNewProduct from "./AddnewProduct";
+import BulkImportDialog from "../bulkimportdialog";
 
 export function AllProducts() {
   const [products, setProducts] = useState<any[]>([]);
@@ -69,6 +70,7 @@ export function AllProducts() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
+  
 // --- 1. FETCH DATA ---
 useEffect(() => {
   setLoading(true); // Make sure loading shows while fetching
@@ -197,27 +199,31 @@ const uniqueWebsites = useMemo(() => {
   return (
     <div className="w-full space-y-4 p-2 animate-in fade-in duration-500">
       {/* HEADER */}
-      <div className="flex justify-between items-end mb-6">
-        <div>
-          <h2 className="text-3xl font-black uppercase italic tracking-tighter text-gray-900 flex items-center gap-2">
-            <Package className="text-blue-600" size={28} /> Inventory
-          </h2>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Manage and update your products</p>
-        </div>
-        <Button 
-          onClick={handleAddNewClick}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-6 font-black uppercase text-[10px] tracking-widest h-12 shadow-lg shadow-blue-100 transition-all active:scale-95"
-        >
-          <PlusCircle className="mr-2 w-4 h-4" /> Add Product
-        </Button>
-      </div>
+<div className="flex justify-between items-end mb-6">
+  <div>
+    <h2 className="text-3xl font-black uppercase italic tracking-tighter text-gray-900 flex items-center gap-2">
+      <Package className="text-blue-600" size={28} /> Inventory
+    </h2>
+    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Manage and update your products</p>
+  </div>
+  
+  <div className="flex gap-3"> {/* Container para pantay ang dalawang buttons */}
+    <BulkImportDialog/>
 
+    <Button 
+      onClick={handleAddNewClick}
+      className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-6 font-black uppercase text-[10px] tracking-widest h-12 shadow-lg shadow-blue-100 transition-all active:scale-95"
+    >
+      <PlusCircle className="mr-2 w-4 h-4" /> Add Product
+    </Button>
+  </div>
+</div>
       {/* FILTERS */}
       <div className="flex flex-wrap gap-3 items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <Input 
-            placeholder="Search name or SKU..." 
+            placeholder="Search name or Item Code..." 
             className="pl-10 rounded-xl border-gray-100 bg-gray-50/50"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -250,7 +256,7 @@ const uniqueWebsites = useMemo(() => {
             <TableRow className="hover:bg-transparent border-none">
               <TableHead className="w-[80px] pl-6 py-4">Image</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest">Product Info</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest">SKU</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest">Item Code</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest">Brand / Web</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6"> Actions</TableHead>
             </TableRow>

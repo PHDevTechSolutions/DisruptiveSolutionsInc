@@ -328,43 +328,43 @@ export default function ProductDetails() {
                   </button>
                 </div>
 
-{/* --- CATALOG BUTTONS (STAY ON PAGE DOWNLOAD) --- */}
-{product.catalogs?.length ? (
-  <div className="grid grid-cols-1 gap-3 pt-4">
-    {product.catalogs.map((url, i) => {
-      
-      /**
-       * CLOUDINARY DOWNLOAD TRICK:
-       * 1. Palitan ang '/upload/' ng '/upload/fl_attachment/' para pilitin ang download.
-       * 2. Kung may '/private/' sa URL, gagawin nating '/upload/' para iwas 401 (basta Public ang file).
-       */
-      const forceDownloadUrl = url
-        .replace("/private/", "/upload/")
-        .replace("/upload/", "/upload/fl_attachment/");
+                {/* --- CATALOG BUTTONS (STAY ON PAGE DOWNLOAD) --- */}
+                {product.catalogs?.length ? (
+                  <div className="grid grid-cols-1 gap-3 pt-4">
+                    {product.catalogs.map((url, i) => {
 
-      // Clean filename for the download attribute
-      const fileName = `Datasheet_${product.name.replace(/\s+/g, '_')}_${i + 1}.pdf`;
+                      /**
+                       * CLOUDINARY DOWNLOAD TRICK:
+                       * 1. Palitan ang '/upload/' ng '/upload/fl_attachment/' para pilitin ang download.
+                       * 2. Kung may '/private/' sa URL, gagawin nating '/upload/' para iwas 401 (basta Public ang file).
+                       */
+                      const forceDownloadUrl = url
+                        .replace("/private/", "/upload/")
+                        .replace("/upload/", "/upload/fl_attachment/");
 
-      return (
-        <a
-          key={i}
-          href={forceDownloadUrl}
-          download={fileName}
-          // Ginawang _self para hindi magbukas ng bagong tab
-          target="_self" 
-          rel="noopener noreferrer"
-          className="w-full py-4 bg-black text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#d11a2a] transition-all shadow-lg group border-none no-underline cursor-pointer"
-        >
-          <FileText
-            size={16}
-            className="group-hover:scale-110 transition-transform text-white"
-          />
-          <span className="text-white">Download PDF Datasheet {i + 1}</span>
-        </a>
-      );
-    })}
-  </div>
-) : null}
+                      // Clean filename for the download attribute
+                      const fileName = `Datasheet_${product.name.replace(/\s+/g, '_')}_${i + 1}.pdf`;
+
+                      return (
+                        <a
+                          key={i}
+                          href={forceDownloadUrl}
+                          download={fileName}
+                          // Ginawang _self para hindi magbukas ng bagong tab
+                          target="_self"
+                          rel="noopener noreferrer"
+                          className="w-full py-4 bg-black text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#d11a2a] transition-all shadow-lg group border-none no-underline cursor-pointer"
+                        >
+                          <FileText
+                            size={16}
+                            className="group-hover:scale-110 transition-transform text-white"
+                          />
+                          <span className="text-white">Download PDF Datasheet {i + 1}</span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                ) : null}
 
 
               </div>

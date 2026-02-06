@@ -147,6 +147,7 @@ export function AppSidebar({ onNavigate, ...props }: any) {
               { title: "Add new product", url: "#" },
             ]
           : [
+            // { title: "Bulk Product", url: "#" },
               { title: "All Product", url: "#" },
               { title: "Add new product", url: "#" },
               { title: "Orders", url: "#", badge: counts.product > 0 ? counts.product : null },

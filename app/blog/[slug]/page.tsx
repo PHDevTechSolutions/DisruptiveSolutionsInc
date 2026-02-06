@@ -82,7 +82,16 @@ useEffect(() => {
                     <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
                     </h1>
                     
-                    
+                    {/* --- ITO YUNG FIX SA COVER IMAGE --- */}
+    {blog.coverImage && (
+        <div className="w-full mb-10 overflow-hidden rounded-2xl shadow-lg">
+            <img 
+                src={blog.coverImage} 
+                alt={blog.title || "Blog Cover"} 
+                className="w-full h-auto object-cover max-h-[500px]" 
+            />
+        </div>
+    )}
                     {blog.sections?.[0]?.type === "paragraph" && (
                         <div className="text-base text-gray-700 leading-relaxed mb-10">
                             <style jsx global>{`
