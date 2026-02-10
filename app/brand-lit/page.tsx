@@ -52,21 +52,42 @@ export default function BrandsPage() {
     return () => unsubscribe();
   }, []);
 
-  // --- 2. FETCH PRODUCTS (LIT ONLY) ---
+  // --- 2. FETCH PRODUCTS (LIT BRAND) ---
   useEffect(() => {
+    // ✅ CORRECT QUERY - Using array-contains for brands array
     const q = query(
-  collection(db, "products"),
-  where("website", "==", "Disruptive Solutions Inc"),
-  // Gamitin ang array-contains kung ang 'brands' ay listahan sa DB
-  where("brands", "array-contains", "brand-lit"), 
-  orderBy("createdAt", "desc")
-);
+      collection(db, "products"),
+      where("brands", "array-contains", "brand-lit"),  // Check if "LIT" is in brands array
+      orderBy("createdAt", "desc")
+    );
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setProducts(data);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q, 
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        }));
+        
+        // 🔥 ADDITIONAL CLIENT-SIDE FILTER (Optional, for extra safety)
+        // Filter for products that also have "Disruptive Solutions Inc" in websites array
+        const filteredData = data.filter((product: any) => {
+          const hasCorrectWebsite = Array.isArray(product.websites) 
+            ? product.websites.includes("Disruptive Solutions Inc")
+            : product.website === "Disruptive Solutions Inc"; // Fallback for old schema
+          
+          return hasCorrectWebsite;
+        });
+        
+        setProducts(filteredData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching products:", error);
+        setLoading(false);
+      }
+    );
+    
     return () => unsubscribe();
   }, []);
 
@@ -178,6 +199,11 @@ export default function BrandsPage() {
 
             {loading ? (
               <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-[#d11a2a]" /></div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-lg font-bold text-gray-400 uppercase italic">No products found</p>
+                <p className="text-xs text-gray-400 mt-2">Try adjusting your filters</p>
+              </div>
             ) : (
               <div className="space-y-4">
                 {activeView === "CATEGORIES" && dbCategories.map((category) => {

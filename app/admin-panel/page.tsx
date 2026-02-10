@@ -26,7 +26,7 @@ import ChangePassword from "../components/settings/changepassword"
 import AllUsers from "../components/settings/allusers"
 import FAQEditor from "../components/pages/FaqSettings"
 import BulkProduct from "../components/products/bulk-product"
-
+import SpecComponent from "../components/products/SpecsCategory"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -75,6 +75,8 @@ export default function Page() {
         return <BrandsManager />
       case "Messenger":
         return <Messenger />
+            case "Specifications Maintenance":
+        return <SpecComponent />
       case "Partners":
         return <PartnersManager />
       case "Notification":
