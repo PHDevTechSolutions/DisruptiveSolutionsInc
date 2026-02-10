@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, where } from "firebase/firestore";
 import Navbar from "../components/navigation/navbar";
 import Footer from "../components/navigation/footer";
-import Application from "../components/application";
+import Application from "../components/litfilter";
 import ProductFilter from "../components/zumtobelfilter"; 
 import Highlights from "../components/Highlights";
 import {
@@ -18,7 +18,8 @@ import {
   Trash2,
   Check,
   Minus,
-  Star
+  Star,
+  Search
 } from "lucide-react";
 import FloatingChatWidget  from "../components/chat-widget";
 
@@ -36,7 +37,8 @@ export default function BrandsPage() {
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState("CATEGORIES"); 
   const [filters, setFilters] = useState<FilterState>({});
-
+    // 🔥 NEW: Search state
+    const [searchQuery, setSearchQuery] = useState("");
   // --- 1. FETCH CATEGORIES ---
   useEffect(() => {
     const q = query(
@@ -51,6 +53,8 @@ export default function BrandsPage() {
     });
     return () => unsubscribe();
   }, []);
+
+  
 
   // --- 2. FETCH PRODUCTS (LIT BRAND) ---
   useEffect(() => {
@@ -109,34 +113,69 @@ export default function BrandsPage() {
     };
   }, [syncCart]);
 
-  // --- FILTER LOGIC ---
+// 🔥 UPDATED: filteredProducts now includes search functionality
   const filteredProducts = useMemo(() => {
     const activeCategoryNames = dbCategories.map((cat: any) => cat.title?.trim().toUpperCase());
+
     return products.filter((product) => {
-      const hasCategoryMatch = dbCategories.length === 0 || product.dynamicSpecs?.some((spec: any) => 
+      // Category filter
+      const hasActiveCategory = product.dynamicSpecs?.some((spec: any) => 
         activeCategoryNames.includes(spec.value?.trim().toUpperCase())
       );
-      if (!hasCategoryMatch) return false;
+      if (!hasActiveCategory) return false;
 
-      const activeEntries = Object.entries(filters).filter(([_, value]) => value !== "*" && value !== "");
-      for (const [key, filterValue] of activeEntries) {
-        let hasMatch = false;
-        const inDynamic = product.dynamicSpecs?.some((spec: any) => 
-          spec.title?.toLowerCase() === key.toLowerCase() && 
-          spec.value?.toLowerCase() === filterValue.toString().toLowerCase()
-        );
-        const inTechnical = product.technicalSpecs?.some((group: any) => 
-          group.rows?.some((row: any) => 
-            row.name?.toLowerCase() === key.toLowerCase() && 
-            row.value?.toLowerCase().includes(filterValue.toString().toLowerCase())
+      // 🔥 NEW: Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = product.name?.toLowerCase().includes(query);
+        const matchesSKU = product.sku?.toLowerCase().includes(query);
+        const matchesDescription = product.shortDescription?.toLowerCase().includes(query);
+        
+        // Search in technical specs
+        const matchesSpecs = product.technicalSpecs?.some((spec: any) =>
+          spec.rows?.some((row: any) =>
+            row.name?.toLowerCase().includes(query) ||
+            row.value?.toLowerCase().includes(query)
           )
         );
-        hasMatch = inDynamic || inTechnical;
+
+        // Search in dynamic specs
+        const matchesDynamicSpecs = product.dynamicSpecs?.some((spec: any) =>
+          spec.title?.toLowerCase().includes(query) ||
+          spec.value?.toLowerCase().includes(query)
+        );
+
+        if (!matchesName && !matchesSKU && !matchesDescription && !matchesSpecs && !matchesDynamicSpecs) {
+          return false;
+        }
+      }
+
+      // Other filters
+      const activeEntries = Object.entries(filters).filter(([key, value]) => {
+        return value !== "*" && value !== "" && key !== "fluxFrom" && key !== "fluxTo";
+      });
+
+      for (const [key, filterValue] of activeEntries) {
+        let hasMatch = product.dynamicSpecs?.some((spec: any) => 
+            spec.title?.toLowerCase() === key.toLowerCase() && 
+            spec.value?.toLowerCase() === filterValue.toString().toLowerCase()
+        );
+        if (!hasMatch && product.technicalSpecs) {
+          product.technicalSpecs.forEach((spec: any) => {
+            const foundRow = spec.rows?.find((r: any) => 
+              r.name.toLowerCase() === key.toLowerCase() || 
+              (key === "power" && r.name.toLowerCase() === "wattage")
+            );
+            if (foundRow && foundRow.value.toLowerCase().includes(filterValue.toString().toLowerCase())) {
+              hasMatch = true;
+            }
+          });
+        }
         if (!hasMatch) return false;
       }
       return true;
     });
-  }, [products, filters, dbCategories]);
+  }, [products, filters, dbCategories, searchQuery]);
 
   const addToQuote = (product: any) => {
     const currentCart = JSON.parse(localStorage.getItem("disruptive_quote_cart") || "[]");
@@ -183,6 +222,39 @@ export default function BrandsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
           <div className="lg:col-span-9 order-2 lg:order-1">
+             <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products by name, SKU, or specifications..."
+                  className="w-full pl-12 pr-12 py-4 border-2 border-gray-200 rounded-2xl text-sm font-bold placeholder:text-gray-400 focus:outline-none focus:border-[#d11a2a] transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full transition-all"
+                  >
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                )}
+              </div>
+              {searchQuery && (
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-xs font-bold text-gray-500">
+                    Found <span className="text-[#d11a2a] font-black">{filteredProducts.length}</span> products matching "{searchQuery}"
+                  </p>
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="text-xs font-bold text-gray-400 hover:text-[#d11a2a] transition-colors"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="mb-8 flex items-center gap-4 border-b border-gray-100">
               {["CATEGORIES", "APPLICATIONS", "HIGHLIGHTS"].map((tab) => (
                 <button
@@ -328,18 +400,33 @@ function ProductCard({ product, addToQuote, isInCart }: any) {
       </Link>
 
       <div className="p-5 flex flex-col flex-1 bg-white">
-        <h4 className="text-[11px] font-black uppercase italic line-clamp-2 min-h-[32px] text-gray-900 group-hover/card:text-[#d11a2a] transition-colors">
+    {/* Product Name as a Link */}
+    <Link 
+        href={`/brand-lit/${product.slug}`} // Palitan mo ito base sa actual route structure mo
+        className="block group/link"
+    >
+        <h4 className="text-[11px] font-black uppercase italic line-clamp-2 min-h-[32px] text-gray-900 group-hover/card:text-[#d11a2a] transition-colors decoration-2 underline-offset-4">
             {product.name}
         </h4>
-        <button 
-          onClick={() => addToQuote(product)}
-          className={`w-full mt-5 py-3.5 text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
+    </Link>
+
+    <button 
+        onClick={() => addToQuote(product)}
+        className={`w-full mt-5 py-3.5 text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
             isInCart ? "bg-green-600 text-white" : "bg-black text-white hover:bg-[#d11a2a]"
-          }`}
-        >
-          {isInCart ? <><Check size={14} /> Added</> : <><Plus size={14} /> Add to Quote</>}
-        </button>
-      </div>
+        }`}
+    >
+        {isInCart ? (
+            <>
+                <Check size={14} /> Added
+            </>
+        ) : (
+            <>
+                <Plus size={14} /> Add to Quote
+            </>
+        )}
+    </button>
+</div>
     </div>
   );
 }

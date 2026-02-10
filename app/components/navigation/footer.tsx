@@ -54,7 +54,7 @@ export default function Footer() {
           <div className="space-y-8">
             <img src={LOGO_WHITE} alt="Logo" className="h-12" />
             <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
-              The leading edge of lighting technology. Disrupting the standard to build a brighter, smarter world.
+              Lighting excellence driven by engineering, innovation, and forward-thinking design. Your Partner For Brighter Solutions.
             </p>
             <div className="flex gap-4">
               {socials.map((soc, i) => (

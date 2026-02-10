@@ -19,7 +19,8 @@ import {
   Trash2,
   Check,
   Minus,
-  Star
+  Star,
+  Search
 } from "lucide-react";
 
 interface FilterState {
@@ -43,7 +44,10 @@ export default function BrandsPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [quoteCart, setQuoteCart] = useState<any[]>([]);
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState("CATEGORIES"); 
+  const [activeView, setActiveView] = useState("CATEGORIES");
+  
+  // 🔥 NEW: Search state
+  const [searchQuery, setSearchQuery] = useState("");
   
   const [filters, setFilters] = useState<FilterState>({
     application: "*",
@@ -58,7 +62,6 @@ export default function BrandsPage() {
     fluxTo: ""
   });
 
-  // --- UPDATED: QUANTITY SYNC USING SLUG (item.id now stores slug) ---
   const updateQuantity = (productSlug: string, delta: number) => {
     const updatedCart = quoteCart.map((item) => {
       if (item.id === productSlug) {
@@ -73,7 +76,6 @@ export default function BrandsPage() {
     window.dispatchEvent(new Event("cartUpdated"));
   };
 
-  // --- 1. FETCH CATEGORIES ---
   useEffect(() => {
     const q = query(
       collection(db, "categoriesmaintenance"),
@@ -86,34 +88,42 @@ export default function BrandsPage() {
     });
     return () => unsubscribe();
   }, []);
-
-  // --- 2. FETCH PRODUCTS (Ensure Slug is included as primary key) ---
+// --- 2. FETCH PRODUCTS (LIT BRAND) ---
   useEffect(() => {
+    // ✅ CORRECT QUERY - Using array-contains for brands array
     const q = query(
       collection(db, "products"),
-      where("website", "==", "Disruptive Solutions Inc"),
-      where("brand", "==", "Zumtobel"),
+      where("brands", "array-contains", "Zumtobel"),  // Check if "LIT" is in brands array
       orderBy("createdAt", "desc")
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-const data = snapshot.docs.map((doc) => {
-  const productData = doc.data();
-  
-  // Helper function para gawing URL-friendly ang pangalan
-  const generatedSlug = productData.name 
-    ? productData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')
-    : doc.id;
-
-  return { 
-    docId: doc.id, 
-    ...productData,
-    // KUNG walang 'slug' sa DB, i-generate natin base sa 'name'
-    slug: productData.slug || generatedSlug 
-  };
-      });
-      setProducts(data);
-      setLoading(false);
-    });
+    
+    const unsubscribe = onSnapshot(
+      q, 
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        }));
+        
+        // 🔥 ADDITIONAL CLIENT-SIDE FILTER (Optional, for extra safety)
+        // Filter for products that also have "Disruptive Solutions Inc" in websites array
+        const filteredData = data.filter((product: any) => {
+          const hasCorrectWebsite = Array.isArray(product.websites) 
+            ? product.websites.includes("Disruptive Solutions Inc")
+            : product.website === "Disruptive Solutions Inc"; // Fallback for old schema
+          
+          return hasCorrectWebsite;
+        });
+        
+        setProducts(filteredData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching products:", error);
+        setLoading(false);
+      }
+    );
+    
     return () => unsubscribe();
   }, []);
 
@@ -134,15 +144,44 @@ const data = snapshot.docs.map((doc) => {
     };
   }, [syncCart]);
 
+  // 🔥 UPDATED: filteredProducts now includes search functionality
   const filteredProducts = useMemo(() => {
     const activeCategoryNames = dbCategories.map((cat: any) => cat.title?.trim().toUpperCase());
 
     return products.filter((product) => {
+      // Category filter
       const hasActiveCategory = product.dynamicSpecs?.some((spec: any) => 
         activeCategoryNames.includes(spec.value?.trim().toUpperCase())
       );
       if (!hasActiveCategory) return false;
 
+      // 🔥 NEW: Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = product.name?.toLowerCase().includes(query);
+        const matchesSKU = product.sku?.toLowerCase().includes(query);
+        const matchesDescription = product.shortDescription?.toLowerCase().includes(query);
+        
+        // Search in technical specs
+        const matchesSpecs = product.technicalSpecs?.some((spec: any) =>
+          spec.rows?.some((row: any) =>
+            row.name?.toLowerCase().includes(query) ||
+            row.value?.toLowerCase().includes(query)
+          )
+        );
+
+        // Search in dynamic specs
+        const matchesDynamicSpecs = product.dynamicSpecs?.some((spec: any) =>
+          spec.title?.toLowerCase().includes(query) ||
+          spec.value?.toLowerCase().includes(query)
+        );
+
+        if (!matchesName && !matchesSKU && !matchesDescription && !matchesSpecs && !matchesDynamicSpecs) {
+          return false;
+        }
+      }
+
+      // Other filters
       const activeEntries = Object.entries(filters).filter(([key, value]) => {
         return value !== "*" && value !== "" && key !== "fluxFrom" && key !== "fluxTo";
       });
@@ -167,15 +206,13 @@ const data = snapshot.docs.map((doc) => {
       }
       return true;
     });
-  }, [products, filters, dbCategories]);
+  }, [products, filters, dbCategories, searchQuery]);
 
-  // --- UPDATED: ADD TO QUOTE (Storing slug as the unique ID) ---
   const addToQuote = (product: any) => {
     const currentCart = JSON.parse(localStorage.getItem("disruptive_quote_cart") || "[]");
     const itemSlug = product.slug;
     
     if (!currentCart.find((item: any) => item.id === itemSlug)) {
-      // Inilalagay natin ang slug sa 'id' field ng cart para consistent sa buong app
       const updatedCart = [...currentCart, { ...product, id: itemSlug, quantity: 1 }];
       localStorage.setItem("disruptive_quote_cart", JSON.stringify(updatedCart));
       window.dispatchEvent(new Event("cartUpdated"));
@@ -206,6 +243,41 @@ const data = snapshot.docs.map((doc) => {
       <section className="py-6 md:py-12 px-4 md:px-6 max-w-[1600px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10">
           <div className="lg:col-span-9 order-2 lg:order-1">
+            {/* 🔥 NEW: Search Bar */}
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products by name, SKU, or specifications..."
+                  className="w-full pl-12 pr-12 py-4 border-2 border-gray-200 rounded-2xl text-sm font-bold placeholder:text-gray-400 focus:outline-none focus:border-[#d11a2a] transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full transition-all"
+                  >
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                )}
+              </div>
+              {searchQuery && (
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-xs font-bold text-gray-500">
+                    Found <span className="text-[#d11a2a] font-black">{filteredProducts.length}</span> products matching "{searchQuery}"
+                  </p>
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="text-xs font-bold text-gray-400 hover:text-[#d11a2a] transition-colors"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="mb-8 flex flex-col md:flex-row md:items-center gap-4 border-b border-gray-200">
               <span className="text-[11px] font-bold uppercase tracking-tight text-gray-900 pb-4 md:pb-0">Sort view according to:</span>
               <div className="flex">
@@ -258,7 +330,6 @@ const data = snapshot.docs.map((doc) => {
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-[#fcfcfc]">
                                 <div className="p-4 md:p-8 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                                   {categoryProducts.map((product) => {
-                                    // UPDATED: Sync check using slug
                                     const isInCart = quoteCart.some((item) => item.id === product.slug);
                                     return (
                                       <div key={product.slug} className="bg-white rounded-xl md:rounded-[24px] overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-500 flex flex-col group/card relative">
@@ -277,10 +348,28 @@ const data = snapshot.docs.map((doc) => {
                                             </div>
                                             <span className="text-[8px] font-bold text-gray-400">({product.reviewCount || 0} Reviews)</span>
                                           </div>
-                                          <h4 className="text-[10px] md:text-[11px] font-black uppercase italic leading-tight line-clamp-2 min-h-[32px]">{product.name}</h4>
-                                          <button onClick={() => addToQuote(product)} className={`mt-4 w-full py-2.5 md:py-3 text-[8px] md:text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all ${isInCart ? "bg-green-600 text-white" : "bg-gray-900 text-white hover:bg-[#d11a2a]"}`}>
-                                            {isInCart ? <><Check size={12} strokeWidth={3} /> Added</> : <><Plus size={12} strokeWidth={3} /> Add to Quote</>}
-                                          </button>
+                                          <Link href={`/zumtobel/${product.slug}`} className="block group/link">
+  <h4 className="text-[10px] md:text-[11px] font-black uppercase italic leading-tight line-clamp-2 min-h-[32px] group-hover/link:text-[#d11a2a] transition-colors">
+    {product.name}
+  </h4>
+</Link>
+
+<button 
+  onClick={() => addToQuote(product)} 
+  className={`mt-4 w-full py-2.5 md:py-3 text-[8px] md:text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
+    isInCart ? "bg-green-600 text-white" : "bg-gray-900 text-white hover:bg-[#d11a2a]"
+  }`}
+>
+  {isInCart ? (
+    <>
+      <Check size={12} strokeWidth={3} /> Added
+    </>
+  ) : (
+    <>
+      <Plus size={12} strokeWidth={3} /> Add to Quote
+    </>
+  )}
+</button>
                                         </div>
                                       </div>
                                     );

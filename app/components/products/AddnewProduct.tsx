@@ -12,6 +12,7 @@ import {
   onSnapshot,
   updateDoc,
   arrayUnion,
+  getDoc
 } from "firebase/firestore";
 import {
   ImagePlus,
@@ -28,7 +29,8 @@ import {
   MoreVertical,
   LinkIcon,
   ImageIcon,
-  QrCode
+  QrCode,
+  RefreshCcw
 } from "lucide-react";
 
 // UI Components
@@ -142,6 +144,59 @@ const [existingQrProducts, setExistingQrProducts] = useState<string[]>([]);
   // Catalog Items: Combined new and existing
   const [catalogs, setCatalogs] = useState<CatalogItem[]>([{ id: Date.now() }]);
 
+ useEffect(() => {
+  const fetchSpecsFromCategory = async () => {
+    // 1. KUNIN ANG LATEST CATEGORY
+    const latestCat = selectedCats[selectedCats.length - 1];
+    
+    // 2. SAFETY CHECK: Kung may tinype na ang user, wag basta-basta i-overwrite
+    // Pwede nating i-check kung ang unang row ay may laman na
+    const hasExistingData = descBlocks.some(block => 
+      block.rows.some(row => row.name !== "" || row.value !== "")
+    );
+
+    // 3. KUNG NI-UNCHECK LAHAT (Empty na ang array)
+    if (selectedCats.length === 0) {
+      setDescBlocks([{ 
+        id: Date.now(), 
+        label: "TECHNICAL SPECIFICATIONS", 
+        rows: [{ name: "", value: "" }] 
+      }]);
+      return;
+    }
+
+    // 4. KUNG MAY NATIRA PANG CATEGORY, PERO HINDI PA NATIN NA-LOAD YUNG LATEST
+    try {
+      const docRef = doc(db, "spec_templates", latestCat);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const savedData = docSnap.data();
+        
+        // Mag-confirm lang tayo o mag-load kung kailangan talaga
+        if (savedData && Array.isArray(savedData.blocks)) {
+          const templateBlocks = savedData.blocks.map((block: any) => ({
+            id: Date.now() + Math.random(),
+            label: block.label || "TECHNICAL SPECIFICATIONS",
+            rows: Array.isArray(block.rows) 
+              ? block.rows.map((r: any) => ({ 
+                  name: r.name || "", 
+                  value: r.value || "" 
+                }))
+              : [{ name: "", value: "" }]
+          }));
+
+          setDescBlocks(templateBlocks);
+        }
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  fetchSpecsFromCategory();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [selectedCats]);
   // --- FETCH MASTER DATA ---
   useEffect(() => {
     const unsubCats = onSnapshot(collection(db, "categories"), (snap) => {
@@ -266,6 +321,8 @@ useEffect(() => {
     } catch (err) { toast.error("Error creating section"); }
   };
 
+  
+
  // --- PUBLISH / UPDATE PRODUCT ---
 const handlePublish = async () => {
   // Check kung may productName at slug
@@ -369,10 +426,63 @@ const handlePublish = async () => {
       {/* LEFT COLUMN */}
       <div className="lg:col-span-2 space-y-8">
         {/* HEADER */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-black text-slate-900 mb-2">{editData ? "Edit Product" : "Add New Product"}</h1>
-          <p className="text-slate-500 text-sm">Fill in the product details and media to publish</p>
-        </div>
+       <div className="mb-8 flex justify-between items-start">
+  <div>
+    <h1 className="text-4xl font-black text-slate-900 mb-2">
+      {editData ? "Edit Product" : "Add New Product"}
+    </h1>
+    <p className="text-slate-500 text-sm">
+      Fill in the product details and media to publish
+    </p>
+  </div>
+
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={async () => {
+      // 1. Check muna kung edit mode (kung may existing product)
+      if (editData?.id) {
+        try {
+          const productRef = doc(db, "products", editData.id); // Siguraduhin na "products" ang collection name mo
+          const productSnap = await getDoc(productRef);
+
+          if (productSnap.exists()) {
+            const pData = productSnap.data();
+            
+            // 2. I-fetch ang 'technicalSpecs' field mula sa actual product document
+            if (pData.technicalSpecs && Array.isArray(pData.technicalSpecs)) {
+              const fetchedSpecs = pData.technicalSpecs.map((block: any) => ({
+                id: block.id || Date.now() + Math.random(),
+                label: block.label || "TECHNICAL SPECIFICATIONS",
+                rows: Array.isArray(block.rows) 
+                  ? block.rows.map((r: any) => ({ 
+                      name: r.name || "", 
+                      value: r.value || "" 
+                    }))
+                  : [{ name: "", value: "" }]
+              }));
+
+              setDescBlocks(fetchedSpecs);
+              toast.success("Specs re-synced from Product Database!");
+            } else {
+              toast.info("No technical specs found for this product.");
+            }
+          }
+        } catch (error) {
+          console.error("Sync Error:", error);
+          toast.error("Failed to fetch technical specs.");
+        }
+      } else {
+        // 3. Fallback: Kung hindi edit mode, sabihan si user na select muna ng category/product
+        toast.warning("Sync only works for existing products in Edit mode.");
+      }
+    }}
+    className="flex items-center gap-2 border-2 border-slate-200 text-slate-600 font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all rounded-xl h-12 px-5 active:scale-95 text-[10px] uppercase tracking-wider"
+  >
+    <RefreshCcw className="w-4 h-4" />
+    REFRESH SPECS
+  </Button>
+</div>
 
         <Card className="shadow-lg border-0 rounded-2xl overflow-hidden bg-white hover:shadow-xl transition-shadow">
           <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-100 px-8 py-6">
@@ -390,25 +500,40 @@ const handlePublish = async () => {
               <Input className="h-12 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0 bg-white" value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} placeholder="Brief highlight of the product..." />
             </div>
 
-            {/* SPECS BLOCKS */}
-            <div className="space-y-6 pt-4 border-t-2 border-slate-100">
-              {descBlocks.map((block, bIdx) => (
-                <div key={block.id} className="p-6 border-2 border-slate-200 rounded-xl bg-gradient-to-br from-slate-50 to-white hover:border-blue-300 transition-colors">
-                  <Input className="mb-6 h-10 text-xs font-black uppercase w-full bg-white border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={block.label} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].label = e.target.value; setDescBlocks(nb); }} />
-                  <div className="space-y-3">
-                    {block.rows.map((row, rIdx) => (
-                      <div key={rIdx} className="grid grid-cols-12 gap-3 items-center">
-                        <Input className="col-span-5 h-10 text-xs font-semibold border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={row.name} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].rows[rIdx].name = e.target.value; setDescBlocks(nb); }} placeholder="e.g. Watts" />
-                        <Input className="col-span-6 h-10 text-xs border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-0" value={row.value} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].rows[rIdx].value = e.target.value; setDescBlocks(nb); }} placeholder="e.g. 50W" />
-                        <button onClick={() => { const nb = [...descBlocks]; nb[bIdx].rows = nb[bIdx].rows.filter((_, i) => i !== rIdx); setDescBlocks(nb); }} className="col-span-1 flex justify-center items-center hover:scale-110 transition-transform"><Trash2 className="w-5 h-5 text-slate-400 hover:text-red-500" /></button>
-                      </div>
-                    ))}
-                    <Button variant="outline" size="sm" className="w-full text-xs font-bold border-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 rounded-lg h-10 bg-transparent" onClick={() => { const nb = [...descBlocks]; nb[bIdx].rows.push({ name: "", value: "" }); setDescBlocks(nb); }}>+ Add Row</Button>
-                  </div>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" className="w-full text-[10px] font-bold border-dashed border-2 bg-transparent" onClick={() => { const nb = [...descBlocks]; nb.push({ id: Date.now(), label: "", rows: [{ name: "", value: "" }] }); setDescBlocks(nb); }}>+ ADD NEW ROW</Button>
-            </div>
+           {/* SPECS BLOCKS */}
+<div className="space-y-6 pt-4 border-t-2 border-slate-100">
+  {descBlocks.map((block, bIdx) => (
+    <div key={block.id} className="p-6 border-2 border-slate-200 rounded-xl bg-gradient-to-br from-slate-50 to-white hover:border-blue-300 transition-colors">
+      <Input 
+        className="mb-6 h-10 text-xs font-black uppercase w-full bg-white border-2 border-slate-200 rounded-lg focus:border-blue-500" 
+        value={block.label} 
+        onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].label = e.target.value; setDescBlocks(nb); }} 
+      />
+      <div className="space-y-3">
+        {block.rows.map((row, rIdx) => (
+          <div key={rIdx} className="grid grid-cols-12 gap-3 items-center">
+            <Input className="col-span-5 h-10 text-xs font-semibold border-2 border-slate-200 rounded-lg focus:border-blue-500" value={row.name} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].rows[rIdx].name = e.target.value; setDescBlocks(nb); }} placeholder="e.g. Watts" />
+            <Input className="col-span-6 h-10 text-xs border-2 border-slate-200 rounded-lg focus:border-blue-500" value={row.value} onChange={(e) => { const nb = [...descBlocks]; nb[bIdx].rows[rIdx].value = e.target.value; setDescBlocks(nb); }} placeholder="e.g. 50W" />
+            <button onClick={() => { const nb = [...descBlocks]; nb[bIdx].rows = nb[bIdx].rows.filter((_, i) => i !== rIdx); setDescBlocks(nb); }} className="col-span-1 flex justify-center items-center hover:scale-110 transition-transform"><Trash2 className="w-5 h-5 text-slate-400 hover:text-red-500" /></button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" className="w-full text-xs font-bold border-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 rounded-lg h-10 bg-transparent" onClick={() => { const nb = [...descBlocks]; nb[bIdx].rows.push({ name: "", value: "" }); setDescBlocks(nb); }}>+ Add Row</Button>
+      </div>
+    </div>
+  ))}
+
+  {/* ACTION BUTTONS: ADD ROW & REFRESH TEMPLATE */}
+  <div className="flex gap-3">
+    <Button 
+      variant="outline" 
+      size="sm" 
+      className="flex-1 text-[10px] font-bold border-dashed border-2 bg-transparent h-12" 
+      onClick={() => { const nb = [...descBlocks]; nb.push({ id: Date.now(), label: "", rows: [{ name: "", value: "" }] }); setDescBlocks(nb); }}
+    >
+      <Plus className="w-4 h-4 mr-2" /> ADD NEW SPEC BLOCK
+    </Button>
+  </div>
+</div>
 
             {/* CATALOGS SECTION */}
             <div className="space-y-5 pt-6 border-t-2 border-slate-100">
@@ -716,7 +841,7 @@ const handlePublish = async () => {
               onDelete={(id: string) => handleDeleteItem("websites", id)}
             />
             <SidebarSection
-              label="Category"
+              label="Product Family"
               icon={<Tag className="w-3 h-3" />}
               items={categories}
               selected={selectedCats}

@@ -171,17 +171,28 @@ export default function ApplicationList({ filteredProducts, addToQuote, quoteCar
                                                         </Link>
                                                         
                                                         <div className="p-5 md:p-6 flex flex-col flex-1 border-t border-gray-50 bg-white z-20">
-                                                            <h4 className="text-[11px] md:text-xs font-black uppercase italic leading-tight line-clamp-2 min-h-[36px] text-gray-900 group-hover/card:text-[#d11a2a] transition-colors">
-                                                                {product.name}
-                                                            </h4>
-                                                            <button 
-                                                                onClick={() => addToQuote(product)}
-                                                                className={`mt-5 w-full py-3.5 md:py-4 text-[9px] md:text-[10px] font-black uppercase rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                                                                    isInCart ? "bg-green-600 text-white" : "bg-gray-900 text-white hover:bg-[#d11a2a]"
-                                                                }`}
-                                                            >
-                                                                {isInCart ? <><Check size={14} strokeWidth={3} /> Added</> : <><Plus size={14} strokeWidth={3} /> Add to Quote</>}
-                                                            </button>
+                                                           <Link href={`/zumtobel/${product.slug}`} className="block group/link">
+  <h4 className="text-[10px] md:text-[11px] font-black uppercase italic leading-tight line-clamp-2 min-h-[32px] group-hover/link:text-[#d11a2a] transition-colors">
+    {product.name}
+  </h4>
+</Link>
+
+<button 
+  onClick={() => addToQuote(product)} 
+  className={`mt-4 w-full py-2.5 md:py-3 text-[8px] md:text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
+    isInCart ? "bg-green-600 text-white" : "bg-gray-900 text-white hover:bg-[#d11a2a]"
+  }`}
+>
+  {isInCart ? (
+    <>
+      <Check size={12} strokeWidth={3} /> Added
+    </>
+  ) : (
+    <>
+      <Plus size={12} strokeWidth={3} /> Add to Quote
+    </>
+  )}
+</button>
                                                         </div>
                                                     </div>
                                                 );

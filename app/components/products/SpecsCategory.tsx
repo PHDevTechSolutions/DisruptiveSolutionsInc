@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { 
   doc, 
@@ -14,14 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { 
-  Settings2, 
   Trash2, 
   Plus, 
-  Save, 
   LayoutList, 
-  ClipboardList 
+  Save,
+  Layers,
+  RefreshCcw
 } from "lucide-react";
 
+// --- INTERFACES ---
 interface SpecRow {
   name: string;
   value: string;
@@ -37,17 +38,13 @@ export default function SpecComponent() {
   // --- STATES ---
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("");
-  
-  // State para sa actual Product Specifications (descBlocks)
   const [descBlocks, setDescBlocks] = useState<SpecBlock[]>([
     { id: Date.now(), label: "TECHNICAL SPECIFICATIONS", rows: [{ name: "", value: "" }] }
   ]);
+  
+  const isInitialLoad = useRef(true);
 
-  // State para sa Maintenance (Template Setup)
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
-  const [templateFields, setTemplateFields] = useState<string[]>([""]);
-
-  // --- FETCH CATEGORIES ---
+  // --- 1. FETCH CATEGORIES FROM FIREBASE ---
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "categories"), (snap) => {
       setCategories(snap.docs.map(d => ({ id: d.id, name: d.data().name })));
@@ -55,80 +52,106 @@ export default function SpecComponent() {
     return () => unsub();
   }, []);
 
-  // --- LOGIC: AUTO-FILL SPECS BASED ON CATEGORY ---
+  // --- 2. LOAD SAVED STRUCTURE & VALUES PER CATEGORY ---
   useEffect(() => {
-    const loadTemplate = async () => {
+    const loadCategoryStructure = async () => {
       if (!selectedCategory) return;
+      isInitialLoad.current = true;
 
       try {
         const docRef = doc(db, "spec_templates", selectedCategory);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const templateData = docSnap.data();
-          // I-set ang fields base sa template ng category
-          const autoRows = templateData.fields.map((f: string) => ({
-            name: f,
-            value: ""
-          }));
+          const savedData = docSnap.data();
+          
+          // Check kung may 'blocks' field sa saved data
+          if (savedData && Array.isArray(savedData.blocks)) {
+            const templateBlocks = savedData.blocks.map((block: any) => ({
+              id: Date.now() + Math.random(),
+              label: block.label || "UNLABELED BLOCK",
+              // DITO ANG PINAKAMAHALAGA: Kinukuha na natin ang saved name AT value
+              rows: Array.isArray(block.rows) 
+                ? block.rows.map((r: any) => ({ 
+                    name: r.name || "", 
+                    value: r.value || "" // Papasok na dito yung value na sinave mo
+                  }))
+                : [{ name: "", value: "" }]
+            }));
 
-          setDescBlocks([
-            {
-              id: Date.now(),
-              label: "TECHNICAL SPECIFICATIONS",
-              rows: autoRows
-            }
-          ]);
-          toast.success(`Template loaded for ${selectedCategory}`);
+            setDescBlocks(templateBlocks);
+            toast.success(`Template & Values for ${selectedCategory} loaded!`);
+          } else {
+            handleResetToDefault();
+          }
+        } else {
+          handleResetToDefault();
         }
       } catch (error) {
-        console.error("Error loading template:", error);
+        console.error("Error loading structure:", error);
+        toast.error("Failed to load layout.");
+      } finally {
+        // Sandaling delay para hindi mag-trigger ang auto-save logic agad
+        setTimeout(() => { isInitialLoad.current = false; }, 500);
       }
     };
 
-    loadTemplate();
+    const handleResetToDefault = () => {
+      setDescBlocks([{ 
+        id: Date.now(), 
+        label: "TECHNICAL SPECIFICATIONS", 
+        rows: [{ name: "", value: "" }] 
+      }]);
+    };
+
+    loadCategoryStructure();
   }, [selectedCategory]);
 
-  // --- MAINTENANCE ACTIONS ---
-  const saveTemplate = async () => {
-    if (!selectedCategory) return toast.error("Select a category first");
-    const cleanFields = templateFields.filter(f => f.trim() !== "");
-    
+  // --- 3. SAVE CURRENT STRUCTURE & VALUES AS MASTER TEMPLATE ---
+  const saveSpecStructure = async () => {
+    if (!selectedCategory) return toast.error("Please select a category first!");
+
     try {
+      // I-format ang data: Isasama ang labels at ang buong rows (name + value)
+      const structureToSave = descBlocks.map(block => ({
+        label: block.label,
+        rows: block.rows.filter(r => r.name.trim() !== "") // Save name and value
+      }));
+
       await setDoc(doc(db, "spec_templates", selectedCategory), {
         category: selectedCategory,
-        fields: cleanFields,
+        blocks: structureToSave,
         updatedAt: serverTimestamp()
       });
-      toast.success("Spec Template Updated!");
-      setIsMaintenanceMode(false);
+
+      toast.success(`Specs with Values for ${selectedCategory} saved successfully!`);
     } catch (e) {
-      toast.error("Failed to save template");
+      toast.error("Failed to save spec layout");
+      console.error(e);
     }
   };
 
-  const loadMaintenanceFields = async () => {
-    if (!selectedCategory) return;
-    const docSnap = await getDoc(doc(db, "spec_templates", selectedCategory));
-    if (docSnap.exists()) {
-      setTemplateFields(docSnap.data().fields);
-    } else {
-      setTemplateFields([""]);
-    }
-    setIsMaintenanceMode(true);
+  // --- 4. OPTIONAL: CLEAR ONLY VALUES (Maintains structure) ---
+  const clearValuesOnly = () => {
+    const cleared = descBlocks.map(block => ({
+      ...block,
+      rows: block.rows.map(row => ({ ...row, value: "" }))
+    }));
+    setDescBlocks(cleared);
+    toast.info("Values cleared, structure remains.");
   };
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       
-      {/* 1. CATEGORY SELECTOR & MAINTENANCE TOGGLE */}
-      <div className="flex flex-col md:flex-row gap-4 items-end bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm">
-        <div className="flex-1 space-y-2">
+      {/* 1. CATEGORY SELECTOR & ACTIONS */}
+      <div className="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-end">
+        <div className="flex-1 space-y-2 w-full">
           <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
             <LayoutList className="w-4 h-4" /> Select Category
           </label>
           <select 
-            className="w-full h-12 px-4 rounded-xl border-2 border-slate-200 focus:border-purple-500 outline-none font-bold text-slate-700 transition-all"
+            className="w-full h-12 px-4 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none font-bold text-slate-700 transition-all bg-slate-50"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
@@ -138,92 +161,73 @@ export default function SpecComponent() {
             ))}
           </select>
         </div>
-        
-        <Button 
-          variant="outline" 
-          className="h-12 px-6 border-2 border-dashed border-purple-300 text-purple-600 font-bold hover:bg-purple-50"
-          onClick={loadMaintenanceFields}
-          disabled={!selectedCategory}
-        >
-          <Settings2 className="w-4 h-4 mr-2" />
-          Edit Template
-        </Button>
+
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={clearValuesOnly}
+            disabled={!selectedCategory}
+            className="h-12 px-4 border-2 border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-50"
+            title="Clear all values but keep names"
+          >
+            <RefreshCcw className="w-5 h-5" />
+          </Button>
+          
+          <Button 
+            onClick={saveSpecStructure}
+            disabled={!selectedCategory}
+            className="h-12 px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-100 flex items-center gap-2 transition-all active:scale-95"
+          >
+            <Save className="w-5 h-5" />
+            SAVE SPECS LAYOUT
+          </Button>
+        </div>
       </div>
 
-      {/* 2. MAINTENANCE MODAL/SECTION (Lilitaw lang pag click ng Edit Template) */}
-      {isMaintenanceMode && (
-        <div className="bg-purple-50 border-2 border-purple-200 p-6 rounded-2xl animate-in fade-in zoom-in duration-200">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-black text-purple-900 uppercase text-sm flex items-center gap-2">
-              <ClipboardList className="w-5 h-5" /> Default Specs for {selectedCategory}
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => setIsMaintenanceMode(false)}>Close</Button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-            {templateFields.map((f, i) => (
-              <div key={i} className="flex gap-2">
-                <Input 
-                  value={f}
-                  className="bg-white border-2 border-purple-100"
-                  onChange={(e) => {
-                    const newF = [...templateFields];
-                    newF[i] = e.target.value;
-                    setTemplateFields(newF);
-                  }}
-                  placeholder="Field Name (e.g. Wattage)"
-                />
-                <Button 
-                  variant="ghost" 
-                  className="text-red-400 hover:text-red-600"
-                  onClick={() => setTemplateFields(templateFields.filter((_, idx) => idx !== i))}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 bg-white" onClick={() => setTemplateFields([...templateFields, ""])}>
-              <Plus className="w-4 h-4 mr-2" /> Add Field
-            </Button>
-            <Button className="flex-1 bg-purple-600 hover:bg-purple-700" onClick={saveTemplate}>
-              <Save className="w-4 h-4 mr-2" /> Save Template
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. MAIN SPECIFICATION INPUTS */}
+      {/* 2. DYNAMIC SPECIFICATION BLOCKS */}
       <div className="space-y-6">
-        <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-          <Plus className="w-6 h-6 text-blue-500" /> PRODUCT SPECIFICATIONS
+        <h2 className="text-xl font-black text-slate-800 flex items-center gap-2 tracking-tight">
+          <Layers className="w-6 h-6 text-blue-500" /> PRODUCT SPECIFICATIONS
         </h2>
 
         {descBlocks.map((block, bIdx) => (
-          <div key={block.id} className="p-6 border-2 border-slate-200 rounded-2xl bg-white shadow-sm hover:border-blue-300 transition-colors">
-            <Input 
-              className="mb-6 h-12 text-xs font-black uppercase w-full bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-0" 
-              value={block.label} 
-              onChange={(e) => {
-                const nb = [...descBlocks];
-                nb[bIdx].label = e.target.value;
-                setDescBlocks(nb);
-              }} 
-            />
+          <div key={block.id} className="p-6 border-2 border-slate-200 rounded-2xl bg-white shadow-sm hover:border-blue-300 transition-all relative animate-in fade-in slide-in-from-top-4">
+            
+            {/* Block Label Input */}
+            <div className="flex gap-4 mb-6">
+              <Input 
+                className="h-12 text-xs font-black uppercase flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-blue-500" 
+                value={block.label} 
+                placeholder="BLOCK TITLE (e.g. PHYSICAL SPECS)"
+                onChange={(e) => {
+                  const nb = [...descBlocks];
+                  nb[bIdx].label = e.target.value;
+                  setDescBlocks(nb);
+                }} 
+              />
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="text-slate-300 hover:text-red-500 h-12 w-12"
+                onClick={() => setDescBlocks(descBlocks.filter((_, i) => i !== bIdx))}
+              >
+                <Trash2 className="w-5 h-5" />
+              </Button>
+            </div>
 
+            {/* Rows Mapping */}
             <div className="space-y-3">
               {block.rows.map((row, rIdx) => (
-                <div key={rIdx} className="grid grid-cols-12 gap-3 items-center group">
+                <div key={rIdx} className="grid grid-cols-12 gap-3 items-center group/row">
                   <Input 
-                    className="col-span-5 h-11 text-xs font-bold border-2 border-slate-100 rounded-xl bg-slate-50/50 group-hover:bg-white transition-all" 
+                    className="col-span-5 h-11 text-xs font-bold border-2 border-slate-100 rounded-xl bg-slate-50/50 group-hover/row:bg-white transition-all" 
                     value={row.name} 
                     onChange={(e) => {
                       const nb = [...descBlocks];
                       nb[bIdx].rows[rIdx].name = e.target.value;
                       setDescBlocks(nb);
                     }} 
-                    placeholder="Specification Name" 
+                    placeholder="Spec Name" 
                   />
                   <Input 
                     className="col-span-6 h-11 text-xs font-medium border-2 border-slate-200 rounded-xl focus:border-blue-500" 
@@ -241,9 +245,9 @@ export default function SpecComponent() {
                       nb[bIdx].rows = nb[bIdx].rows.filter((_, i) => i !== rIdx);
                       setDescBlocks(nb);
                     }} 
-                    className="col-span-1 flex justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="col-span-1 flex justify-center items-center opacity-0 group-hover/row:opacity-100 transition-opacity"
                   >
-                    <Trash2 className="w-5 h-5 text-slate-400 hover:text-red-500" />
+                    <Trash2 className="w-4 h-4 text-slate-300 hover:text-red-500" />
                   </button>
                 </div>
               ))}
@@ -251,7 +255,7 @@ export default function SpecComponent() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="w-full text-xs font-bold border-2 border-dashed border-blue-200 text-blue-600 hover:bg-blue-50 rounded-xl h-11" 
+                className="w-full text-xs font-bold border-2 border-dashed border-blue-100 text-blue-500 hover:bg-blue-50 rounded-xl h-11 mt-2" 
                 onClick={() => {
                   const nb = [...descBlocks];
                   nb[bIdx].rows.push({ name: "", value: "" });
@@ -266,10 +270,10 @@ export default function SpecComponent() {
 
         <Button 
           variant="outline" 
-          className="w-full h-14 border-dashed border-4 border-slate-200 rounded-2xl font-black text-slate-400 hover:text-slate-600 hover:border-slate-400 hover:bg-slate-50 transition-all uppercase tracking-widest text-xs"
-          onClick={() => setDescBlocks([...descBlocks, { id: Date.now(), label: "NEW SECTION", rows: [{ name: "", value: "" }] }])}
+          className="w-full h-16 border-dashed border-4 border-slate-100 rounded-2xl font-black text-slate-400 hover:text-blue-500 hover:border-blue-200 hover:bg-blue-50 transition-all uppercase tracking-widest text-[10px]"
+          onClick={() => setDescBlocks([...descBlocks, { id: Date.now(), label: "", rows: [{ name: "", value: "" }] }])}
         >
-          + Add New Specification Block
+          <Plus className="w-5 h-5 mr-2" /> Add New Specification Block
         </Button>
       </div>
     </div>

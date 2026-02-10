@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useId } from "react";
+import React, { useState, useEffect, useCallback, useId, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot, limit, where, addDoc, serverTimestamp } from "firebase/firestore";
 import Link from "next/link";
@@ -9,10 +9,11 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 import SignUpNewsletter from "../components/SignUpNewsletter"
 import Footer from "../components/navigation/footer";
 import Navbar from "../components/navigation/navbar";
+import BrandCarousel from "../components/BrandCarousel"; // 🔥 NEW IMPORT!
 import {
   Menu, X, FileSignature, ArrowRight, Sparkles, ChevronUp,
   MessageSquare, Send, Brain, Zap, Code, Facebook,
-  Instagram, Linkedin, Video, ShieldCheck, User, LogOut, Plus, Loader2, Calendar
+  Instagram, Linkedin, Video, ShieldCheck, User, LogOut, Plus, Loader2, Calendar, CheckCircle2, Upload
 } from "lucide-react";
 import HomePopup from "../components/modals/HomePopup";
 import FloatingChatWidget from "../components/chat-widget";
@@ -33,32 +34,38 @@ const AI_AGENTS = [
   { id: "gemini", name: "Sales Pro", role: "Quotation Assistant", avatar: "https://github.com/shadcn.png", status: "online", icon: Zap, gradient: "from-blue-500/20 to-cyan-500/20" },
 ];
 
-
-
 export default function DisruptiveLandingPage() {
-
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [message, setMessage] = useState("");
   const pathname = usePathname();
   const [userSession, setUserSession] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    company: "",
+    message: ""
+  });
 
   const [brandsData, setBrandsData] = useState([]);
 
   const logActivity = async (actionName: string) => {
     try {
-        await addDoc(collection(db, "cmsactivity_logs"), {
-            page: actionName,
-            timestamp: serverTimestamp(),
-            userAgent: typeof window !== "undefined" ? navigator.userAgent : "Server",
-            userEmail: userSession?.email || "Anonymous Visitor",
-        });
+      await addDoc(collection(db, "cmsactivity_logs"), {
+        page: actionName,
+        timestamp: serverTimestamp(),
+        userAgent: typeof window !== "undefined" ? navigator.userAgent : "Server",
+        userEmail: userSession?.email || "Anonymous Visitor",
+      });
     } catch (err) {
-        console.error("Dashboard Log Failed:", err);
+      console.error("Dashboard Log Failed:", err);
     }
-};
-
+  };
 
   const [fetchedProjects, setFetchedProjects] = useState<any[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
@@ -94,7 +101,6 @@ export default function DisruptiveLandingPage() {
 
     return () => unsubscribe();
   }, []);
-
 
   const LOGO_RED = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-red-scaled.png";
   const LOGO_WHITE = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
@@ -134,41 +140,116 @@ export default function DisruptiveLandingPage() {
     }
   ];
 
+  // --- CLOUDINARY UPLOAD FUNCTION ---
+  const uploadToCloudinary = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "taskflow_preset");
+    const cloudName = "dvmpn8mjh";
 
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: "POST", body: formData }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error.message || "Cloudinary Upload Failed");
+      }
+
+      const data = await response.json();
+      return data.secure_url;
+    } catch (error) {
+      console.error("Cloudinary Error:", error);
+      throw error;
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus("idle");
+
+    try {
+      let finalFileUrl = "";
+      if (file) {
+        finalFileUrl = await uploadToCloudinary(file);
+      }
+
+      const submissionData = {
+        ...formData,
+        attachmentUrl: finalFileUrl,
+        status: "unread",
+        type: "quotation",
+        processStatus: "pending",
+        createdAt: new Date(),
+      };
+
+      // 1. Save to Firebase
+      await addDoc(collection(db, "inquiries"), {
+        ...submissionData,
+        createdAt: serverTimestamp(),
+      });
+
+      // 2. Send Email via API
+      const emailRes = await fetch("/api/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(submissionData),
+      });
+
+      if (!emailRes.ok) throw new Error("Email sending failed");
+
+      setStatus("success");
+      setFormData({
+        firstName: "", lastName: "", email: "",
+        company: "", message: ""
+      });
+      setFile(null);
+    } catch (error) {
+      console.error("Submission Error:", error);
+      setStatus("error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const [blogs, setBlogs] = useState<any[]>([]);
 
-useEffect(() => {
-  const q = query(
-    collection(db, "blogs"),
-    where("website", "==", "disruptivesolutionsinc"),
-    // DAGDAGAN ITO: Para "published" lang ang kukunin
-    where("status", "==", "Published"), 
-    orderBy("createdAt", "desc"),
-    limit(3)
-  );
+  useEffect(() => {
+    const q = query(
+      collection(db, "blogs"),
+      where("website", "==", "disruptivesolutionsinc"),
+      where("status", "==", "Published"),
+      orderBy("createdAt", "desc"),
+      limit(3)
+    );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const data = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    setBlogs(data);
-  });
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setBlogs(data);
+    });
 
-  return () => unsubscribe();
-}, []);
+    return () => unsubscribe();
+  }, []);
 
-          // Format date
-        const formatDate = (timestamp: any) => {
-            if (!timestamp) return "Recently";
-            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-            return new Intl.DateTimeFormat('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            }).format(date);
-        };
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return "Recently";
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(date);
+  };
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -181,9 +262,9 @@ useEffect(() => {
   const [brands, setBrands] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
+  useEffect(() => {
     const q = query(
-      collection(db, "brand_name"), 
+      collection(db, "brand_name"),
       where("website", "==", "Disruptive Solutions Inc"),
       orderBy("createdAt", "desc")
     );
@@ -210,8 +291,6 @@ useEffect(() => {
     return () => unsub();
   }, []);
 
-  if (partners.length === 0) return null;
-
   const getGridConfig = () => {
     const count = brands.length;
     if (count === 1) return "grid-cols-1 max-w-[500px]";
@@ -229,9 +308,7 @@ useEffect(() => {
     );
   }
 
-
   return (
-
     <>
       <FloatingChatWidget />
       <HomePopup />
@@ -239,7 +316,7 @@ useEffect(() => {
 
         <Navbar />
 
-        {/* HERO SECTION */}
+        {/* 🔥 HERO SECTION WITH BRAND CAROUSEL */}
         <section className="relative min-h-[112vh] flex items-center bg-[#0a0a0a] overflow-hidden pt-1">
 
           <div className="absolute inset-0 z-0">
@@ -258,6 +335,7 @@ useEffect(() => {
           <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
+              {/* LEFT SIDE - TEXT CONTENT */}
               <motion.div
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -265,7 +343,7 @@ useEffect(() => {
                 className="text-center lg:text-left flex flex-col items-center lg:items-start"
               >
                 <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-xs font-bold tracking-[0.3em] uppercase mb-6 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full backdrop-blur-md">
-                  <Sparkles size={14} /> Innovation at our core
+                  <Sparkles size={14} /> Your Partner For Brighter Solutions
                 </span>
 
                 <h1 className="text-white text-5xl md:text-7xl lg:text-7xl font-black leading-[0.9] tracking-tighter mb-8 uppercase drop-shadow-2xl">
@@ -283,35 +361,14 @@ useEffect(() => {
                 </div>
               </motion.div>
 
+              {/* 🔥 RIGHT SIDE - BRAND CAROUSEL */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.9, x: 30 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
                 transition={{ duration: 1, delay: 0.2 }}
                 className="relative hidden lg:block"
               >
-                <motion.div
-                  animate={{ y: [0, -15, 0] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                  className="relative z-10"
-                >
-                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl">
-                    <h2 className="text-[#d11a2a] font-black text-4xl mb-2 tracking-tighter italic">99.9%</h2>
-                    <p className="text-white font-bold uppercase text-[10px] tracking-[0.3em] mb-8">System Reliability</p>
-
-                    <div className="space-y-6">
-                      {[
-                        { label: "Precision Engineering", val: "100%" },
-                        { label: "Energy Savings", val: "75%" },
-                        { label: "Global Reach", val: "24/7" },
-                      ].map((stat, i) => (
-                        <div key={i} className="flex justify-between items-end border-b border-white/10 pb-2">
-                          <span className="text-gray-400 text-[10px] font-bold uppercase">{stat.label}</span>
-                          <span className="text-white font-black text-sm tracking-widest">{stat.val}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
+           
               </motion.div>
 
             </div>
@@ -340,7 +397,7 @@ useEffect(() => {
                 className="flex flex-col items-center"
               >
                 <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] font-black uppercase tracking-[0.4em] mb-6 bg-red-50 px-5 py-2 rounded-full border border-red-100/50">
-                  <Zap size={12} className="fill-[#d11a2a]" /> Premium Products
+                  <Zap size={12} className="fill-[#d11a2a]" /> Explore our Product Range
                 </span>
                 <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-[-0.04em] uppercase leading-[0.9] mb-8">
                   Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Brands</span>
@@ -359,102 +416,122 @@ useEffect(() => {
                 show: { opacity: 1, transition: { staggerChildren: 0.1 } }
               }}
             >
-              {brands.map((brand) => (
-                <motion.div
-                  key={brand.id}
-                  variants={{ hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0 } }}
-                  whileHover={{ y: -8 }}
-                  className="w-full flex justify-center"
-                >
-                  <Link
-                    href={brand.href || "#"}
-                    className="group relative w-full h-[400px] md:h-[460px] block rounded-[28px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100"
-                  >
-                    <div className="absolute inset-0 overflow-hidden">
-                      <img
-                        src={brand.image}
-                        alt={brand.title}
-                        className="w-full h-full object-cover brightness-[0.6] group-hover:brightness-[0.4]"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90" />
-                    </div>
+              {brands.map((brand) => {
+                const isSoon = brand.status?.toLowerCase() === "soon";
 
-                    <div className="absolute inset-0 p-6 md:p-7 flex flex-col justify-end z-10">
-                      <div className="mb-4">
-                        <span className="bg-[#d11a2a] text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-md">
-                          {brand.category}
-                        </span>
+                return (
+                  <motion.div
+                    key={brand.id}
+                    variants={{ hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0 } }}
+                    whileHover={!isSoon ? { y: -8 } : {}}
+                    className="w-full flex justify-center"
+                  >
+                    <Link
+                      href={isSoon ? "#" : (brand.href || "#")}
+                      className={`group relative w-full h-[400px] md:h-[460px] block rounded-[28px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 ${isSoon ? "cursor-not-allowed" : "cursor-pointer"
+                        }`}
+                    >
+                      <div className="absolute inset-0 overflow-hidden">
+                        <img
+                          src={brand.image}
+                          alt={brand.title}
+                          className={`w-full h-full object-cover transition-all duration-700 ${isSoon
+                              ? "brightness-[0.4] grayscale group-hover:grayscale-0 group-hover:scale-110"
+                              : "brightness-[0.6] group-hover:brightness-[0.4] group-hover:scale-105"
+                            }`}
+                        />
+                        <div className={`absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 transition-opacity ${isSoon ? "group-hover:opacity-60" : ""}`} />
                       </div>
 
-                      <div className="space-y-3">
-                        <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tighter leading-tight">
-                          {brand.title}
-                        </h3>
+                      {isSoon && (
+                        <div className="absolute inset-0 flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0">
+                          <div className="bg-white/10 backdrop-blur-md border border-white/20 px-8 py-3 rounded-full">
+                            <span className="text-white text-xs font-black uppercase tracking-[0.3em] drop-shadow-lg">
+                              Coming Soon
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
-                        <p className="text-white/80 text-[10px] md:text-xs leading-relaxed line-clamp-3 font-medium italic">
-                          {brand.description}
-                        </p>
+                      <div className="absolute inset-0 p-6 md:p-7 flex flex-col justify-end z-10">
+                        <div className="mb-4 flex justify-between items-start">
+                          <span className="bg-[#d11a2a] text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-md">
+                            {brand.category}
+                          </span>
+                        </div>
 
-                        <div className="flex items-center gap-3 pt-2 text-white/60 group-hover:text-[#d11a2a] transition-colors">
-                          <div className="h-[1.5px] w-6 bg-white/20 group-hover:bg-[#d11a2a] group-hover:w-10 transition-all duration-500" />
-                          <span className="text-[9px] font-black uppercase tracking-widest">Learn More</span>
+                        <div className="space-y-3">
+                          <h3 className={`text-lg md:text-xl font-black text-white uppercase tracking-tighter leading-tight transition-colors ${isSoon ? "group-hover:text-red-400" : ""}`}>
+                            {brand.title}
+                          </h3>
+
+                          <p className="text-white/80 text-[10px] md:text-xs leading-relaxed line-clamp-3 font-medium italic">
+                            {brand.description}
+                          </p>
+
+                          <div className={`flex items-center gap-3 pt-2 transition-all duration-500 ${isSoon ? "opacity-0 group-hover:opacity-0" : "text-white/60 group-hover:text-[#d11a2a]"}`}>
+                            <div className="h-[1.5px] w-6 bg-white/20 group-hover:bg-[#d11a2a] group-hover:w-10 transition-all duration-500" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Learn More</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </motion.div>
           </div>
         </section>
 
         {/* PARTNERS SECTION */}
-        <section className="relative py-16 md:py-24 bg-white overflow-hidden border-y border-gray-100">
-          <div className="max-w-full mx-auto">
+        {partners.length > 0 && (
+          <section className="relative py-16 md:py-24 bg-white overflow-hidden border-y border-gray-100">
+            <div className="max-w-full mx-auto">
 
-            <div className="text-center mb-16 px-6">
-              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-                <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] mb-4 bg-red-50 px-4 py-2 rounded-full border border-red-100/50">
-                  <Zap size={12} className="fill-[#d11a2a]" /> Scalable Excellence
-                </span>
-                <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter uppercase leading-[0.85]">
-                  Our Disruptive <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Partners</span>
-                </h2>
-              </motion.div>
-            </div>
+              <div className="text-center mb-16 px-6">
+                <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+                  <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] mb-4 bg-red-50 px-4 py-2 rounded-full border border-red-100/50">
+                    <Zap size={12} className="fill-[#d11a2a]" /> Home of Lighting Excellence and Innovation
+                  </span>
+                  <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter uppercase leading-[0.85]">
+                    Our Disruptive <br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Partners</span>
+                  </h2>
+                </motion.div>
+              </div>
 
-            <div className="relative w-full overflow-hidden py-10">
-              <motion.div
-                className="flex whitespace-nowrap items-center"
-                animate={{ x: ["0%", "-75.33%"] }}
-                transition={{
-                  duration: 30,
-                  ease: "linear",
-                  repeat: Infinity
-                }}
-              >
-                {partners.map((logo, idx) => (
-                  <div
-                    key={idx}
-                    className="mx-3 md:mx-4 flex items-center justify-center shrink-0"
-                  >
-                    <div className="relative h-28 w-48 md:h-44 md:w-80 bg-white rounded-[24px] flex items-center justify-center p-2 group border-[3px] border-gray-100 hover:border-[#d11a2a] shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:shadow-[0_30px_60px_rgba(209,26,42,0.15)] overflow-hidden">
-                      <img
-                        src={logo}
-                        alt="Partner Brand"
-                        className="h-[90%] w-[90%] object-contain mix-blend-multiply opacity-100 group-hover:scale-125"
-                      />
+              <div className="relative w-full overflow-hidden py-10">
+                <motion.div
+                  className="flex whitespace-nowrap items-center"
+                  animate={{ x: ["0%", "-75.33%"] }}
+                  transition={{
+                    duration: 30,
+                    ease: "linear",
+                    repeat: Infinity
+                  }}
+                >
+                  {partners.map((logo, idx) => (
+                    <div
+                      key={idx}
+                      className="mx-3 md:mx-4 flex items-center justify-center shrink-0"
+                    >
+                      <div className="relative h-28 w-48 md:h-44 md:w-80 bg-white rounded-[24px] flex items-center justify-center p-2 group border-[3px] border-gray-100 hover:border-[#d11a2a] shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:shadow-[0_30px_60px_rgba(209,26,42,0.15)] overflow-hidden">
+                        <img
+                          src={logo}
+                          alt="Partner Brand"
+                          className="h-[90%] w-[90%] object-contain mix-blend-multiply opacity-100 group-hover:scale-125"
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </motion.div>
+                  ))}
+                </motion.div>
 
-              <div className="absolute inset-y-0 left-0 w-32 md:w-72 bg-gradient-to-r from-white via-white/95 to-transparent z-10 pointer-events-none" />
-              <div className="absolute inset-y-0 right-0 w-32 md:w-72 bg-gradient-to-l from-white via-white/95 to-transparent z-10 pointer-events-none" />
+                <div className="absolute inset-y-0 left-0 w-32 md:w-72 bg-gradient-to-r from-white via-white/95 to-transparent z-10 pointer-events-none" />
+                <div className="absolute inset-y-0 right-0 w-32 md:w-72 bg-gradient-to-l from-white via-white/95 to-transparent z-10 pointer-events-none" />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* PROJECTS SECTION */}
         <section className="relative w-full bg-white py-16 md:py-24">
@@ -469,7 +546,7 @@ useEffect(() => {
                 className="flex flex-col items-center"
               >
                 <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] mb-6 bg-red-50 px-5 py-2 rounded-full border border-red-100/50">
-                  <Zap size={12} className="fill-[#d11a2a]" /> Portfolios
+                  <Zap size={12} className="fill-[#d11a2a]" /> Get Inspired
                 </span>
                 <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-gray-900 tracking-[-0.04em] uppercase leading-[0.9] mb-8">
                   Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Projects</span>
@@ -494,7 +571,7 @@ useEffect(() => {
                     className="w-full"
                   >
                     <div className="group relative h-[220px] md:h-[400px] block rounded-[32px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 cursor-default">
-                      
+
                       <img
                         src={project.imageUrl}
                         alt={project.title}
@@ -572,9 +649,9 @@ useEffect(() => {
                   const descriptionText = blog.sections?.[0]?.description || "Click to read more about this disruptive technology update.";
 
                   return (
-                    <Link 
-                      href={`/blog/${blog.slug || blog.id}`} 
-                      key={blog.id} 
+                    <Link
+                      href={`/blog/${blog.slug || blog.id}`}
+                      key={blog.id}
                       className="group"
                       onClick={() => logActivity(`Blog: Read ${blog.title}`)}
                     >
@@ -585,7 +662,7 @@ useEffect(() => {
                             <img
                               src={blog.coverImage}
                               alt={blog.title}
-                              className="w-full h-full object-contain" 
+                              className="w-full h-full object-contain"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-300 font-black italic text-[10px] uppercase">
@@ -606,20 +683,19 @@ useEffect(() => {
                             {blog.title}
                           </h3>
 
-                          <div 
+                          <div
                             className="text-gray-400 text-xs leading-relaxed mb-6 line-clamp-2 font-medium italic"
                             dangerouslySetInnerHTML={{ __html: descriptionText }}
                           />
 
-                                                      {/* DATE CREATED */}
-                            <div className="flex items-center gap-2 mb-6">
-                                <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
-                                    <Calendar size={10} className="text-gray-400" />
-                                </div>
-                                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
-                                    {formatDate(blog.createdAt)}
-                                </span>
+                          <div className="flex items-center gap-2 mb-6">
+                            <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
+                              <Calendar size={10} className="text-gray-400" />
                             </div>
+                            <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                              {formatDate(blog.createdAt)}
+                            </span>
+                          </div>
 
                           <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2 group-hover:gap-4 transition-all duration-300">
@@ -646,6 +722,117 @@ useEffect(() => {
                 <ArrowRight size={16} />
               </div>
             </Link>
+          </div>
+        </section>
+
+        {/* CONTACT FORM SECTION */}
+        <section className="relative min-h-screen w-full bg-[#f3f4f6] overflow-hidden flex items-center py-20 selection:bg-[#d11a2a] selection:text-white">
+
+          <div className="absolute inset-0 opacity-[0.15] pointer-events-none"
+            style={{
+              backgroundImage: `radial-gradient(#000 0.5px, transparent 0.5px)`,
+              backgroundSize: '24px 24px'
+            }}
+          />
+
+          <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="space-y-8"
+              >
+                <div className="space-y-6">
+                  <h1 className="text-[#1a1a1a] text-4xl md:text-6xl font-black leading-[1] tracking-tighter uppercase">
+                    Talk to us <br />
+                    about your <br />
+                    <span className="text-[#d11a2a] italic">next lighting</span> <br />
+                    project.
+                  </h1>
+
+                  <div className="w-16 h-1.5 bg-[#d11a2a]" />
+
+                  <div className="space-y-3 max-w-sm">
+                    <p className="text-gray-900 text-lg font-bold leading-tight uppercase tracking-tight">
+                      Get your free quotation in 30 minutes.
+                    </p>
+                    <p className="text-gray-500 text-sm md:text-base font-medium leading-relaxed">
+                      Reach out to <span className="text-black font-bold">Disruptive Solutions Inc.</span> today!
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                className="relative bg-[#fafafa] p-8 md:p-12 rounded-[40px] border border-gray-200 shadow-2xl"
+              >
+                {status === "success" ? (
+                  <div className="py-12 text-center">
+                    <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto mb-6" />
+                    <h2 className="text-2xl font-black uppercase tracking-tighter">Request Sent!</h2>
+                    <button onClick={() => setStatus("idle")} className="text-[#d11a2a] font-black uppercase text-[10px] tracking-widest hover:underline mt-4">Send Another</button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">First Name*</label>
+                        <input name="firstName" required value={formData.firstName} onChange={handleChange} className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300" placeholder="John" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Last Name*</label>
+                        <input name="lastName" required value={formData.lastName} onChange={handleChange} className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300" placeholder="Doe" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Company / Organization*</label>
+                      <input name="company" required value={formData.company} onChange={handleChange} className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300" placeholder="ACME Industrial" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Email Address*</label>
+                      <input type="email" name="email" required value={formData.email} onChange={handleChange} className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300" placeholder="john@company.com" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Project Plans (Optional)</label>
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`h-14 px-5 rounded-2xl bg-gray-100/50 border-2 border-dashed border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-all ${file ? 'border-[#d11a2a] bg-red-50' : ''}`}
+                      >
+                        <input type="file" ref={fileInputRef} onChange={(e) => setFile(e.target.files?.[0] || null)} className="hidden" />
+                        <span className="text-[10px] font-bold text-gray-500 uppercase truncate max-w-[200px]">{file ? file.name : "Upload File"}</span>
+                        <Upload size={16} className={file ? "text-[#d11a2a]" : "text-gray-400"} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Message*</label>
+                      <textarea name="message" required value={formData.message} onChange={handleChange} placeholder="What do you need?..." className="w-full h-28 p-4 rounded-2xl bg-gray-100/50 border border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 resize-none placeholder:text-gray-300" />
+                    </div>
+
+                    <button
+                      disabled={loading}
+                      type="submit"
+                      className="w-full h-16 bg-[#d11a2a] text-white hover:bg-black rounded-full font-black uppercase tracking-[0.3em] text-[11px] transition-all duration-500 shadow-xl active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 mt-4"
+                    >
+                      {loading ? (
+                        <>PROCESSING <Loader2 className="animate-spin" size={18} /></>
+                      ) : (
+                        <>Request Quote <ArrowRight size={18} /></>
+                      )}
+                    </button>
+                    {status === "error" && <p className="text-red-500 text-[9px] font-black uppercase text-center mt-2">Error. Please try again.</p>}
+                  </form>
+                )}
+              </motion.div>
+            </div>
           </div>
         </section>
 

@@ -1,222 +1,210 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { ChevronDown, Minus, Filter, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { db } from "@/lib/firebase";
+import { 
+    collection, 
+    onSnapshot, 
+    query, 
+    orderBy, 
+    where, 
+    QuerySnapshot, 
+    DocumentData 
+} from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
+import { 
+    Plus, 
+    ImageIcon, 
+    Check, 
+    ChevronRight 
+} from "lucide-react";
 
-interface FilterProps {
-  products: any[];
-  productCount: number;
-  filters: any;
-  setFilters: (val: any) => void;
-  activeView?: string;
+interface ApplicationProps {
+    filteredProducts: any[];
+    addToQuote: (product: any) => void;
+    quoteCart: any[];
 }
 
-export default function ProductFilter({
-  products,
-  productCount,
-  filters,
-  setFilters,
-  activeView,
-}: FilterProps) {
-  const [isOpenMobile, setIsOpenMobile] = useState(false);
+export default function ApplicationList({ filteredProducts, addToQuote, quoteCart }: ApplicationProps) {
+    const [applications, setApplications] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [openId, setOpenId] = useState<string | null>(null);
 
-  // --- LOGIC PARA SA LIT TECHNICAL SPECS ---
-  const dynamicFilterData = useMemo(() => {
-    const filterGroups: { [key: string]: Set<string> } = {};
+    useEffect(() => {
+        const q = query(
+            collection(db, "applications"),
+            where("isActive", "==", true),
+            orderBy("createdAt", "asc")
+        );
 
-    products.forEach((product) => {
-      // 1. Kunin ang values mula sa Dynamic Specs (e.g. Category, Application)
-      product.dynamicSpecs?.forEach((spec: any) => {
-        const title = spec.title?.trim();
-        if (title && spec.value) {
-          if (!filterGroups[title]) filterGroups[title] = new Set();
-          filterGroups[title].add(spec.value.toString().trim());
-        }
-      });
-
-      // 2. Kunin ang specific rows mula sa Technical Specs (Dito galing ang LIT details)
-      product.technicalSpecs?.forEach((group: any) => {
-        group.rows?.forEach((row: any) => {
-          const name = row.name?.trim();
-          if (name && row.value) {
-            if (!filterGroups[name]) filterGroups[name] = new Set();
-            filterGroups[name].add(row.value.toString().trim());
-          }
+        const unsubscribe = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+            const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+            setApplications(list);
+            setLoading(false);
         });
-      });
-    });
 
-    const finalData: { [key: string]: string[] } = {};
-    Object.keys(filterGroups).forEach((key) => {
-      // Ginagamitan ng numeric sort para ang "10W" ay mauna sa "100W"
-      finalData[key] = Array.from(filterGroups[key]).sort((a, b) =>
-        a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
-      );
-    });
+        return () => unsubscribe();
+    }, []);
 
-    return finalData;
-  }, [products]);
-
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFilters({ ...filters, [name]: value });
-  };
-
-  // --- FILTER CLEANUP ---
-  const filterNames = Object.keys(dynamicFilterData)
-    .sort()
-    .filter((name) => {
-      // Wag ipakita ang mga system fields o redundand filters
-      const hidden = ["BRAND", "WEBSITE", "CREATEDAT", "ID", "MAINIMAGE", "NAME"];
-      if (hidden.includes(name.toUpperCase())) return false;
-      
-      // Itago ang Application filter kung nasa Application view na
-      if (activeView === "APPLICATIONS" && name.toUpperCase() === "APPLICATION") {
-        return false;
-      }
-      return true;
-    });
-
-  const activeFiltersCount = Object.values(filters).filter(v => v !== "*" && v !== "").length;
-
-  return (
-    <>
-      {/* --- MOBILE FLOATING BUTTON --- */}
-      <div className="md:hidden fixed bottom-6 right-6 z-[60]">
-        <button
-          onClick={() => setIsOpenMobile(true)}
-          className="bg-black text-white p-4 rounded-full shadow-2xl flex items-center gap-2 border border-white/20 active:scale-95 transition-all"
-        >
-          <Filter size={20} />
-          {activeFiltersCount > 0 && (
-            <span className="bg-[#d11a2a] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">
-              {activeFiltersCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* --- MOBILE DRAWER --- */}
-      <AnimatePresence>
-        {isOpenMobile && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setIsOpenMobile(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] md:hidden"
-            />
-            <motion.div
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed inset-x-0 bottom-0 bg-white rounded-t-[32px] p-6 z-[101] md:hidden max-h-[85vh] overflow-y-auto"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-sm font-black uppercase tracking-widest text-gray-900">Filter LIT Products</h3>
-                <button onClick={() => setIsOpenMobile(false)} className="p-2 bg-gray-100 rounded-full"><X size={18}/></button>
-              </div>
-              <FilterContent 
-                filterNames={filterNames} 
-                filters={filters} 
-                dynamicFilterData={dynamicFilterData} 
-                handleSelectChange={handleSelectChange}
-                productCount={productCount}
-                setFilters={setFilters}
-                activeView={activeView}
-              />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* --- DESKTOP STICKY VERSION --- */}
-      <div className="hidden md:block bg-white border border-gray-100 rounded-[24px] p-6 sticky top-28 shadow-sm h-auto max-h-[calc(100vh-140px)] overflow-y-auto custom-scrollbar">
-        <FilterContent 
-          filterNames={filterNames} 
-          filters={filters} 
-          dynamicFilterData={dynamicFilterData} 
-          handleSelectChange={handleSelectChange}
-          productCount={productCount}
-          setFilters={setFilters}
-          activeView={activeView}
-        />
-      </div>
-    </>
-  );
-}
-
-// Reusable Filter Content Component
-function FilterContent({ filterNames, filters, dynamicFilterData, handleSelectChange, productCount, setFilters, activeView }: any) {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
-        <div className="flex flex-col">
-          <h2 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.1em] text-gray-900">
-            Specifications /{" "}
-            <span className={Object.values(filters).some((v) => v !== "*" && v !== "") ? "text-[#d11a2a]" : "text-gray-300"}>
-              {Object.values(filters).some((v) => v !== "*" && v !== "") ? "Active" : "All"}
-            </span>
-          </h2>
-          <span className="text-[8px] font-bold text-gray-400 uppercase italic">
-            Refining {activeView}
-          </span>
-        </div>
-        <Minus size={14} className="text-gray-300" />
-      </div>
-
-      <div className="space-y-4">
-        {filterNames.length > 0 ? (
-          filterNames.map((name: string) => (
-            <div key={name} className="space-y-1">
-              <label className="text-[8px] md:text-[9px] font-bold text-gray-500 uppercase tracking-tight">
-                {name}:
-              </label>
-              <div className="relative">
-                <select
-                  name={name}
-                  value={filters[name] || "*"}
-                  onChange={handleSelectChange}
-                  className="w-full bg-gray-50 border border-gray-100 text-[11px] md:text-[10px] font-bold py-2.5 md:py-1.5 px-3 rounded-md appearance-none focus:outline-none focus:border-[#d11a2a] focus:ring-1 focus:ring-[#d11a2a]/10 transition-all cursor-pointer uppercase truncate pr-8"
-                >
-                  <option value="*">* SHOW ALL</option>
-                  {dynamicFilterData[name].map((opt: string) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+    if (loading) {
+        return (
+            <div className="space-y-4 p-6">
+                {[1, 2, 3].map((n) => (
+                    <div key={n} className="h-24 w-full bg-gray-50 animate-pulse rounded-2xl" />
+                ))}
             </div>
-          ))
-        ) : (
-          <p className="text-[9px] text-gray-400 italic">No specs found for these products.</p>
-        )}
-      </div>
+        );
+    }
 
-      <div className="mt-8 md:mt-6 pt-4 border-t border-gray-100">
-        <p className="text-[12px] md:text-[13px] font-black text-gray-900 mb-4 italic">
-          {productCount.toLocaleString()}{" "}
-          <span className="font-normal text-gray-400 not-italic text-[10px]">LIT matches</span>
-        </p>
+    return (
+        <div className="border-t border-gray-100">
+            {applications.map((app) => {
+                const appProducts = filteredProducts.filter((product: any) => {
+                    const targetAppTitle = app.title?.toUpperCase();
+                    return product.dynamicSpecs?.some((spec: any) => 
+                        spec.title?.toUpperCase() === "APPLICATION" && 
+                        spec.value?.toUpperCase() === targetAppTitle
+                    );
+                });
 
-        <button
-          onClick={() => setFilters({
-            application: "*",
-            mountingType: "*",
-            colour: "*",
-            lightDistribution: "*",
-            lampType: "*",
-            lampColour: "*",
-            power: "*",
-            connection: "*",
-            fluxFrom: "",
-            fluxTo: ""
-          })}
-          className="flex items-center text-[9px] font-black uppercase text-gray-400 hover:text-[#d11a2a] transition-colors group w-full py-2"
-        >
-          <span className="mr-2 text-[7px] group-hover:translate-x-1 transition-transform">▶</span>
-          Reset Technical Filters
-        </button>
-      </div>
-    </div>
-  );
+                if (appProducts.length === 0) return null;
+
+                const isOpen = openId === app.id;
+
+                return (
+                    <div 
+                        key={app.id} 
+                        className={`border-b border-gray-100 transition-all duration-300 ${isOpen ? 'bg-gray-50/50' : 'bg-white'}`}
+                    >
+                        {/* APPLICATION ROW HEADER */}
+                        <button
+                            onClick={() => setOpenId(isOpen ? null : app.id)}
+                            className="w-full flex items-center justify-between p-5 md:p-8 transition-all text-left group"
+                        >
+                            <div className="flex items-center gap-6 md:gap-10 flex-1">
+                                {/* LARGER APPLICATION IMAGE CONTAINER */}
+                                <div className="w-28 h-18 md:w-48 md:h-28 bg-white shrink-0 overflow-hidden rounded-2xl border border-gray-100 shadow-sm relative transition-all group-hover:border-[#d11a2a]/30">
+                                    {app.imageUrl ? (
+                                        <img
+                                            src={app.imageUrl}
+                                            alt={app.title}
+                                            className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                            <ImageIcon className="text-gray-300" size={24} />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="max-w-lg">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <h4 className={`text-base md:text-xl font-black uppercase tracking-tight transition-colors group-hover:text-[#d11a2a] ${isOpen ? 'text-[#d11a2a]' : 'text-gray-900'}`}>
+                                            {app.title}
+                                        </h4>
+                                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm transition-all border ${isOpen ? 'bg-[#d11a2a] text-white border-[#d11a2a]' : 'bg-gray-100 text-gray-500 border-gray-200 group-hover:bg-[#d11a2a] group-hover:text-white group-hover:border-[#d11a2a]'}`}>
+                                            {appProducts.length}
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] md:text-xs text-gray-600 font-semibold leading-tight line-clamp-2 uppercase tracking-wide italic max-w-md">
+                                        {app.description || "Explore specialized lighting solutions for this application."}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className={`p-3 rounded-full transition-all ${isOpen ? 'bg-[#d11a2a] text-white rotate-90' : 'bg-gray-50 text-gray-400 group-hover:text-gray-900'}`}>
+                                <ChevronRight size={20} strokeWidth={3} />
+                            </div>
+                        </button>
+
+                        {/* PRODUCT GRID SECTION */}
+                        <AnimatePresence>
+                            {isOpen && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="p-4 md:p-10 pt-0">
+                                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-8">
+                                            {appProducts.map((product: any) => {
+                                                const isInCart = quoteCart.some((item: any) => item.id === product.id);
+                                                const firstSpecGroup = product.technicalSpecs?.[0];
+
+                                                return (
+                                                    <div key={product.id} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 hover:shadow-2xl hover:shadow-gray-300/50 transition-all duration-500 flex flex-col group/card relative">
+                                                        <Link href={`/lighting-products-smart-solutions/${product.id}`}>
+                                                            {/* LARGER PRODUCT IMAGE CONTAINER */}
+                                                            <div className="relative h-60 sm:h-72 md:h-80 w-full bg-white p-6 flex items-center justify-center overflow-hidden">
+                                                                <img 
+                                                                    src={product.mainImage} 
+                                                                    className="max-w-[95%] max-h-[95%] object-contain group-hover/card:scale-110 group-hover/card:blur-[2px] transition-all duration-700" 
+                                                                    alt={product.name} 
+                                                                />
+                                                                
+                                                                {/* Technical Specs Overlay */}
+                                                                <motion.div 
+                                                                    initial={{ opacity: 0 }} 
+                                                                    whileHover={{ opacity: 1 }} 
+                                                                    className="absolute inset-0 bg-black/85 backdrop-blur-[2px] flex flex-col justify-center items-center p-6 opacity-0 group-hover/card:opacity-100 transition-all duration-300 z-30"
+                                                                >
+                                                                    <p className="text-[10px] font-black text-[#d11a2a] uppercase tracking-widest mb-4 italic border-b border-[#d11a2a]/40 pb-1 w-full text-center">Technical Specs</p>
+                                                                    <table className="w-full border-collapse">
+                                                                        <tbody className="divide-y divide-white/10">
+                                                                            {firstSpecGroup?.rows?.slice(0, 6).map((row: any, i: number) => (
+                                                                                <tr key={i}>
+                                                                                    <td className="py-2 text-[8px] md:text-[9px] font-bold text-gray-400 uppercase italic">{row.name}</td>
+                                                                                    <td className="py-2 text-[9px] md:text-[10px] font-black text-white uppercase text-right">{row.value || "—"}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </motion.div>
+
+                                                                <div className="absolute top-4 left-4 bg-white px-3 py-1.5 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-tighter border border-gray-100 shadow-sm z-10">
+                                                                    {product.sku}
+                                                                </div>
+                                                            </div>
+                                                        </Link>
+                                                        
+                                                        <div className="p-5 md:p-6 flex flex-col flex-1 border-t border-gray-50 bg-white z-20">
+                                                           <Link href={`/brand-lit/${product.slug}`} className="block group/link">
+  <h4 className="text-[10px] md:text-[11px] font-black uppercase italic leading-tight line-clamp-2 min-h-[32px] group-hover/link:text-[#d11a2a] transition-colors">
+    {product.name}
+  </h4>
+</Link>
+
+<button 
+  onClick={() => addToQuote(product)} 
+  className={`mt-4 w-full py-2.5 md:py-3 text-[8px] md:text-[9px] font-black uppercase rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
+    isInCart ? "bg-green-600 text-white" : "bg-gray-900 text-white hover:bg-[#d11a2a]"
+  }`}
+>
+  {isInCart ? (
+    <>
+      <Check size={12} strokeWidth={3} /> Added
+    </>
+  ) : (
+    <>
+      <Plus size={12} strokeWidth={3} /> Add to Quote
+    </>
+  )}
+</button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,12 +11,12 @@ import Navbar from "../components/navigation/navbar";
 import FloatingChatWidget  from "../components/chat-widget";
 import {
     Menu, Mail, Phone, MapPin, Send, ChevronUp, Sparkles, ArrowRight,
-    Facebook, Instagram, Linkedin, X, LogOut, User, Zap, FileSignature, ShieldCheck
+    Facebook, Instagram, Linkedin, X, LogOut, User, Zap, FileSignature, ShieldCheck, Upload
 } from "lucide-react";
 import Footer from "../components/navigation/footer";
-
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Idagdag ito
 // Firebase Imports
-import { db, auth } from "@/lib/firebase"; 
+import { db, auth, storage } from "@/lib/firebase"; 
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 // Dynamic Import para sa Map (Para iwas SSR errors sa Next.js)
@@ -30,6 +31,8 @@ const MapZoomControl = dynamic(() => import("@/components/ui/map").then(mod => m
 
 export default function ContactUsPage() {
     // --- STATES ---
+    const [file, setFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isNavOpen, setIsNavOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -87,24 +90,39 @@ const handleSubmit = async (e: React.FormEvent) => {
     setStatus("loading");
 
     try {
-        // 1. SAVE TO FIREBASE
-        // Sine-save muna natin sa DB para sigurado tayong may record ka.
+        let fileUrl = "";
+
+        // 1. UPLOAD FILE TO FIREBASE STORAGE (Kung may file)
+        if (file) {
+            try {
+                // Gumawa ng unique filename gamit ang timestamp
+                const fileRef = ref(storage, `inquiries/${Date.now()}_${file.name}`);
+                const uploadResult = await uploadBytes(fileRef, file);
+                fileUrl = await getDownloadURL(uploadResult.ref);
+            } catch (uploadError) {
+                console.error("Storage Upload Error:", uploadError);
+                // Optional: Pwedeng ituloy pa rin ang process kahit walang file
+            }
+        }
+
+        // 2. SAVE TO FIREBASE (Firestore)
+        // Kasama na rito ang fileUrl kung mayroon man
         await addDoc(collection(db, "inquiries"), {
             ...formData,
+            attachmentUrl: fileUrl, // Dito mase-save ang link ng file
             submittedAt: serverTimestamp(),
             source: "Contact Page",
-            status: "unread",    // Mahalaga ito para sa admin notification count
-            type: "customer",    // Para ma-filter sa dashboard
+            status: "unread",
+            type: "customer",
         });
 
-        // 2. SEND EMAIL NOTIFICATIONS (API Call)
-        // Gagamit tayo ng nested try-catch para kung mag-fail man ang email, 
-        // hindi mag-e-error ang buong process dahil saved na sa Firebase.
+        // 3. SEND EMAIL NOTIFICATIONS (API Call)
         try {
             const emailResponse = await fetch("/api/contact", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                // Isama rin ang attachmentUrl sa email payload kung kailangan ng API mo
+                body: JSON.stringify({ ...formData, attachmentUrl: fileUrl }),
             });
 
             if (!emailResponse.ok) {
@@ -114,11 +132,11 @@ const handleSubmit = async (e: React.FormEvent) => {
             console.error("Email API Error:", emailError);
         }
         
-        // 3. SUCCESS UI
+        // 4. SUCCESS UI
         setStatus("success");
         setFormData({ fullName: "", email: "", phone: "", message: "" });
+        setFile(null); // I-clear ang file state
         
-        // Balik sa idle after 5 seconds
         setTimeout(() => setStatus("idle"), 5000);
 
     } catch (error) {
@@ -292,6 +310,43 @@ const handleSubmit = async (e: React.FormEvent) => {
                             className="w-full bg-gray-50 border-none rounded-[24px] md:rounded-[32px] px-6 py-4 focus:ring-2 focus:ring-[#d11a2a]/20 outline-none transition-all font-bold resize-none text-base md:text-sm"
                         ></textarea>
                     </div>
+
+{/* Palitan yung part ng file upload UI ng ganito para mas user-friendly */}
+<div className="md:col-span-2 space-y-4">
+    <label className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">
+        Project Plans (Optional)
+    </label>
+    <div 
+        onClick={() => !file && fileInputRef.current?.click()}
+        className={`border-2 border-dashed rounded-[1.5rem] md:rounded-[2rem] p-6 md:p-10 flex flex-col items-center cursor-pointer transition-all ${file ? 'border-[#d11a2a] bg-red-50' : 'border-gray-200 hover:border-[#d11a2a] hover:bg-red-50'}`}
+    >
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={(e) => setFile(e.target.files?.[0] || null)} 
+            className="hidden" 
+        />
+        <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
+            <Upload size={20} className={file ? "text-[#d11a2a]" : "text-gray-400"} />
+        </div>
+        <p className="text-[10px] md:text-sm font-bold text-gray-900 uppercase text-center">
+            {file ? file.name : "Tap to upload files"}
+        </p>
+        
+        {file && (
+            <button 
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation(); // Iwasan mag-trigger ang parent click
+                    setFile(null);
+                }}
+                className="mt-2 text-[10px] text-red-600 font-bold uppercase hover:underline"
+            >
+                Remove File
+            </button>
+        )}
+    </div>
+</div>
                     
                     <div className="md:col-span-2 pt-2">
                         <motion.button
@@ -314,7 +369,6 @@ const handleSubmit = async (e: React.FormEvent) => {
         </div>
     </div>
 </section>
-
            <Footer/>
         </div>
     );
