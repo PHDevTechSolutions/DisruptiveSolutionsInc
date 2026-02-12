@@ -21,12 +21,18 @@ interface BrandCarouselProps {
 export default function BrandCarousel({ brands }: BrandCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isFirstLoad, setIsFirstLoad] = useState(true); // 🔥 NEW: Track first load
 
   // Filter out "soon" brands for carousel
   const activeBrands = brands.filter(brand => brand.status?.toLowerCase() !== "soon");
 
   useEffect(() => {
     if (activeBrands.length === 0) return;
+
+    // 🔥 Remove first load flag after component mounts
+    const firstLoadTimer = setTimeout(() => {
+      setIsFirstLoad(false);
+    }, 100);
 
     const interval = setInterval(() => {
       setIsAnimating(true);
@@ -36,7 +42,10 @@ export default function BrandCarousel({ brands }: BrandCarouselProps) {
       }, 300);
     }, 4000); // Change every 4 seconds
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(firstLoadTimer);
+    };
   }, [activeBrands.length]);
 
   if (activeBrands.length === 0) return null;
@@ -63,10 +72,10 @@ export default function BrandCarousel({ brands }: BrandCarouselProps) {
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
-          initial={{ opacity: 0, scale: 0.8, rotateY: -20 }}
+          initial={isFirstLoad ? { opacity: 1, scale: 1, rotateY: 0 } : { opacity: 0, scale: 0.8, rotateY: -20 }}
           animate={{ opacity: 1, scale: 1, rotateY: 0 }}
           exit={{ opacity: 0, scale: 0.8, rotateY: 20 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          transition={isFirstLoad ? { duration: 0 } : { duration: 0.6, ease: "easeOut" }}
           className={`relative w-[420px] h-[480px] rounded-[32px] overflow-hidden border-2 border-white/10 shadow-2xl ${
             isAnimating ? 'blur-sm scale-95' : 'blur-0 scale-100'
           } transition-all duration-300`}
@@ -86,58 +95,38 @@ export default function BrandCarousel({ brands }: BrandCarouselProps) {
             {/* Top Badge */}
             <div className="flex justify-between items-start">
               <motion.span
-                initial={{ x: -20, opacity: 0 }}
+                initial={isFirstLoad ? { x: 0, opacity: 1 } : { x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
+                transition={isFirstLoad ? { duration: 0 } : { delay: 0.3 }}
                 className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg"
               >
                 {currentBrand.category}
               </motion.span>
               
-              {/* Progress Indicators */}
-              <div className="flex gap-1.5">
-                {activeBrands.map((_, idx) => (
-                  <motion.div
-                    key={idx}
-                    className={`h-1 rounded-full transition-all duration-500 ${
-                      idx === currentIndex 
-                        ? 'w-8 bg-[#d11a2a]' 
-                        : 'w-1.5 bg-white/30'
-                    }`}
-                  />
-                ))}
-              </div>
             </div>
 
             {/* Bottom Content */}
             <div className="space-y-4">
               {/* Brand Logo/Name */}
               <motion.div
-                initial={{ y: 30, opacity: 0 }}
+                initial={isFirstLoad ? { y: 0, opacity: 1 } : { y: 30, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4 }}
+                transition={isFirstLoad ? { duration: 0 } : { delay: 0.4 }}
                 className="flex items-center gap-4"
               >
-                <div className="w-16 h-16 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl flex items-center justify-center">
-                  <span className="text-3xl font-black text-white">
-                    {currentBrand.title.charAt(0)}
-                  </span>
-                </div>
                 <div>
                   <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
                     {currentBrand.title}
                   </h3>
-                  <p className="text-white/60 text-xs font-bold uppercase tracking-wider mt-1">
-                    Premium Brand
-                  </p>
+                
                 </div>
               </motion.div>
 
               {/* Description */}
               <motion.p
-                initial={{ y: 20, opacity: 0 }}
+                initial={isFirstLoad ? { y: 0, opacity: 1 } : { y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                transition={isFirstLoad ? { duration: 0 } : { delay: 0.5 }}
                 className="text-white/80 text-sm leading-relaxed font-medium line-clamp-3"
               >
                 {currentBrand.description}
@@ -145,9 +134,9 @@ export default function BrandCarousel({ brands }: BrandCarouselProps) {
 
               {/* Call to Action */}
               <motion.div
-                initial={{ y: 20, opacity: 0 }}
+                initial={isFirstLoad ? { y: 0, opacity: 1 } : { y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.6 }}
+                transition={isFirstLoad ? { duration: 0 } : { delay: 0.6 }}
                 className="flex items-center gap-3 pt-2"
               >
                 <div className="h-[2px] w-8 bg-[#d11a2a]" />
@@ -191,9 +180,9 @@ export default function BrandCarousel({ brands }: BrandCarouselProps) {
 
       {/* Brand Counter */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={isFirstLoad ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
+        transition={isFirstLoad ? { duration: 0 } : { delay: 0.7 }}
         className="absolute -bottom-24 right-0 bg-white/5 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full"
       >
         <span className="text-[10px] font-black uppercase tracking-widest text-white/60">

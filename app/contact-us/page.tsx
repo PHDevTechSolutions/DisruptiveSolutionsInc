@@ -18,6 +18,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Idagdag 
 // Firebase Imports
 import { db, auth, storage } from "@/lib/firebase"; 
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import FloatingMenuWidget from "../components/menu-widget";
 
 // Dynamic Import para sa Map (Para iwas SSR errors sa Next.js)
 const Map = dynamic(() => import("@/components/ui/map").then(mod => mod.Map), { 
@@ -150,7 +151,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a]">
             
             {/* --- NEW INDUSTRIAL MOBILE NAV (LEFT SIDE) --- */}
-          <FloatingChatWidget/>
+          <FloatingMenuWidget/>
           <Navbar/>
 
             {/* --- HERO SECTION (DARK) --- */}

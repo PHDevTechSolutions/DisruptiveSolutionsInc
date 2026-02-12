@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import HomePopup from "../components/modals/HomePopup";
 import FloatingChatWidget from "../components/chat-widget";
+import MenuButton from "../components/menu-widget";
+import FloatingMenuWidget from "../components/menu-widget";
 
 // --- MOCK UI COMPONENTS (Para sa Chat Widget) ---
 const Avatar = ({ children, className }: any) => (
@@ -310,7 +312,7 @@ export default function DisruptiveLandingPage() {
 
   return (
     <>
-      <FloatingChatWidget />
+
       <HomePopup />
       <div className="min-h-screen bg-[#f8f9fa] font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a] overflow-x-hidden">
 
@@ -368,7 +370,7 @@ export default function DisruptiveLandingPage() {
                 transition={{ duration: 1, delay: 0.2 }}
                 className="relative hidden lg:block"
               >
-           
+             <BrandCarousel brands={brands} />
               </motion.div>
 
             </div>
@@ -835,7 +837,8 @@ export default function DisruptiveLandingPage() {
             </div>
           </div>
         </section>
-
+        
+        <FloatingMenuWidget/>
         <Footer />
       </div>
     </>

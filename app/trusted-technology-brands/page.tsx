@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image"; // Mas okay gamitin ito sa Next.js
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { 
@@ -9,7 +10,6 @@ import {
   query, 
   where, 
   getDocs, 
-  limit, 
   orderBy, 
   onSnapshot 
 } from "firebase/firestore";
@@ -17,7 +17,7 @@ import {
 // UI Components
 import Navbar from "../components/navigation/navbar"; 
 import Footer from "../components/navigation/footer";
-import FloatingChatWidget from "../components/chat-widget";
+import FloatingMenuWidget from "../components/menu-widget"; // Inupdate ko ito base sa huling usapan natin
 
 // Swiper
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -34,8 +34,20 @@ import {
   Loader2 
 } from "lucide-react";
 
+// --- TYPE DEFINITION ---
+interface Brand {
+  id: string;
+  title: string;
+  image: string;
+  description: string;
+  status?: string;
+  website: string;
+  href?: string;
+}
+
 export default function BrandsShowcase() {
-  const [dynamicBrands, setDynamicBrands] = useState<any[]>([]);
+  
+  const [dynamicBrands, setDynamicBrands] = useState<Brand[]>([]);
   const [brandProducts, setBrandProducts] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [userSession, setUserSession] = useState<any>(null);
@@ -48,7 +60,7 @@ export default function BrandsShowcase() {
     return () => unsubscribe();
   }, []);
 
-// --- 2. FETCH BRANDS FROM DATABASE (DYNAMIC) ---
+  // --- 2. FETCH BRANDS FROM DATABASE (DYNAMIC) ---
   useEffect(() => {
     const q = query(
       collection(db, "brand_name"),
@@ -57,22 +69,29 @@ export default function BrandsShowcase() {
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const brandsData = snapshot.docs.map(doc => ({
+      // I-map ang data at i-cast as Brand
+      const allBrands: Brand[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
-      setDynamicBrands(brandsData);
+      } as Brand));
+
+      // FILTER LOGIC: Tanggalin ang brands na may status na "soon"
+      const filteredBrands = allBrands.filter(brand => brand.status !== "soon");
+
+      setDynamicBrands(filteredBrands);
       
-      // Isang tawag lang para makuha lahat ng products
-      await fetchProductsForBrands(brandsData);
+      // Isang tawag lang para makuha lahat ng products para sa filtered brands lang
+      if (filteredBrands.length > 0) {
+        await fetchProductsForBrands(filteredBrands);
+      }
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // --- 3. UPDATED FRONT-END FILTERING ---
-  const fetchProductsForBrands = async (brandsList: any[]) => {
+  // --- 3. FETCH PRODUCTS ---
+  const fetchProductsForBrands = async (brandsList: Brand[]) => {
     try {
       const q = query(
         collection(db, "products"),
@@ -104,7 +123,9 @@ export default function BrandsShowcase() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans antialiased text-slate-900 overflow-x-hidden">
       <Navbar />
-      <FloatingChatWidget />
+      
+      {/* Ginawa nating Hub Widget na 'to par */}
+      <FloatingMenuWidget/>
 
       {/* HERO SECTION */}
       <section className="relative h-[60vh] w-full flex items-center justify-center bg-[#050505]">
@@ -115,7 +136,7 @@ export default function BrandsShowcase() {
             alt="Hero Background" 
           />
         </div>
-        <div className="relative z-10 text-center">
+        <div className="relative z-10 text-center px-4">
           <h1 className="text-white text-5xl md:text-[7rem] font-black uppercase tracking-tighter italic leading-none">
             THE BRANDS<br />
             <span className="text-transparent" style={{ WebkitTextStroke: "1px white" }}>
@@ -186,44 +207,40 @@ export default function BrandsShowcase() {
                         }}
                       >
                         {brandProducts[brand.id]?.map((product: any) => {
-  const productSlug = product.slug || product.id;
-  const rawBrand = product.brand?.toString().toLowerCase().trim();
+                          const productSlug = product.slug || product.id;
+                          const rawBrand = product.brand?.toString().toLowerCase().trim();
+                          const brandPath = rawBrand === 'lit' ? `brand-${rawBrand}` : rawBrand;
 
-  // --- DYNAMIC ROUTING LOGIC ---
-  // Kung "lit", magiging "/brand-lit/..."
-  // Kung iba (like zumtobel), magiging "/zumtobel/..."
-  const brandPath = rawBrand === 'lit' ? `brand-${rawBrand}` : rawBrand;
-
-  return (
-    <SwiperSlide key={product.id} className="pb-10">
-      <Link href={`/${brandPath}/${productSlug}`}>
-        <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-500 h-full group flex flex-col border-b-4 hover:border-b-[#d11a2a]">
-          <div className="aspect-[4/5] bg-gray-50/50 p-8 flex items-center justify-center relative">
-            <img 
-              src={product.mainImage} 
-              alt={product.name} 
-              className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700" 
-            />
-            <div className="absolute bottom-4 right-4 bg-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
-              <Plus size={16} className="text-[#d11a2a]" />
-            </div>
-          </div>
-          <div className="p-8 flex-grow">
-            <h4 className="text-[11px] font-black uppercase text-gray-900 line-clamp-2 leading-tight">
-              {product.name}
-            </h4>
-            <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest">
-              Brand: {product.brand}
-            </p>
-          </div>
-        </div>
-      </Link>
-    </SwiperSlide>
-  );
-})}
+                          return (
+                            <SwiperSlide key={product.id} className="pb-10">
+                              <Link href={`/${brandPath}/${productSlug}`}>
+                                <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-500 h-full group flex flex-col border-b-4 hover:border-b-[#d11a2a]">
+                                  <div className="aspect-[4/5] bg-gray-50/50 p-8 flex items-center justify-center relative">
+                                    <img 
+                                      src={product.mainImage} 
+                                      alt={product.name} 
+                                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700" 
+                                    />
+                                    <div className="absolute bottom-4 right-4 bg-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Plus size={16} className="text-[#d11a2a]" />
+                                    </div>
+                                  </div>
+                                  <div className="p-8 flex-grow">
+                                    <h4 className="text-[11px] font-black uppercase text-gray-900 line-clamp-2 leading-tight">
+                                      {product.name}
+                                    </h4>
+                                    <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest">
+                                      Brand: {product.brand}
+                                    </p>
+                                  </div>
+                                </div>
+                              </Link>
+                            </SwiperSlide>
+                          );
+                        })}
                       </Swiper>
                       
-                      {/* Custom Navigation */}
+                      {/* Custom Navigation Icons */}
                       <div className="flex gap-4 mt-4 justify-center lg:justify-start">
                         <button className={`prev-${brand.id} w-12 h-12 flex items-center justify-center border rounded-full hover:bg-black hover:text-white transition-all`}>
                           <ChevronLeft size={20} />

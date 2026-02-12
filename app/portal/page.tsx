@@ -29,6 +29,7 @@ import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebas
 // COMPONENT IMPORT
 import QuotationModal from "../components/portal/QuotationModal";
 import FloatingChatWidget from "../components/chat-widget";
+import FloatingMenuWidget from "../components/menu-widget";
 
 export default function PortalPage() {
     // --- UI STATES ---
@@ -365,7 +366,7 @@ export default function PortalPage() {
                         )}
                     </AnimatePresence>
                 </div>
-                <FloatingChatWidget/>
+                <FloatingMenuWidget/>
             </main>
 
             {/* QUOTATION MODAL COMPONENT */}

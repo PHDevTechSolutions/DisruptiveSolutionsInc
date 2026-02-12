@@ -17,6 +17,13 @@ import {
   ChevronDown
 } from "lucide-react";
 
+interface Brand {
+  id: string;
+  title: string;
+  status?: string;
+  website: string;
+  // ... iba pang fields
+}
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -25,19 +32,25 @@ export default function Navbar() {
   const [isProductsHovered, setIsProductsHovered] = useState(false);
 // --- FETCH BRANDS FROM FIRESTORE (FILTERED BY WEBSITE) ---
 useEffect(() => {
-  // Nagdagdag tayo ng where condition para i-filter ang website
+  // Query para makuha lang ang para sa website na ito
   const q = query(
     collection(db, "brand_name"), 
-    where("website", "==", "Disruptive Solutions Inc"), // <--- Ito ang filter
+    where("website", "==", "Disruptive Solutions Inc"),
     orderBy("title", "asc")
   );
 
   const unsubscribe = onSnapshot(q, (snapshot) => {
-    const brandData = snapshot.docs.map(doc => ({
+    // 1. I-map ang docs at i-cast as Brand interface
+    const allBrands: Brand[] = snapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...(doc.data() as Omit<Brand, 'id'>)
     }));
-    setBrands(brandData);
+
+    // 2. Client-side filter: Tanggalin ang mga brands na "soon" ang status
+    const activeBrands = allBrands.filter(brand => brand.status !== "soon");
+
+    // 3. I-set ang state gamit ang sinalang data
+    setBrands(activeBrands);
   });
 
   return () => unsubscribe();

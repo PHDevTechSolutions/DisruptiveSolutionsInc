@@ -22,6 +22,7 @@ import {
   Search
 } from "lucide-react";
 import FloatingChatWidget  from "../components/chat-widget";
+import FloatingMenuWidget from "../components/menu-widget";
 
 // --- INTERFACES ---
 interface FilterState {
@@ -209,7 +210,7 @@ export default function BrandsPage() {
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a] selection:text-white overflow-x-hidden">
       <Navbar />
-      <FloatingChatWidget/>
+      <FloatingMenuWidget/>
 
       {/* HERO */}
       <section className="relative h-[60vh] w-full flex items-center justify-center bg-black">

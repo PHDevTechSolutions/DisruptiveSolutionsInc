@@ -19,6 +19,7 @@ import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 
 import Footer from "../components/navigation/footer";
 import Navbar from "../components/navigation/navbar";
 import FloatingChatWidget  from "../components/chat-widget";
+import FloatingMenuWidget from "../components/menu-widget";
 
 export default function CatalogPage() {
   const [catalogs, setCatalogs] = useState<any[]>([]);
@@ -116,7 +117,7 @@ const handleRequestAccess = async (e: React.FormEvent) => {
 
   return (
     <div className="min-h-screen relative selection:bg-[#d11a2a]/30 selection:text-white">
-      <FloatingChatWidget/>
+      <FloatingMenuWidget/>
       {/* BACKGROUND LAYER */}
       <div
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
