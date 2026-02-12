@@ -747,7 +747,7 @@ export default function DisruptiveLandingPage() {
                 className="space-y-8"
               >
                 <div className="space-y-6">
-                  <h1 className="text-[#1a1a1a] text-4xl md:text-6xl font-black leading-[1] tracking-tighter uppercase">
+                  <h1 className="text-[#1a1a1a] text-4xl md:text-5xl font-black leading-[1] tracking-tighter uppercase">
                     Talk to us <br />
                     about your <br />
                     <span className="text-[#d11a2a] italic">next lighting</span> <br />

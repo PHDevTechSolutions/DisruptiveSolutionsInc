@@ -192,6 +192,7 @@ export function AppSidebar({ onNavigate, ...props }: any) {
             { title: "Brands", url: "#" },
             { title: "Partners", url: "#" },
             { title: "HomePopup", url: "#" },
+            { title: "Contact Info", url: "#" },
             { title: "Faq Settings", url: "#" },
           ],
         },
