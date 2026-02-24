@@ -26,6 +26,7 @@ import type {
     ErrorEvent,
     FeatureGroup,
     LatLngExpression,
+    LatLngTuple, 
     LayerGroup,
     Map as LeafletMap,
     LocateOptions,
@@ -191,6 +192,20 @@ const MapLayersContext = createContext<MapLayersContextType | null>(null)
 
 function useMapLayersContext() {
     return useContext(MapLayersContext)
+}
+
+function MapController({
+    center,
+    zoom,
+}: {
+    center: LatLngTuple
+    zoom: number
+}) {
+    const map = useMap()
+    useEffect(() => {
+        map.flyTo(center, zoom, { duration: 1.2 })
+    }, [center, zoom, map])
+    return null
 }
 
 function MapTileLayer({
@@ -1349,6 +1364,7 @@ export {
     Map,
     MapCircle,
     MapCircleMarker,
+    MapController,
     MapDrawCircle,
     MapDrawControl,
     MapDrawDelete,

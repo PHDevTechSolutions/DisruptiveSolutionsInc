@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { db } from "@/lib/firebase"; 
-import { 
-  collection, query, onSnapshot, 
-  addDoc, deleteDoc, updateDoc, doc, serverTimestamp, orderBy 
+import { db } from "@/lib/firebase";
+import {
+  collection, query, onSnapshot,
+  addDoc, deleteDoc, updateDoc, doc, serverTimestamp, orderBy
 } from "firebase/firestore";
-import { 
+import {
   Mail, Phone, MapPin, Loader2, Plus, Trash2, Edit2, X, Check, Settings2,
   Facebook, Instagram, Linkedin, Link as LinkIcon
 } from "lucide-react";
@@ -16,16 +16,18 @@ interface ContactItem {
   id: string;
   type: string;
   value: string;
+  lat?: number;
+  lng?: number;
 }
 
 const ContactDisplay = () => {
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  
+
   const [activeType, setActiveType] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ value: "" });
+  const [formData, setFormData] = useState({ value: "", lat: "", lng: "" });
 
   // --- FETCH DATA (Real-time) ---
   useEffect(() => {
@@ -40,14 +42,28 @@ const ContactDisplay = () => {
   // --- HANDLERS ---
   const handleSave = async (type: string) => {
     if (!formData.value) return;
+    const isAddress = type.toLowerCase() === "address";
+
+    const payload: any = {
+      value: formData.value,
+      type: type.toLowerCase(),
+    };
+
+    // Only store lat/lng for address type
+    if (isAddress) {
+      const lat = parseFloat(formData.lat);
+      const lng = parseFloat(formData.lng);
+      if (!isNaN(lat)) payload.lat = lat;
+      if (!isNaN(lng)) payload.lng = lng;
+    }
+
     try {
       if (editingId) {
-        await updateDoc(doc(db, "contact_info", editingId), { value: formData.value });
+        await updateDoc(doc(db, "contact_info", editingId), payload);
       } else {
-        await addDoc(collection(db, "contact_info"), { 
-          value: formData.value, 
-          type: type.toLowerCase(),
-          createdAt: serverTimestamp() 
+        await addDoc(collection(db, "contact_info"), {
+          ...payload,
+          createdAt: serverTimestamp()
         });
       }
       cancelEdit();
@@ -59,10 +75,10 @@ const ContactDisplay = () => {
     if (newSectionName) {
       const cleanName = newSectionName.toLowerCase().trim();
       try {
-        await addDoc(collection(db, "contact_info"), { 
-          value: `Click edit to add ${newSectionName} details`, 
+        await addDoc(collection(db, "contact_info"), {
+          value: `Click edit to add ${newSectionName} details`,
           type: cleanName,
-          createdAt: serverTimestamp() 
+          createdAt: serverTimestamp()
         });
       } catch (err) { console.error(err); }
     }
@@ -71,7 +87,7 @@ const ContactDisplay = () => {
   const cancelEdit = () => {
     setActiveType(null);
     setEditingId(null);
-    setFormData({ value: "" });
+    setFormData({ value: "", lat: "", lng: "" });
   };
 
   const getIcon = (type: string) => {
@@ -91,77 +107,94 @@ const ContactDisplay = () => {
     const icon = getIcon(type);
     const filtered = contacts.filter(c => c.type === type.toLowerCase());
     const isSocial = ["facebook", "instagram", "linkedin"].includes(type.toLowerCase());
-    
+    const isAddress = type.toLowerCase() === "address";
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">{title}</p>
-          {/* MULTIPLE INSERT: Always show Plus icon if Admin is ON */}
           {isAdmin && (
-             <button 
-               onClick={() => {
-                 cancelEdit();
-                 setActiveType(type);
-               }} 
-               className="text-[#d11a2a] p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-             >
-               <Plus size={18} />
-             </button>
+            <button
+              onClick={() => {
+                cancelEdit();
+                setActiveType(type);
+              }}
+              className="text-[#d11a2a] p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <Plus size={18} />
+            </button>
           )}
         </div>
 
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
             {filtered.map((item) => (
-              <motion.div 
-                key={item.id} 
-                layout 
-                initial={{ opacity: 0, x: -10 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                exit={{ opacity: 0, scale: 0.95 }} 
+              <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 className="flex items-center justify-between group"
               >
-                <div className="flex gap-4 min-w-0 flex-1 items-center">
-                  <div className="h-10 w-10 shrink-0 rounded-xl bg-red-50 flex items-center justify-center text-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all duration-300 shadow-sm">
+                <div className="flex gap-4 min-w-0 flex-1 items-start">
+                  <div className="h-10 w-10 shrink-0 rounded-xl bg-red-50 flex items-center justify-center text-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all duration-300 shadow-sm mt-0.5">
                     {icon}
                   </div>
                   <div className="min-w-0 flex-1">
                     {isSocial && !isAdmin ? (
-                        <a 
-                          href={item.value.startsWith('http') ? item.value : `https://${item.value}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="font-bold text-[#d11a2a] hover:underline text-sm md:text-base truncate block"
-                        >
-                            {item.value.replace('https://', '').replace('www.', '')}
-                        </a>
+                      <a
+                        href={item.value.startsWith('http') ? item.value : `https://${item.value}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-[#d11a2a] hover:underline text-sm md:text-base truncate block"
+                      >
+                        {item.value.replace('https://', '').replace('www.', '')}
+                      </a>
                     ) : (
-                        <p className="font-bold text-gray-900 text-sm md:text-base break-words whitespace-pre-line leading-tight">
-                            {item.value}
-                        </p>
+                      <p className="font-bold text-gray-900 text-sm md:text-base break-words whitespace-pre-line leading-tight">
+                        {item.value}
+                      </p>
+                    )}
+                    {/* Show coordinates badge if address has lat/lng */}
+                    {isAddress && item.lat && item.lng && (
+                      <p className="text-[9px] text-gray-400 font-bold mt-1 flex items-center gap-1">
+                        <MapPin size={9} />
+                        {item.lat.toFixed(4)}, {item.lng.toFixed(4)}
+                        <span className="text-green-500 font-black">✓ Map pin set</span>
+                      </p>
+                    )}
+                    {isAddress && (!item.lat || !item.lng) && (
+                      <p className="text-[9px] text-orange-400 font-bold mt-1">
+                        ⚠ No map coordinates yet
+                      </p>
                     )}
                   </div>
                 </div>
-                
+
                 {isAdmin && (
                   <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => { 
-                        setEditingId(item.id); 
-                        setFormData({ value: item.value }); 
-                        setActiveType(type); 
-                      }} 
+                    <button
+                      onClick={() => {
+                        setEditingId(item.id);
+                        setFormData({
+                          value: item.value,
+                          lat: item.lat?.toString() || "",
+                          lng: item.lng?.toString() || "",
+                        });
+                        setActiveType(type);
+                      }}
                       className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md"
                     >
-                      <Edit2 size={14}/>
+                      <Edit2 size={14} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
-                        if(confirm("Delete this entry?")) deleteDoc(doc(db, "contact_info", item.id));
-                      }} 
+                        if (confirm("Delete this entry?")) deleteDoc(doc(db, "contact_info", item.id));
+                      }}
                       className="p-1.5 text-red-500 hover:bg-red-50 rounded-md"
                     >
-                      <Trash2 size={14}/>
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 )}
@@ -171,20 +204,76 @@ const ContactDisplay = () => {
 
           {/* EDIT/ADD BOX */}
           {activeType === type && (
-            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 shadow-inner">
-              <textarea 
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 shadow-inner"
+            >
+              <textarea
                 placeholder={isSocial ? "Paste link..." : `Enter ${title} details...`}
                 className="w-full bg-white p-3 rounded-xl text-sm font-bold border-none ring-1 ring-gray-200 outline-none focus:ring-2 focus:ring-[#d11a2a]/20 min-h-[60px]"
-                value={formData.value} 
-                onChange={e => setFormData({ value: e.target.value })}
+                value={formData.value}
+                onChange={e => setFormData({ ...formData, value: e.target.value })}
                 autoFocus
               />
+
+              {/* LAT/LNG fields — only for address */}
+              {isAddress && (
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                    <MapPin size={9} /> Map Coordinates
+                    <a
+                      href="https://www.latlong.net/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#d11a2a] underline ml-1"
+                    >
+                      Get from latlong.net ↗
+                    </a>
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-wider block mb-1">
+                        Latitude
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 14.6019"
+                        className="w-full bg-white p-2.5 rounded-xl text-sm font-bold border-none ring-1 ring-gray-200 outline-none focus:ring-2 focus:ring-[#d11a2a]/20"
+                        value={formData.lat}
+                        onChange={e => setFormData({ ...formData, lat: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-wider block mb-1">
+                        Longitude
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 121.0590"
+                        className="w-full bg-white p-2.5 rounded-xl text-sm font-bold border-none ring-1 ring-gray-200 outline-none focus:ring-2 focus:ring-[#d11a2a]/20"
+                        value={formData.lng}
+                        onChange={e => setFormData({ ...formData, lng: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
-                <button onClick={() => handleSave(type)} className="flex-1 bg-[#d11a2a] text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md hover:bg-[#b01622]">
-                  <Check size={14}/> {editingId ? "Update" : "Save"}
+                <button
+                  onClick={() => handleSave(type)}
+                  className="flex-1 bg-[#d11a2a] text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md hover:bg-[#b01622]"
+                >
+                  <Check size={14} /> {editingId ? "Update" : "Save"}
                 </button>
-                <button onClick={cancelEdit} className="flex-1 bg-white border border-gray-200 text-gray-400 py-2 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1">
-                  <X size={14}/> Cancel
+                <button
+                  onClick={cancelEdit}
+                  className="flex-1 bg-white border border-gray-200 text-gray-400 py-2 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1"
+                >
+                  <X size={14} /> Cancel
                 </button>
               </div>
             </motion.div>
@@ -202,12 +291,14 @@ const ContactDisplay = () => {
 
   const defaultTypes = ["email", "phone", "address"];
   const socialTypes = ["facebook", "instagram", "linkedin"];
-  const customTypes = Array.from(new Set(contacts.map(c => c.type).filter(t => !defaultTypes.includes(t) && !socialTypes.includes(t))));
+  const customTypes = Array.from(new Set(
+    contacts.map(c => c.type).filter(t => !defaultTypes.includes(t) && !socialTypes.includes(t))
+  ));
 
   return (
     <div className="bg-white p-8 md:p-10 rounded-[32px] md:rounded-[40px] shadow-2xl border border-gray-100 relative">
-      <button 
-        onClick={() => { setIsAdmin(!isAdmin); cancelEdit(); }} 
+      <button
+        onClick={() => { setIsAdmin(!isAdmin); cancelEdit(); }}
         className={`absolute top-6 right-6 p-2 rounded-xl transition-all z-10 ${isAdmin ? 'bg-[#d11a2a] text-white shadow-lg' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
       >
         <Settings2 size={18} />
@@ -218,7 +309,6 @@ const ContactDisplay = () => {
       </h3>
 
       <div className="space-y-12">
-        {/* MULTIPLE ENTRIES ALLOWED HERE */}
         {renderSection("email", "Email Us")}
         <hr className="border-gray-50" />
         {renderSection("phone", "Direct Lines")}
@@ -230,12 +320,12 @@ const ContactDisplay = () => {
           <hr className="border-gray-800/10 mb-10" />
           <p className="text-[11px] font-black text-gray-300 uppercase tracking-[0.4em] mb-8">Social Ecosystem</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-              {renderSection("facebook", "Facebook")}
-              {renderSection("instagram", "Instagram")}
-              {renderSection("linkedin", "LinkedIn")}
+            {renderSection("facebook", "Facebook")}
+            {renderSection("instagram", "Instagram")}
+            {renderSection("linkedin", "LinkedIn")}
           </div>
         </div>
-        
+
         {/* CUSTOM SECTIONS */}
         {customTypes.length > 0 && (
           <div className="pt-6 space-y-12">
@@ -250,8 +340,8 @@ const ContactDisplay = () => {
 
         {/* CREATE NEW CATEGORY */}
         {isAdmin && (
-          <button 
-            onClick={addNewSection} 
+          <button
+            onClick={addNewSection}
             className="w-full mt-12 py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:text-[#d11a2a] hover:border-[#d11a2a] transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
           >
             <Plus size={16} /> Create New Category

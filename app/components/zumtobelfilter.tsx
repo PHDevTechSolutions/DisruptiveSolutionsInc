@@ -21,12 +21,12 @@ export default function ProductFilter({
 }: FilterProps) {
   const [isOpenMobile, setIsOpenMobile] = useState(false);
 
-  // --- UNIFIED LOGIC PARA SA LIT AT ZUMTOBEL ---
+  // --- OPTIMIZED FILTER EXTRACTION ---
   const dynamicFilterData = useMemo(() => {
     const filterGroups: { [key: string]: Set<string> } = {};
 
     products.forEach((product) => {
-      // 1. Kunin ang values mula sa Dynamic Specs (Category, Application, etc.)
+      // 1. Mula sa Dynamic Specs (e.g. Color, Mounting, etc.)
       product.dynamicSpecs?.forEach((spec: any) => {
         const title = spec.title?.trim();
         if (title && spec.value) {
@@ -35,22 +35,26 @@ export default function ProductFilter({
         }
       });
 
-      // 2. Kunin ang lahat ng rows mula sa Technical Specs 
-      // Ito ang magpapakita ng Beam Angle para sa LIT o kaya UGR para sa Zumtobel
+      // 2. Mula sa Technical Specs (Support for .specs OR .rows)
       product.technicalSpecs?.forEach((group: any) => {
-        group.rows?.forEach((row: any) => {
-          const name = row.name?.trim();
-          if (name && row.value) {
+        // Sinisiguro natin na mababasa nito kahit 'specs' o 'rows' ang tawag sa array
+        const specRows = group.specs || group.rows || [];
+        
+        specRows.forEach((row: any) => {
+          const name = (row.name || row.label)?.trim();
+          const val = row.value?.toString().trim();
+          
+          if (name && val && val !== "—" && val !== "") {
             if (!filterGroups[name]) filterGroups[name] = new Set();
-            filterGroups[name].add(row.value.toString().trim());
+            filterGroups[name].add(val);
           }
         });
       });
     });
 
+    // I-convert ang Sets sa Sorted Arrays
     const finalData: { [key: string]: string[] } = {};
     Object.keys(filterGroups).forEach((key) => {
-      // Numeric sort para maayos ang pagkakasunod (e.g., 10W bago ang 100W)
       finalData[key] = Array.from(filterGroups[key]).sort((a, b) =>
         a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
       );
@@ -61,41 +65,52 @@ export default function ProductFilter({
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFilters({ ...filters, [name]: value });
+    // Kung "*" ang pinili, tanggalin ang filter key para hindi mag-conflict
+    const newFilters = { ...filters };
+    if (value === "*") {
+      delete newFilters[name];
+    } else {
+      newFilters[name] = value;
+    }
+    setFilters(newFilters);
   };
 
-  // Linisin ang listahan ng filters (itago ang mga metadata)
+  // Listahan ng mga ayaw nating ipakita sa sidebar filters
   const filterNames = Object.keys(dynamicFilterData)
     .sort()
     .filter((name) => {
-      const hidden = ["BRAND", "WEBSITE", "CREATEDAT", "ID", "MAINIMAGE", "NAME", "RATING", "REVIEWCOUNT"];
-      if (hidden.includes(name.toUpperCase())) return false;
+      const excluded = [
+        "BRAND", "WEBSITE", "CREATEDAT", "ID", "MAINIMAGE", 
+        "NAME", "RATING", "REVIEWCOUNT", "SLUG", "IMAGEURL", "DESCRIPTION"
+      ];
+      if (excluded.includes(name.toUpperCase())) return false;
       
-      if (activeView === "APPLICATIONS" && name.toUpperCase() === "APPLICATION") {
-        return false;
-      }
+      // Itago ang Application filter kung nasa Application view na tayo
+      if (activeView === "APPLICATIONS" && name.toUpperCase() === "APPLICATION") return false;
+      
       return true;
     });
 
-  const activeFiltersCount = Object.values(filters).filter(v => v !== "*" && v !== "").length;
+  const activeFiltersCount = Object.keys(filters).length;
 
   return (
     <>
-      {/* --- MOBILE VIEW --- */}
+      {/* --- MOBILE TOGGLE --- */}
       <div className="md:hidden fixed bottom-6 right-6 z-[60]">
         <button
           onClick={() => setIsOpenMobile(true)}
-          className="bg-black text-white p-4 rounded-full shadow-2xl flex items-center gap-2 border border-white/20"
+          className="bg-[#d11a2a] text-white p-4 rounded-full shadow-2xl flex items-center gap-2"
         >
           <Filter size={20} />
           {activeFiltersCount > 0 && (
-            <span className="bg-[#d11a2a] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">
+            <span className="bg-white text-[#d11a2a] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">
               {activeFiltersCount}
             </span>
           )}
         </button>
       </div>
 
+      {/* --- MOBILE OVERLAY --- */}
       <AnimatePresence>
         {isOpenMobile && (
           <>
@@ -106,10 +121,10 @@ export default function ProductFilter({
             />
             <motion.div
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-              className="fixed inset-x-0 bottom-0 bg-white rounded-t-[32px] p-6 z-[101] max-h-[80vh] overflow-y-auto"
+              className="fixed inset-x-0 bottom-0 bg-white rounded-t-[32px] p-6 z-[101] max-h-[85vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-sm font-black uppercase italic tracking-widest">Specifications</h3>
+                <h3 className="text-sm font-black uppercase italic tracking-widest">Filter Specs</h3>
                 <button onClick={() => setIsOpenMobile(false)} className="p-2 bg-gray-100 rounded-full"><X size={18}/></button>
               </div>
               <FilterContent 
@@ -122,8 +137,8 @@ export default function ProductFilter({
         )}
       </AnimatePresence>
 
-      {/* --- DESKTOP VIEW --- */}
-      <div className="hidden md:block bg-white border border-gray-100 rounded-[24px] p-6 sticky top-28 shadow-sm max-h-[calc(100vh-160px)] overflow-y-auto">
+      {/* --- DESKTOP SIDEBAR --- */}
+      <div className="hidden md:block bg-white border border-gray-100 rounded-[24px] p-6 sticky top-28 shadow-sm max-h-[calc(100vh-160px)] overflow-y-auto custom-scrollbar">
         <FilterContent 
           filterNames={filterNames} filters={filters} 
           dynamicFilterData={dynamicFilterData} handleSelectChange={handleSelectChange}
@@ -134,49 +149,65 @@ export default function ProductFilter({
   );
 }
 
+// --- SUB-COMPONENT PARA SA REUSABLE CONTENT ---
 function FilterContent({ filterNames, filters, dynamicFilterData, handleSelectChange, productCount, setFilters, activeView }: any) {
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
         <div>
-          <h2 className="text-[10px] font-black uppercase tracking-widest">Refine Search</h2>
-          <span className="text-[8px] font-bold text-[#d11a2a] uppercase italic">{activeView}</span>
+          <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Filter By</h2>
+          <span className="text-[12px] font-black text-black uppercase italic">{activeView}</span>
         </div>
-        <Minus size={14} className="text-gray-300" />
-      </div>
-
-      <div className="space-y-4">
-        {filterNames.map((name: string) => (
-          <div key={name} className="space-y-1">
-            <label className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{name}:</label>
-            <div className="relative">
-              <select
-                name={name}
-                value={filters[name] || "*"}
-                onChange={handleSelectChange}
-                className="w-full bg-gray-50 border border-gray-100 text-[10px] font-bold py-2 px-3 rounded-md appearance-none focus:border-[#d11a2a] outline-none transition-all uppercase truncate"
-              >
-                <option value="*">* SHOW ALL</option>
-                {dynamicFilterData[name].map((opt: string) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-8 pt-4 border-t border-gray-100">
-        <p className="text-[12px] font-black text-gray-900 mb-2 italic">
-          {productCount} <span className="font-normal text-gray-400 text-[10px] not-italic">Items Found</span>
-        </p>
-        <button
-          onClick={() => setFilters({})}
-          className="text-[9px] font-black uppercase text-gray-400 hover:text-[#d11a2a] transition-all"
+        <button 
+           onClick={() => setFilters({})}
+           className="text-[9px] font-bold text-gray-300 hover:text-[#d11a2a] uppercase transition-colors"
         >
-          Reset All Filters
+          Clear
         </button>
+      </div>
+
+      <div className="space-y-5">
+        {filterNames.length > 0 ? (
+          filterNames.map((name: string) => (
+            <div key={name} className="space-y-1.5">
+              <label className="text-[9px] font-black text-gray-500 uppercase tracking-tight ml-1">
+                {name}
+              </label>
+              <div className="relative">
+                <select
+                  name={name}
+                  value={filters[name] || "*"}
+                  onChange={handleSelectChange}
+                  className={`w-full border text-[10px] font-bold py-2.5 px-3 rounded-xl appearance-none outline-none transition-all uppercase truncate
+                    ${filters[name] ? "bg-[#d11a2a]/5 border-[#d11a2a] text-[#d11a2a]" : "bg-gray-50 border-gray-100 text-gray-900"}
+                  `}
+                >
+                  <option value="*">All {name}</option>
+                  {dynamicFilterData[name].map((opt: string) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+                <ChevronDown size={12} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${filters[name] ? "text-[#d11a2a]" : "text-gray-400"}`} />
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-[10px] text-gray-400 italic">No specifications available</p>
+        )}
+      </div>
+
+      <div className="mt-10 pt-5 border-t border-gray-100">
+        <p className="text-[11px] font-black text-gray-900 mb-1 uppercase">
+          {productCount} <span className="text-gray-400 font-bold ml-1">Products Found</span>
+        </p>
+        {Object.keys(filters).length > 0 && (
+          <button
+            onClick={() => setFilters({})}
+            className="text-[10px] font-black uppercase text-[#d11a2a] hover:underline"
+          >
+            Reset All Filters
+          </button>
+        )}
       </div>
     </div>
   );
