@@ -168,16 +168,12 @@ export default function BrandsShowcase() {
               <div className="max-w-[1400px] mx-auto px-8 md:px-12 flex flex-col lg:flex-row gap-20 items-center">
                 {/* BRAND SIDEBAR */}
                 <div className="w-full lg:w-[400px] space-y-10 text-center lg:text-left">
-                  {/* BIGGER LOGO with subtle card container */}
-                  <div className="flex items-center justify-center lg:justify-start">
-                    <div className="bg-gray-50 border border-gray-100 rounded-[28px] px-10 py-8 inline-flex items-center justify-center w-full lg:w-auto">
-                      <img
-                        src={brand.image}
-                        alt={brand.title}
-                        className="h-28 md:h-36 w-auto object-contain"
-                      />
-                    </div>
-                  </div>
+                  {/* BIGGER LOGO — no wrapper, just the image */}
+                  <img
+                    src={brand.image}
+                    alt={brand.title}
+                    className="h-32 md:h-44 w-auto object-contain mx-auto lg:mx-0"
+                  />
 
                   <div className="space-y-4">
                     <h2 className="text-3xl font-black italic uppercase text-gray-900">
