@@ -3,15 +3,15 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { db } from "@/lib/firebase"; // Siguraduhing tama ang path
+import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { 
-  ArrowRight, 
-  ChevronUp, 
-  Menu, 
+import {
+  ArrowRight,
+  ChevronUp,
+  Menu,
   Search,
   LayoutGrid,
-  Loader2
+  Loader2,
 } from "lucide-react";
 
 export default function BrandsPage() {
@@ -19,38 +19,42 @@ export default function BrandsPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-    const [isNavOpen, setIsNavOpen] = useState(false); // Mobile Nav Toggle
-  const LOGO_RED = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-red-scaled.png";
-  const LOGO_WHITE = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
-      // In-define ang navLinks para gumana ang menu
-    const navLinks = [
-        { name: "Home", href: "/dashboard" },
-        { name: "Products & Solutions", href: "/lighting-products-smart-solutions" },
-        { name: "Brands", href: "/trusted-technology-brands" },
-        { name: "Contact", href: "/contact-us" },
-    ];
+  const LOGO_RED =
+    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-red-scaled.png";
+  const LOGO_WHITE =
+    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
+
+  const navLinks = [
+    { name: "Home", href: "/dashboard" },
+    {
+      name: "Products & Solutions",
+      href: "/lighting-products-smart-solutions",
+    },
+    { name: "Brands", href: "/trusted-technology-brands" },
+    { name: "Contact", href: "/contact-us" },
+  ];
+
   // --- 1. FETCH PRODUCTS FROM FIRESTORE ---
   useEffect(() => {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
-    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const productData = snapshot.docs.map(doc => ({
+      const productData = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       setProducts(productData);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
   // --- 2. FILTER LOGIC ---
-  // Tinitignan kung ang napiling Brand ay kasama sa array ng brands ng product
-  const filteredProducts = activeFilter === "All" 
-    ? products 
-    : products.filter(p => p.brands?.includes(activeFilter));
+  const filteredProducts =
+    activeFilter === "All"
+      ? products
+      : products.filter((p) => p.brands?.includes(activeFilter));
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -59,210 +63,220 @@ export default function BrandsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a] selection:text-white overflow-x-hidden">
-      
-     {/* --- 1. NAVIGATION (ALWAYS VISIBLE STYLE) --- */}
-                 {/* --- 1. NAVIGATION (FROSTED GLASS / MALIWANAG STYLE) --- */}
-      <nav className="fixed top-0 left-0 w-full z-[1000] py-4 transition-all duration-500">
-        {/* Background Layer: Dito ang "Maliwanag" effect */}
-        <motion.div
-          initial={false}
-          animate={{
-            // Kapag scrolled: maputi na semi-transparent (parang frosted glass)
-            // Kapag hindi scrolled: full transparent
-            backgroundColor: isScrolled ? "rgba(255, 255, 255, 0.75)" : "rgba(255, 255, 255, 0)",
-            backdropFilter: isScrolled ? "blur(16px)" : "blur(0px)",
-            boxShadow: isScrolled ? "0 4px 30px rgba(0, 0, 0, 0.05)" : "0 0px 0px rgba(0, 0, 0, 0)",
-            borderBottom: isScrolled ? "1px solid rgba(255, 255, 255, 0.3)" : "1px solid rgba(255, 255, 255, 0)",
-            height: isScrolled ? "70px" : "90px", // Nababawasan ang taas pag nag-scroll
-          }}
-          className="absolute inset-0 transition-all duration-500"
-        />
-
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between relative z-10 h-full">
-
+    <div className="min-h-screen bg-white font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a]">
+      {/* --- NAVIGATION --- */}
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? "bg-white/95 backdrop-blur-md shadow-sm" : "bg-transparent"}`}
+      >
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* LOGO */}
-          <div className="relative">
-            <Link href="/">
-              <motion.img
-                animate={{ scale: isScrolled ? 0.85 : 1 }}
-                // Dahil maliwanag ang BG, RED logo ang gagamitin natin pag scrolled para kita agad
-                src={isScrolled ? LOGO_RED : LOGO_WHITE}
-                alt="Logo"
-                className="h-12 w-auto object-contain transition-all duration-500"
-              />
-            </Link>
-          </div>
+          <Link href="/dashboard">
+            <img
+              src={isScrolled ? LOGO_RED : LOGO_WHITE}
+              alt="Disruptive Solutions"
+              className="h-8 w-auto transition-all duration-300"
+            />
+          </Link>
 
-          {/* THE COMPACT "MAGDIDIKIT" MENU (White/Glass Style) */}
-          <motion.div
-            initial={false}
-            animate={{
-              gap: isScrolled ? "2px" : "12px",
-              // Mas madilim ng konti ang capsule pag malinaw ang main nav bg
-              backgroundColor: isScrolled ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.15)",
-              paddingLeft: isScrolled ? "6px" : "16px",
-              paddingRight: isScrolled ? "6px" : "16px",
-              border: isScrolled ? "1px solid rgba(0, 0, 0, 0.05)" : "1px solid rgba(255, 255, 255, 0.2)",
-            }}
-            className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center py-1.5 rounded-full transition-all duration-500 ease-in-out"
-          >
+          {/* DESKTOP MENU */}
+          <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
-                className={`px-5 py-2 text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-500 rounded-full relative group ${isScrolled ? "text-gray-900" : "text-white"
-                  }`}
+                className={`relative px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all duration-300 rounded-xl group
+                                    ${isScrolled ? "text-gray-700 hover:text-[#d11a2a]" : "text-white/80 hover:text-white"}`}
               >
-                {/* Sliding Red Hover Effect */}
-                <motion.span
-                  className="absolute inset-0 bg-[#d11a2a] rounded-full -z-10 opacity-0 group-hover:opacity-100 transition-all duration-300 scale-90 group-hover:scale-100"
-                />
-                <span className="relative z-10 group-hover:text-white transition-colors">
-                  {link.name}
-                </span>
+                <span className="relative z-10">{link.name}</span>
               </Link>
             ))}
-          </motion.div>
-
-          {/* RIGHT SIDE BUTTON */}
-          <div className="hidden lg:block">
-            <motion.div animate={{ scale: isScrolled ? 0.9 : 1 }}>
-              <Link
-                href="/quote"
-                className={`px-7 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-500 shadow-xl ${isScrolled
-                  ? "bg-[#d11a2a] text-white shadow-red-500/20"
-                  : "bg-white text-gray-900"
-                  }`}
-              >
-                Free Quote
-              </Link>
-            </motion.div>
           </div>
 
-          {/* MOBILE TOGGLE ICON */}
-          <button className="lg:hidden p-2" onClick={() => setIsNavOpen(true)}>
-            <Menu className={isScrolled ? "text-gray-900" : "text-white"} size={28} />
+          {/* RIGHT SIDE BUTTON */}
+          <div className="hidden md:flex items-center gap-3">
+            <Link
+              href="/contact-us"
+              className="bg-[#d11a2a] text-white px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-red-700 transition-all"
+            >
+              Free Quote
+            </Link>
+          </div>
+
+          {/* MOBILE TOGGLE */}
+          <button
+            className={`md:hidden ${isScrolled ? "text-gray-900" : "text-white"}`}
+            onClick={() => setIsNavOpen(true)}
+          >
+            <Menu size={24} />
           </button>
         </div>
       </nav>
+
+      {/* MOBILE NAV DRAWER */}
+      <AnimatePresence>
+        {isNavOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 z-[100] flex flex-col items-center justify-center gap-6"
+          >
+            <button
+              onClick={() => setIsNavOpen(false)}
+              className="absolute top-6 right-6 text-white text-2xl font-black"
+            >
+              ✕
+            </button>
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                onClick={() => setIsNavOpen(false)}
+                className="text-white text-2xl font-black uppercase tracking-widest hover:text-[#d11a2a] transition-all"
+              >
+                {link.name}
+              </Link>
+            ))}
+            <Link
+              href="/contact-us"
+              onClick={() => setIsNavOpen(false)}
+              className="mt-4 bg-[#d11a2a] text-white px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest"
+            >
+              Free Quote
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* --- HERO --- */}
-      <section className="relative h-[60vh] w-full flex overflow-hidden bg-black">
-        <div className="flex w-full h-full">
-            <motion.div initial={{ scale: 1.2 }} animate={{ scale: 1 }} transition={{ duration: 2 }} className="w-full h-full relative">
-                <img src="https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80" className="w-full h-full object-cover brightness-[0.3]" />
-            </motion.div>
+      <section className="relative pt-52 pb-40 bg-[#0a0a0a] overflow-hidden">
+        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/30 via-transparent to-transparent" />
+        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <span className="text-[#d11a2a] text-[12px] font-black uppercase tracking-[0.6em] mb-6 block italic">
+              Our Brands
+            </span>
+            <h1 className="text-white text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.9] mb-8">
+              Our Disruptive
+              <br />
+              <span className="text-[#d11a2a] italic"> Brands.</span>
+            </h1>
+          </motion.div>
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/40 pointer-events-none" />
-        <div className="absolute bottom-12 left-12 z-10">
-            <h1 className="text-white text-7xl md:text-9xl font-black uppercase tracking-tighter leading-none opacity-20">DISRUPTIVE <br/> PRODUCTS</h1>
-        </div>
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent" />
       </section>
 
       {/* --- FILTER SECTION --- */}
-      <section className="py-12 px-6 bg-white sticky top-[70px] z-[50] border-b border-gray-100 backdrop-blur-md bg-white/80">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-                <LayoutGrid size={18} className="text-[#d11a2a]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-900">Filter by brand</span>
-            </div>
-            
-            <div className="flex flex-wrap justify-center p-1.5 bg-gray-100 rounded-2xl border border-gray-200">
-                {["All", "LIT", "ZUMTOBEL"].map((tab) => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveFilter(tab)}
-                        className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 ${
-                            activeFilter === tab 
-                            ? "bg-white text-[#d11a2a] shadow-sm" 
-                            : "text-gray-400 hover:text-gray-900"
-                        }`}
+      <section className="relative z-20 -mt-12 md:-mt-24 px-4 md:px-6 pb-24">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-10 bg-gray-50 w-fit rounded-2xl p-2">
+            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 px-3">
+              Filter by brand
+            </span>
+            {["All", "LIT", "ZUMTOBEL"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveFilter(tab)}
+                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 ${
+                  activeFilter === tab
+                    ? "bg-white text-[#d11a2a] shadow-sm"
+                    : "text-gray-400 hover:text-gray-900"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* --- PRODUCT GRID --- */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {loading ? (
+              <div className="col-span-3 flex items-center justify-center gap-3 py-24 text-gray-400 font-bold uppercase text-[10px] tracking-widest">
+                <Loader2 size={16} className="animate-spin" /> Loading
+                Masterpieces...
+              </div>
+            ) : (
+              filteredProducts.map((product) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="group relative rounded-[32px] overflow-hidden bg-gray-100 aspect-[4/5] shadow-lg hover:shadow-2xl transition-all duration-500"
+                >
+                  {/* Background Image */}
+                  {product.imageUrl && (
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  )}
+
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                  {/* Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    {/* Brand Tags */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {product.brands?.map((brand: string) => (
+                        <span
+                          key={brand}
+                          className="text-[9px] font-black uppercase tracking-widest bg-[#d11a2a] text-white px-3 py-1 rounded-full"
+                        >
+                          {brand}
+                        </span>
+                      ))}
+                    </div>
+
+                    <h3 className="text-white font-black text-lg uppercase tracking-tight leading-tight mb-1">
+                      {product.name}
+                    </h3>
+                    <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-4">
+                      SKU: {product.sku || "N/A"}
+                    </p>
+
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="inline-flex items-center gap-2 bg-white text-[#d11a2a] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#d11a2a] hover:text-white transition-all duration-300"
                     >
-                        {tab}
-                    </button>
-                ))}
+                      Explore Product <ArrowRight size={12} />
+                    </Link>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+
+          {!loading && filteredProducts.length === 0 && (
+            <div className="col-span-3 text-center py-24 text-gray-400 font-bold uppercase text-[11px] tracking-widest">
+              No products found in this category.
             </div>
+          )}
         </div>
       </section>
 
-    {/* --- PRODUCT GRID --- */}
-<section className="py-24 px-6 bg-white min-h-[400px]">
-  <div className="max-w-7xl mx-auto">
-    {loading ? (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 animate-spin text-[#d11a2a]" />
-        <p className="mt-4 text-xs font-black uppercase tracking-widest text-gray-400">Loading Masterpieces...</p>
-      </div>
-    ) : (
-      <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <AnimatePresence mode='popLayout'>
-          {filteredProducts.map((product) => (
-            <motion.div 
-              key={product.id}
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="group relative h-[500px] rounded-[40px] overflow-hidden bg-gray-900"
-            >
-              {/* Background Image (Main Image from Cloudinary) */}
-              <div className="absolute inset-0">
-                <img 
-                    src={product.mainImage || "https://via.placeholder.com/800"} 
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 brightness-[0.7] group-hover:brightness-[0.4]" 
-                    alt={product.name}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
-              </div>
-
-              {/* Content */}
-              <div className="absolute inset-0 p-10 flex flex-col justify-end z-10 transition-transform duration-500 group-hover:translate-y-[-10px]">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {product.brands?.map((brand: string) => (
-                    <span key={brand} className="px-3 py-1 rounded-lg bg-[#d11a2a] text-white text-[8px] font-black uppercase tracking-widest">
-                      {brand}
-                    </span>
-                  ))}
-                </div>
-                
-                <h3 className="text-3xl font-black text-white uppercase tracking-tighter mb-2 leading-tight">
-                  {product.name}
-                </h3>
-                
-                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-6">
-                  SKU: {product.sku || "N/A"}
-                </p>
-
-                <div className="flex items-center gap-4 text-white opacity-0 group-hover:opacity-100 transition-all duration-500">
-                    <div className="h-[2px] w-0 bg-[#d11a2a] group-hover:w-12 transition-all duration-700" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Explore Product</span>
-                </div>
-              </div>
-
-              {/* BINURA NATIN DITO YUNG PRICE TAG OVERLAY */}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
-    )}
-
-    {!loading && filteredProducts.length === 0 && (
-      <div className="text-center py-20 border-2 border-dashed border-gray-100 rounded-[40px]">
-        <p className="text-gray-400 text-xs font-black uppercase tracking-widest">No products found in this category.</p>
-      </div>
-    )}
-  </div>
-</section>
-
       {/* --- FOOTER --- */}
-      <footer className="bg-[#0a0a0a] text-white pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
-            <span className="text-gray-600 text-[10px] font-black uppercase tracking-widest">© 2026 Disruptive Solutions Inc.</span>
-            <button onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#d11a2a] transition-all group">
-              Back to Top <div className="p-3 bg-white/5 rounded-full group-hover:bg-[#d11a2a] transition-all"><ChevronUp size={16} /></div>
-            </button>
-          </div>
+      <footer className="border-t border-gray-100 py-10 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+            © 2026 Disruptive Solutions Inc.
+          </p>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#d11a2a] transition-all group"
+          >
+            Back to Top{" "}
+            <ChevronUp
+              size={14}
+              className="group-hover:-translate-y-1 transition-transform"
+            />
+          </button>
         </div>
       </footer>
     </div>
