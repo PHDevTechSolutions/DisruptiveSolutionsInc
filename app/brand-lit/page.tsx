@@ -202,7 +202,7 @@ export default function BrandsPage() {
       <section className="relative h-[60vh] w-full flex items-center justify-center bg-black">
         <div className="absolute inset-0 opacity-40">
           <img
-            src="https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png"
+            src="/images/lit.png"
             className="w-full h-full object-cover"
             alt="LIT"
           />

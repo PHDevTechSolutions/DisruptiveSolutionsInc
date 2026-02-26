@@ -236,7 +236,7 @@ export default function BrandsPage() {
       {/* Hero Section */}
       <section className="relative h-[60vh] w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
-          <img src="https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png" className="w-full h-full object-cover" alt="Hero" />
+          <img src="/images/zumtobel.png" className="w-full h-full object-cover" alt="Hero" />
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20" />
       </section>
