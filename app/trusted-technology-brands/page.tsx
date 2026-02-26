@@ -137,10 +137,13 @@ export default function BrandsShowcase() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
+            <span className="text-[#d11a2a] text-[12px] font-black uppercase tracking-[0.6em] mb-6 block italic">
+              Our Brands
+            </span>
             <h1 className="text-white text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.9] mb-8">
               Our Disruptive
               <br />
-              <span className="text-[#d11a2a] italic"> Brands</span>
+              <span className="text-[#d11a2a] italic"> Brands.</span>
             </h1>
           </motion.div>
         </div>
@@ -164,12 +167,17 @@ export default function BrandsShowcase() {
             >
               <div className="max-w-[1400px] mx-auto px-8 md:px-12 flex flex-col lg:flex-row gap-20 items-center">
                 {/* BRAND SIDEBAR */}
-                <div className="w-full lg:w-[350px] space-y-10 text-center lg:text-left">
-                  <img
-                    src={brand.image}
-                    alt={brand.title}
-                    className="h-16 md:h-20 mx-auto lg:mx-0 object-contain"
-                  />
+                <div className="w-full lg:w-[400px] space-y-10 text-center lg:text-left">
+                  {/* BIGGER LOGO with subtle card container */}
+                  <div className="flex items-center justify-center lg:justify-start">
+                    <div className="bg-gray-50 border border-gray-100 rounded-[28px] px-10 py-8 inline-flex items-center justify-center w-full lg:w-auto">
+                      <img
+                        src={brand.image}
+                        alt={brand.title}
+                        className="h-28 md:h-36 w-auto object-contain"
+                      />
+                    </div>
+                  </div>
 
                   <div className="space-y-4">
                     <h2 className="text-3xl font-black italic uppercase text-gray-900">
