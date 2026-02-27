@@ -89,7 +89,7 @@ export default function DisruptiveLandingPage() {
     const q = query(
       collection(db, "projects"),
       orderBy("createdAt", "desc"),
-      limit(32)
+      limit(4)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
