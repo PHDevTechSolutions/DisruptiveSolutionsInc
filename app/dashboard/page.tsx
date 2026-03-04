@@ -564,49 +564,53 @@ export default function DisruptiveLandingPage() {
                 </div>
               ) : (
                 fetchedProjects.map((project) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 15 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    whileHover={{ y: -8 }}
-                    className="w-full"
-                  >
-                    <div className="group relative h-[220px] md:h-[400px] block rounded-[32px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 cursor-default">
+                  {/* ... inside fetchedProjects.map ... */}
+<motion.div
+  key={project.id}
+  initial={{ opacity: 0, y: 15 }}
+  whileInView={{ opacity: 1, y: 0 }}
+  viewport={{ once: true }}
+  whileHover={{ y: -8 }}
+  className="w-full"
+>
+  {/* Wrap the entire card in a Link component */}
+  <Link href="/projects" className="block w-full">
+    <div className="group relative h-[220px] md:h-[400px] block rounded-[32px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 cursor-pointer">
+      
+      <img
+        src={project.imageUrl}
+        alt={project.title}
+        className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity duration-500"
+      />
 
-                      <img
-                        src={project.imageUrl}
-                        alt={project.title}
-                        className="w-full h-full object-cover opacity-60 group-hover:opacity-40"
-                      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 group-hover:opacity-0 transition-opacity duration-500" />
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 group-hover:opacity-0 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center p-6 text-center">
+        {project.logoUrl && (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            whileHover={{ scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-white/10 blur-2xl rounded-full" />
+            <img
+              src={project.logoUrl}
+              alt="Client Logo"
+              className="relative w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+            />
+          </motion.div>
+        )}
+      </div>
 
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center p-6 text-center">
-                        {project.logoUrl && (
-                          <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            whileHover={{ scale: 1.05 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="relative"
-                          >
-                            <div className="absolute inset-0 bg-white/10 blur-2xl rounded-full" />
-                            <img
-                              src={project.logoUrl}
-                              alt="Client Logo"
-                              className="relative w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]"
-                            />
-                          </motion.div>
-                        )}
-                      </div>
-
-                      <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end group-hover:opacity-0 transition-opacity duration-300">
-                        <h3 className="text-xs md:text-sm font-black text-white uppercase tracking-tight leading-tight line-clamp-2">
-                          {project.title}
-                        </h3>
-                      </div>
-                    </div>
-                  </motion.div>
+      <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end group-hover:opacity-0 transition-opacity duration-300">
+        <h3 className="text-xs md:text-sm font-black text-white uppercase tracking-tight leading-tight line-clamp-2">
+          {project.title}
+        </h3>
+      </div>
+    </div>
+  </Link>
+</motion.div>
                 ))
               )}
             </div>
