@@ -2,18 +2,47 @@
 
 import React, { useState, useEffect, useCallback, useId, useRef } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot, limit, where, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  limit,
+  where,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
-import SignUpNewsletter from "../components/SignUpNewsletter"
+import SignUpNewsletter from "../components/SignUpNewsletter";
 import Footer from "../components/navigation/footer";
 import Navbar from "../components/navigation/navbar";
 import BrandCarousel from "../components/BrandCarousel"; // 🔥 NEW IMPORT!
 import {
-  Menu, X, FileSignature, ArrowRight, Sparkles, ChevronUp,
-  MessageSquare, Send, Brain, Zap, Code, Facebook,
-  Instagram, Linkedin, Video, ShieldCheck, User, LogOut, Plus, Loader2, Calendar, CheckCircle2, Upload
+  Menu,
+  X,
+  FileSignature,
+  ArrowRight,
+  Sparkles,
+  ChevronUp,
+  MessageSquare,
+  Send,
+  Brain,
+  Zap,
+  Code,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Video,
+  ShieldCheck,
+  User,
+  LogOut,
+  Plus,
+  Loader2,
+  Calendar,
+  CheckCircle2,
+  Upload,
 } from "lucide-react";
 import HomePopup from "../components/modals/HomePopup";
 import FloatingChatWidget from "../components/chat-widget";
@@ -22,18 +51,44 @@ import FloatingMenuWidget from "../components/menu-widget";
 
 // --- MOCK UI COMPONENTS (Para sa Chat Widget) ---
 const Avatar = ({ children, className }: any) => (
-  <div className={`relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${className}`}>{children}</div>
+  <div
+    className={`relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${className}`}
+  >
+    {children}
+  </div>
 );
-const AvatarImage = ({ src }: any) => <img src={src} className="aspect-square h-full w-full" />;
+const AvatarImage = ({ src }: any) => (
+  <img src={src} className="aspect-square h-full w-full" />
+);
 const AvatarFallback = ({ children, className }: any) => (
-  <div className={`flex h-full w-full items-center justify-center rounded-full bg-gray-100 ${className}`}>{children}</div>
+  <div
+    className={`flex h-full w-full items-center justify-center rounded-full bg-gray-100 ${className}`}
+  >
+    {children}
+  </div>
 );
 const cn = (...classes: any) => classes.filter(Boolean).join(" ");
 
 // --- AI AGENTS DATA ---
 const AI_AGENTS = [
-  { id: "gpt4", name: "Disruptive AI", role: "Smart Lighting Expert", avatar: "https://github.com/shadcn.png", status: "online", icon: Sparkles, gradient: "from-red-500/20 to-rose-500/20" },
-  { id: "gemini", name: "Sales Pro", role: "Quotation Assistant", avatar: "https://github.com/shadcn.png", status: "online", icon: Zap, gradient: "from-blue-500/20 to-cyan-500/20" },
+  {
+    id: "gpt4",
+    name: "Disruptive AI",
+    role: "Smart Lighting Expert",
+    avatar: "https://github.com/shadcn.png",
+    status: "online",
+    icon: Sparkles,
+    gradient: "from-red-500/20 to-rose-500/20",
+  },
+  {
+    id: "gemini",
+    name: "Sales Pro",
+    role: "Quotation Assistant",
+    avatar: "https://github.com/shadcn.png",
+    status: "online",
+    icon: Zap,
+    gradient: "from-blue-500/20 to-cyan-500/20",
+  },
 ];
 
 export default function DisruptiveLandingPage() {
@@ -51,7 +106,7 @@ export default function DisruptiveLandingPage() {
     lastName: "",
     email: "",
     company: "",
-    message: ""
+    message: "",
   });
 
   const [brandsData, setBrandsData] = useState([]);
@@ -61,7 +116,8 @@ export default function DisruptiveLandingPage() {
       await addDoc(collection(db, "cmsactivity_logs"), {
         page: actionName,
         timestamp: serverTimestamp(),
-        userAgent: typeof window !== "undefined" ? navigator.userAgent : "Server",
+        userAgent:
+          typeof window !== "undefined" ? navigator.userAgent : "Server",
         userEmail: userSession?.email || "Anonymous Visitor",
       });
     } catch (err) {
@@ -89,13 +145,13 @@ export default function DisruptiveLandingPage() {
     const q = query(
       collection(db, "projects"),
       orderBy("createdAt", "desc"),
-      limit(4)
+      limit(4),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
+      const data = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       setFetchedProjects(data);
       setProjectsLoading(false);
@@ -104,8 +160,10 @@ export default function DisruptiveLandingPage() {
     return () => unsubscribe();
   }, []);
 
-  const LOGO_RED = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-red-scaled.png";
-  const LOGO_WHITE = "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
+  const LOGO_RED =
+    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-red-scaled.png";
+  const LOGO_WHITE =
+    "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/DISRUPTIVE-LOGO-white-scaled.png";
 
   const navLinks = [
     { name: "Home", href: "/dashboard" },
@@ -129,17 +187,21 @@ export default function DisruptiveLandingPage() {
     {
       category: "Smart Lighting",
       title: "Zumtobel's Lighting Solutions",
-      description: "Global leader in premium lighting solutions, combines design, innovation and sustainability.",
-      image: "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
-      href: "/lighting-products-smart-solutions"
+      description:
+        "Global leader in premium lighting solutions, combines design, innovation and sustainability.",
+      image:
+        "https://disruptivesolutionsinc.com/wp-content/uploads/2025/11/ZUMTOBELs.png",
+      href: "/lighting-products-smart-solutions",
     },
     {
       category: "Power Solutions",
       title: "Affordable Lighting That Works as Hard as You Do",
-      description: "Smart lighting at smarter prices - reliable quality without compromise",
-      image: "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
-      href: "/lit-lighting-solutions"
-    }
+      description:
+        "Smart lighting at smarter prices - reliable quality without compromise",
+      image:
+        "https://disruptivesolutionsinc.com/wp-content/uploads/2025/08/Lit-Rectangle-black-scaled-e1754460691526.png",
+      href: "/lit-lighting-solutions",
+    },
   ];
 
   // --- CLOUDINARY UPLOAD FUNCTION ---
@@ -152,7 +214,7 @@ export default function DisruptiveLandingPage() {
     try {
       const response = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        { method: "POST", body: formData }
+        { method: "POST", body: formData },
       );
 
       if (!response.ok) {
@@ -168,7 +230,9 @@ export default function DisruptiveLandingPage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -209,8 +273,11 @@ export default function DisruptiveLandingPage() {
 
       setStatus("success");
       setFormData({
-        firstName: "", lastName: "", email: "",
-        company: "", message: ""
+        firstName: "",
+        lastName: "",
+        email: "",
+        company: "",
+        message: "",
       });
       setFile(null);
     } catch (error) {
@@ -229,13 +296,13 @@ export default function DisruptiveLandingPage() {
       where("website", "==", "disruptivesolutionsinc"),
       where("status", "==", "Published"),
       orderBy("createdAt", "desc"),
-      limit(3)
+      limit(3),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
+      const data = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       setBlogs(data);
     });
@@ -246,10 +313,10 @@ export default function DisruptiveLandingPage() {
   const formatDate = (timestamp: any) => {
     if (!timestamp) return "Recently";
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     }).format(date);
   };
 
@@ -268,16 +335,20 @@ export default function DisruptiveLandingPage() {
     const q = query(
       collection(db, "brand_name"),
       where("website", "==", "Disruptive Solutions Inc"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setBrands(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching brands:", error);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setBrands(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching brands:", error);
+        setLoading(false);
+      },
+    );
 
     return () => unsubscribe();
   }, []);
@@ -285,9 +356,12 @@ export default function DisruptiveLandingPage() {
   const [partners, setPartners] = useState<any[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, "brand_partners"), orderBy("createdAt", "desc"));
+    const q = query(
+      collection(db, "brand_partners"),
+      orderBy("createdAt", "desc"),
+    );
     const unsub = onSnapshot(q, (snap) => {
-      const urls = snap.docs.map(doc => doc.data().logoUrl);
+      const urls = snap.docs.map((doc) => doc.data().logoUrl);
       setPartners(urls.length > 0 ? [...urls, ...urls, ...urls] : []);
     });
     return () => unsub();
@@ -312,15 +386,12 @@ export default function DisruptiveLandingPage() {
 
   return (
     <>
-
       <HomePopup />
       <div className="min-h-screen bg-[#f8f9fa] font-sans selection:bg-[#d11a2a]/10 selection:text-[#d11a2a] overflow-x-hidden">
-
         <Navbar />
 
         {/* 🔥 HERO SECTION WITH BRAND CAROUSEL */}
         <section className="relative min-h-[112vh] flex items-center bg-[#0a0a0a] overflow-hidden pt-1">
-
           <div className="absolute inset-0 z-0">
             <img
               src="https://disruptivesolutionsinc.com/wp-content/uploads/2025/09/HOME-PAGE-HERO.png"
@@ -336,7 +407,6 @@ export default function DisruptiveLandingPage() {
 
           <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-
               {/* LEFT SIDE - TEXT CONTENT */}
               <motion.div
                 initial={{ opacity: 0, x: -30 }}
@@ -349,15 +419,24 @@ export default function DisruptiveLandingPage() {
                 </span>
 
                 <h1 className="text-white text-5xl md:text-7xl lg:text-7xl font-black leading-[0.9] tracking-tighter mb-8 uppercase drop-shadow-2xl">
-                  Disruptive <br /> Solutions <span className="text-[#d11a2a] italic">Inc.</span>
+                  Disruptive <br /> Solutions{" "}
+                  <span className="text-[#d11a2a] italic">Inc.</span>
                 </h1>
 
                 <p className="text-gray-300 text-base md:text-lg max-w-lg leading-relaxed mb-10 font-medium">
-                  We deliver premium, <span className="text-white font-semibold">future-ready lighting solutions</span> that brighten spaces, cut costs, and power smarter business across the globe.
+                  We deliver premium,{" "}
+                  <span className="text-white font-semibold">
+                    future-ready lighting solutions
+                  </span>{" "}
+                  that brighten spaces, cut costs, and power smarter business
+                  across the globe.
                 </p>
 
                 <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-                  <Link href="/trusted-technology-brands" className="bg-[#d11a2a] text-white px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-xl shadow-red-900/30">
+                  <Link
+                    href="/trusted-technology-brands"
+                    className="bg-[#d11a2a] text-white px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-xl shadow-red-900/30"
+                  >
                     Explore Products
                   </Link>
                 </div>
@@ -370,9 +449,8 @@ export default function DisruptiveLandingPage() {
                 transition={{ duration: 1, delay: 0.2 }}
                 className="relative hidden lg:block"
               >
-             <BrandCarousel brands={brands} />
+                <BrandCarousel brands={brands} />
               </motion.div>
-
             </div>
           </div>
 
@@ -385,12 +463,11 @@ export default function DisruptiveLandingPage() {
             className="absolute inset-0 pointer-events-none opacity-[0.2]"
             style={{
               backgroundImage: `linear-gradient(to right, #e5e7eb 1px, transparent 4px), linear-gradient(to bottom, #e5e7eb 1px, transparent 4px)`,
-              backgroundSize: '40px 40px'
+              backgroundSize: "40px 40px",
             }}
           />
 
           <div className="max-w-full mx-auto px-8 md:px-16 lg:px-28 relative z-10 flex flex-col items-center">
-
             <div className="flex flex-col items-center justify-center text-center mb-16 max-w-3xl mx-auto">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -399,10 +476,14 @@ export default function DisruptiveLandingPage() {
                 className="flex flex-col items-center"
               >
                 <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] font-black uppercase tracking-[0.4em] mb-6 bg-red-50 px-5 py-2 rounded-full border border-red-100/50">
-                  <Zap size={12} className="fill-[#d11a2a]" /> Explore our Product Range
+                  <Zap size={12} className="fill-[#d11a2a]" /> Explore our
+                  Product Range
                 </span>
                 <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-[-0.04em] uppercase leading-[0.9] mb-8">
-                  Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Brands</span>
+                  Our{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">
+                    Brands
+                  </span>
                 </h2>
                 <div className="h-1.5 w-16 bg-[#d11a2a] mb-8 rounded-full shadow-[0_2px_10px_rgba(209,26,42,0.3)]" />
               </motion.div>
@@ -415,7 +496,7 @@ export default function DisruptiveLandingPage() {
               viewport={{ once: true }}
               variants={{
                 hidden: { opacity: 0 },
-                show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+                show: { opacity: 1, transition: { staggerChildren: 0.1 } },
               }}
             >
               {brands.map((brand) => {
@@ -424,25 +505,32 @@ export default function DisruptiveLandingPage() {
                 return (
                   <motion.div
                     key={brand.id}
-                    variants={{ hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0 } }}
+                    variants={{
+                      hidden: { opacity: 0, y: 30 },
+                      show: { opacity: 1, y: 0 },
+                    }}
                     whileHover={!isSoon ? { y: -8 } : {}}
                     className="w-full flex justify-center"
                   >
                     <Link
-                      href={isSoon ? "#" : (brand.href || "#")}
-                      className={`group relative w-full h-[400px] md:h-[460px] block rounded-[28px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 ${isSoon ? "cursor-not-allowed" : "cursor-pointer"
-                        }`}
+                      href={isSoon ? "#" : brand.href || "#"}
+                      className={`group relative w-full h-[400px] md:h-[460px] block rounded-[28px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 ${
+                        isSoon ? "cursor-not-allowed" : "cursor-pointer"
+                      }`}
                     >
                       <div className="absolute inset-0 overflow-hidden">
                         <img
                           src={brand.image}
                           alt={brand.title}
-                          className={`w-full h-full object-cover transition-all duration-700 ${isSoon
+                          className={`w-full h-full object-cover transition-all duration-700 ${
+                            isSoon
                               ? "brightness-[0.4] grayscale group-hover:grayscale-0 group-hover:scale-110"
                               : "brightness-[0.6] group-hover:brightness-[0.4] group-hover:scale-105"
-                            }`}
+                          }`}
                         />
-                        <div className={`absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 transition-opacity ${isSoon ? "group-hover:opacity-60" : ""}`} />
+                        <div
+                          className={`absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 transition-opacity ${isSoon ? "group-hover:opacity-60" : ""}`}
+                        />
                       </div>
 
                       {isSoon && (
@@ -463,7 +551,9 @@ export default function DisruptiveLandingPage() {
                         </div>
 
                         <div className="space-y-3">
-                          <h3 className={`text-lg md:text-xl font-black text-white uppercase tracking-tighter leading-tight transition-colors ${isSoon ? "group-hover:text-red-400" : ""}`}>
+                          <h3
+                            className={`text-lg md:text-xl font-black text-white uppercase tracking-tighter leading-tight transition-colors ${isSoon ? "group-hover:text-red-400" : ""}`}
+                          >
                             {brand.title}
                           </h3>
 
@@ -471,9 +561,13 @@ export default function DisruptiveLandingPage() {
                             {brand.description}
                           </p>
 
-                          <div className={`flex items-center gap-3 pt-2 transition-all duration-500 ${isSoon ? "opacity-0 group-hover:opacity-0" : "text-white/60 group-hover:text-[#d11a2a]"}`}>
+                          <div
+                            className={`flex items-center gap-3 pt-2 transition-all duration-500 ${isSoon ? "opacity-0 group-hover:opacity-0" : "text-white/60 group-hover:text-[#d11a2a]"}`}
+                          >
                             <div className="h-[1.5px] w-6 bg-white/20 group-hover:bg-[#d11a2a] group-hover:w-10 transition-all duration-500" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Learn More</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest">
+                              Learn More
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -489,15 +583,21 @@ export default function DisruptiveLandingPage() {
         {partners.length > 0 && (
           <section className="relative py-16 md:py-24 bg-white overflow-hidden border-y border-gray-100">
             <div className="max-w-full mx-auto">
-
               <div className="text-center mb-16 px-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                >
                   <span className="inline-flex items-center gap-2 text-[#d11a2a] text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] mb-4 bg-red-50 px-4 py-2 rounded-full border border-red-100/50">
-                    <Zap size={12} className="fill-[#d11a2a]" /> Home of Lighting Excellence and Innovation
+                    <Zap size={12} className="fill-[#d11a2a]" /> Home of
+                    Lighting Excellence and Innovation
                   </span>
                   <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter uppercase leading-[0.85]">
                     Our Disruptive <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Partners</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">
+                      Partners
+                    </span>
                   </h2>
                 </motion.div>
               </div>
@@ -509,7 +609,7 @@ export default function DisruptiveLandingPage() {
                   transition={{
                     duration: 30,
                     ease: "linear",
-                    repeat: Infinity
+                    repeat: Infinity,
                   }}
                 >
                   {partners.map((logo, idx) => (
@@ -538,7 +638,6 @@ export default function DisruptiveLandingPage() {
         {/* PROJECTS SECTION */}
         <section className="relative w-full bg-white py-16 md:py-24">
           <div className="max-w-[1550px] mx-auto px-8 md:px-16 lg:px-28 relative z-10">
-
             <div className="flex flex-col items-center justify-center text-center mb-16 max-w-3xl mx-auto">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -551,7 +650,10 @@ export default function DisruptiveLandingPage() {
                   <Zap size={12} className="fill-[#d11a2a]" /> Get Inspired
                 </span>
                 <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-gray-900 tracking-[-0.04em] uppercase leading-[0.9] mb-8">
-                  Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">Projects</span>
+                  Featured{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-500">
+                    Projects
+                  </span>
                 </h2>
                 <div className="h-1.5 w-16 bg-[#d11a2a] mb-8 rounded-full shadow-[0_2px_10px_rgba(209,26,42,0.3)]" />
               </motion.div>
@@ -564,59 +666,64 @@ export default function DisruptiveLandingPage() {
                 </div>
               ) : (
                 fetchedProjects.map((project) => (
-                  {/* ... inside fetchedProjects.map ... */}
-<motion.div
-  key={project.id}
-  initial={{ opacity: 0, y: 15 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  viewport={{ once: true }}
-  whileHover={{ y: -8 }}
-  className="w-full"
->
-  {/* Wrap the entire card in a Link component */}
-  <Link href="/projects" className="block w-full">
-    <div className="group relative h-[220px] md:h-[400px] block rounded-[32px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 cursor-pointer">
-      
-      <img
-        src={project.imageUrl}
-        alt={project.title}
-        className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity duration-500"
-      />
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 15 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    whileHover={{ y: -8 }}
+                    className="w-full"
+                  >
+                    {/* Wrap the entire card in a Link component */}
+                    <Link href="/projects" className="block w-full">
+                      <div className="group relative h-[220px] md:h-[400px] block rounded-[32px] overflow-hidden bg-gray-900 shadow-xl border border-gray-100 cursor-pointer">
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity duration-500"
+                        />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 group-hover:opacity-0 transition-opacity duration-500" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 group-hover:opacity-0 transition-opacity duration-500" />
 
-      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center p-6 text-center">
-        {project.logoUrl && (
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            whileHover={{ scale: 1.05 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-white/10 blur-2xl rounded-full" />
-            <img
-              src={project.logoUrl}
-              alt="Client Logo"
-              className="relative w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]"
-            />
-          </motion.div>
-        )}
-      </div>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center p-6 text-center">
+                          {project.logoUrl && (
+                            <motion.div
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              whileHover={{ scale: 1.05 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="relative"
+                            >
+                              <div className="absolute inset-0 bg-white/10 blur-2xl rounded-full" />
+                              <img
+                                src={project.logoUrl}
+                                alt="Client Logo"
+                                className="relative w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+                              />
+                            </motion.div>
+                          )}
+                        </div>
 
-      <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end group-hover:opacity-0 transition-opacity duration-300">
-        <h3 className="text-xs md:text-sm font-black text-white uppercase tracking-tight leading-tight line-clamp-2">
-          {project.title}
-        </h3>
-      </div>
-    </div>
-  </Link>
-</motion.div>
+                        <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end group-hover:opacity-0 transition-opacity duration-300">
+                          <h3 className="text-xs md:text-sm font-black text-white uppercase tracking-tight leading-tight line-clamp-2">
+                            {project.title}
+                          </h3>
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
                 ))
               )}
             </div>
 
-            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="mt-10 mb-10 flex justify-center">
-              <Link href="/projects" className="mt-8 group flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#d11a2a] transition-all">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              className="mt-10 mb-10 flex justify-center"
+            >
+              <Link
+                href="/projects"
+                className="mt-8 group flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#d11a2a] transition-all"
+              >
                 View All Projects
                 <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all">
                   <ArrowRight size={16} />
@@ -629,7 +736,6 @@ export default function DisruptiveLandingPage() {
         {/* BLOG SECTION */}
         <section className="relative py-1 bg-[#fcfcfc] overflow-hidden">
           <div className="max-w-7xl mx-auto px-6">
-
             <div className="flex flex-col items-center justify-center text-center mb-16">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -642,7 +748,10 @@ export default function DisruptiveLandingPage() {
                 </span>
 
                 <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter uppercase leading-tight">
-                  Latest <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-400">Insights</span>
+                  Latest{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d11a2a] to-red-400">
+                    Insights
+                  </span>
                 </h2>
 
                 <div className="h-1.5 w-16 bg-[#d11a2a] mt-6 rounded-full" />
@@ -650,79 +759,90 @@ export default function DisruptiveLandingPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-              {blogs.length > 0 ? (
-                blogs.map((blog) => {
-                  const descriptionText = blog.sections?.[0]?.description || "Click to read more about this disruptive technology update.";
+              {blogs.length > 0
+                ? blogs.map((blog) => {
+                    const descriptionText =
+                      blog.sections?.[0]?.description ||
+                      "Click to read more about this disruptive technology update.";
 
-                  return (
-                    <Link
-                      href={`/blog/${blog.slug || blog.id}`}
-                      key={blog.id}
-                      className="group"
-                      onClick={() => logActivity(`Blog: Read ${blog.title}`)}
-                    >
-                      <div className="bg-white border border-gray-100 p-2 h-full flex flex-col hover:shadow-[0_20px_50px_rgba(209,26,42,0.1)] hover:-translate-y-1">
+                    return (
+                      <Link
+                        href={`/blog/${blog.slug || blog.id}`}
+                        key={blog.id}
+                        className="group"
+                        onClick={() => logActivity(`Blog: Read ${blog.title}`)}
+                      >
+                        <div className="bg-white border border-gray-100 p-2 h-full flex flex-col hover:shadow-[0_20px_50px_rgba(209,26,42,0.1)] hover:-translate-y-1">
+                          <div className="relative h-56 bg-gray-50 overflow-hidden mb-6 flex items-center justify-center p-4">
+                            {blog.coverImage ? (
+                              <img
+                                src={blog.coverImage}
+                                alt={blog.title}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-300 font-black italic text-[10px] uppercase">
+                                No Image Available
+                              </div>
+                            )}
+                          </div>
 
-                        <div className="relative h-56 bg-gray-50 overflow-hidden mb-6 flex items-center justify-center p-4">
-                          {blog.coverImage ? (
-                            <img
-                              src={blog.coverImage}
-                              alt={blog.title}
-                              className="w-full h-full object-contain"
+                          <div className="px-4 pb-6 flex-grow flex flex-col">
+                            <div className="flex items-center gap-3 mb-4">
+                              <span className="h-[1px] w-6 bg-[#d11a2a]" />
+                              <span className="text-[#d11a2a] text-[9px] font-black uppercase tracking-widest">
+                                {blog.category || "General"}
+                              </span>
+                            </div>
+
+                            <h3 className="text-xl font-black text-gray-900 uppercase italic tracking-tighter leading-tight mb-4 group-hover:text-[#d11a2a] transition-colors line-clamp-2">
+                              {blog.title}
+                            </h3>
+
+                            <div
+                              className="text-gray-400 text-xs leading-relaxed mb-6 line-clamp-2 font-medium italic"
+                              dangerouslySetInnerHTML={{
+                                __html: descriptionText,
+                              }}
                             />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-300 font-black italic text-[10px] uppercase">
-                              No Image Available
+
+                            <div className="flex items-center gap-2 mb-6">
+                              <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
+                                <Calendar size={10} className="text-gray-400" />
+                              </div>
+                              <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                                {formatDate(blog.createdAt)}
+                              </span>
                             </div>
-                          )}
-                        </div>
 
-                        <div className="px-4 pb-6 flex-grow flex flex-col">
-                          <div className="flex items-center gap-3 mb-4">
-                            <span className="h-[1px] w-6 bg-[#d11a2a]" />
-                            <span className="text-[#d11a2a] text-[9px] font-black uppercase tracking-widest">
-                              {blog.category || "General"}
-                            </span>
-                          </div>
-
-                          <h3 className="text-xl font-black text-gray-900 uppercase italic tracking-tighter leading-tight mb-4 group-hover:text-[#d11a2a] transition-colors line-clamp-2">
-                            {blog.title}
-                          </h3>
-
-                          <div
-                            className="text-gray-400 text-xs leading-relaxed mb-6 line-clamp-2 font-medium italic"
-                            dangerouslySetInnerHTML={{ __html: descriptionText }}
-                          />
-
-                          <div className="flex items-center gap-2 mb-6">
-                            <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
-                              <Calendar size={10} className="text-gray-400" />
+                            <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2 group-hover:gap-4 transition-all duration-300">
+                                Read Full Story{" "}
+                                <ArrowRight
+                                  size={12}
+                                  className="text-[#d11a2a]"
+                                />
+                              </span>
                             </div>
-                            <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
-                              {formatDate(blog.createdAt)}
-                            </span>
-                          </div>
-
-                          <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2 group-hover:gap-4 transition-all duration-300">
-                              Read Full Story <ArrowRight size={12} className="text-[#d11a2a]" />
-                            </span>
                           </div>
                         </div>
-                      </div>
-                    </Link>
-                  );
-                })
-              ) : (
-                [1, 2, 3].map((i) => (
-                  <div key={i} className="h-80 bg-gray-50 animate-pulse border border-gray-100" />
-                ))
-              )}
+                      </Link>
+                    );
+                  })
+                : [1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-80 bg-gray-50 animate-pulse border border-gray-100"
+                    />
+                  ))}
             </div>
           </div>
 
           <div className="flex flex-col items-center justify-center text-center mb-16">
-            <Link href="/blog" className="mt-5 group flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#d11a2a] transition-all">
+            <Link
+              href="/blog"
+              className="mt-5 group flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-[#d11a2a] transition-all"
+            >
               Explore All Stories
               <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-[#d11a2a] group-hover:bg-[#d11a2a] group-hover:text-white transition-all">
                 <ArrowRight size={16} />
@@ -733,17 +853,16 @@ export default function DisruptiveLandingPage() {
 
         {/* CONTACT FORM SECTION */}
         <section className="relative min-h-screen w-full bg-[#f3f4f6] overflow-hidden flex items-center py-20 selection:bg-[#d11a2a] selection:text-white">
-
-          <div className="absolute inset-0 opacity-[0.15] pointer-events-none"
+          <div
+            className="absolute inset-0 opacity-[0.15] pointer-events-none"
             style={{
               backgroundImage: `radial-gradient(#000 0.5px, transparent 0.5px)`,
-              backgroundSize: '24px 24px'
+              backgroundSize: "24px 24px",
             }}
           />
 
           <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10 w-full">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -754,7 +873,10 @@ export default function DisruptiveLandingPage() {
                   <h1 className="text-[#1a1a1a] text-4xl md:text-5xl font-black leading-[1] tracking-tighter uppercase">
                     Talk to us <br />
                     about your <br />
-                    <span className="text-[#d11a2a] italic">next lighting</span> <br />
+                    <span className="text-[#d11a2a] italic">
+                      next lighting
+                    </span>{" "}
+                    <br />
                     project.
                   </h1>
 
@@ -765,7 +887,11 @@ export default function DisruptiveLandingPage() {
                       Get your free quotation in 30 minutes.
                     </p>
                     <p className="text-gray-500 text-sm md:text-base font-medium leading-relaxed">
-                      Reach out to <span className="text-black font-bold">Disruptive Solutions Inc.</span> today!
+                      Reach out to{" "}
+                      <span className="text-black font-bold">
+                        Disruptive Solutions Inc.
+                      </span>{" "}
+                      today!
                     </p>
                   </div>
                 </div>
@@ -780,47 +906,112 @@ export default function DisruptiveLandingPage() {
                 {status === "success" ? (
                   <div className="py-12 text-center">
                     <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto mb-6" />
-                    <h2 className="text-2xl font-black uppercase tracking-tighter">Request Sent!</h2>
-                    <button onClick={() => setStatus("idle")} className="text-[#d11a2a] font-black uppercase text-[10px] tracking-widest hover:underline mt-4">Send Another</button>
+                    <h2 className="text-2xl font-black uppercase tracking-tighter">
+                      Request Sent!
+                    </h2>
+                    <button
+                      onClick={() => setStatus("idle")}
+                      className="text-[#d11a2a] font-black uppercase text-[10px] tracking-widest hover:underline mt-4"
+                    >
+                      Send Another
+                    </button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">First Name*</label>
-                        <input name="firstName" required value={formData.firstName} onChange={handleChange} className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300" placeholder="John" />
+                        <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">
+                          First Name*
+                        </label>
+                        <input
+                          name="firstName"
+                          required
+                          value={formData.firstName}
+                          onChange={handleChange}
+                          className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300"
+                          placeholder="John"
+                        />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Last Name*</label>
-                        <input name="lastName" required value={formData.lastName} onChange={handleChange} className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300" placeholder="Doe" />
+                        <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">
+                          Last Name*
+                        </label>
+                        <input
+                          name="lastName"
+                          required
+                          value={formData.lastName}
+                          onChange={handleChange}
+                          className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300"
+                          placeholder="Doe"
+                        />
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Company / Organization*</label>
-                      <input name="company" required value={formData.company} onChange={handleChange} className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300" placeholder="ACME Industrial" />
+                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">
+                        Company / Organization*
+                      </label>
+                      <input
+                        name="company"
+                        required
+                        value={formData.company}
+                        onChange={handleChange}
+                        className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300"
+                        placeholder="ACME Industrial"
+                      />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Email Address*</label>
-                      <input type="email" name="email" required value={formData.email} onChange={handleChange} className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300" placeholder="john@company.com" />
+                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">
+                        Email Address*
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        required
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full h-12 px-0 bg-transparent border-b-2 border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 placeholder:text-gray-300"
+                        placeholder="john@company.com"
+                      />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Project Plans (Optional)</label>
+                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">
+                        Project Plans (Optional)
+                      </label>
                       <div
                         onClick={() => fileInputRef.current?.click()}
-                        className={`h-14 px-5 rounded-2xl bg-gray-100/50 border-2 border-dashed border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-all ${file ? 'border-[#d11a2a] bg-red-50' : ''}`}
+                        className={`h-14 px-5 rounded-2xl bg-gray-100/50 border-2 border-dashed border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-all ${file ? "border-[#d11a2a] bg-red-50" : ""}`}
                       >
-                        <input type="file" ref={fileInputRef} onChange={(e) => setFile(e.target.files?.[0] || null)} className="hidden" />
-                        <span className="text-[10px] font-bold text-gray-500 uppercase truncate max-w-[200px]">{file ? file.name : "Upload File"}</span>
-                        <Upload size={16} className={file ? "text-[#d11a2a]" : "text-gray-400"} />
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={(e) => setFile(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                        <span className="text-[10px] font-bold text-gray-500 uppercase truncate max-w-[200px]">
+                          {file ? file.name : "Upload File"}
+                        </span>
+                        <Upload
+                          size={16}
+                          className={file ? "text-[#d11a2a]" : "text-gray-400"}
+                        />
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">Message*</label>
-                      <textarea name="message" required value={formData.message} onChange={handleChange} placeholder="What do you need?..." className="w-full h-28 p-4 rounded-2xl bg-gray-100/50 border border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 resize-none placeholder:text-gray-300" />
+                      <label className="text-gray-400 text-[9px] font-black uppercase tracking-widest ml-1">
+                        Message*
+                      </label>
+                      <textarea
+                        name="message"
+                        required
+                        value={formData.message}
+                        onChange={handleChange}
+                        placeholder="What do you need?..."
+                        className="w-full h-28 p-4 rounded-2xl bg-gray-100/50 border border-gray-200 outline-none focus:border-[#d11a2a] transition-all font-bold text-gray-800 resize-none placeholder:text-gray-300"
+                      />
                     </div>
 
                     <button
@@ -829,20 +1020,29 @@ export default function DisruptiveLandingPage() {
                       className="w-full h-16 bg-[#d11a2a] text-white hover:bg-black rounded-full font-black uppercase tracking-[0.3em] text-[11px] transition-all duration-500 shadow-xl active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 mt-4"
                     >
                       {loading ? (
-                        <>PROCESSING <Loader2 className="animate-spin" size={18} /></>
+                        <>
+                          PROCESSING{" "}
+                          <Loader2 className="animate-spin" size={18} />
+                        </>
                       ) : (
-                        <>Request Quote <ArrowRight size={18} /></>
+                        <>
+                          Request Quote <ArrowRight size={18} />
+                        </>
                       )}
                     </button>
-                    {status === "error" && <p className="text-red-500 text-[9px] font-black uppercase text-center mt-2">Error. Please try again.</p>}
+                    {status === "error" && (
+                      <p className="text-red-500 text-[9px] font-black uppercase text-center mt-2">
+                        Error. Please try again.
+                      </p>
+                    )}
                   </form>
                 )}
               </motion.div>
             </div>
           </div>
         </section>
-        
-        <FloatingMenuWidget/>
+
+        <FloatingMenuWidget />
         <Footer />
       </div>
     </>
